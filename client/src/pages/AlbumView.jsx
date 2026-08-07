@@ -324,9 +324,11 @@ export const AlbumView = () => {
       {/* Sticky Bar thanh tác vụ chọn ảnh ở cạnh dưới màn hình */}
       {!isClosed && (
         <SelectionStickyBar
+          selectedCount={selectedPhotos.length}
           selectedPhotos={selectedPhotos}
           maxSelect={album.maxSelect}
-          onClearAll={handleClearAll}
+          isClosed={isClosed}
+          onOpenSubmitModal={() => setShowSubmitModal(true)}
           onSubmit={() => setShowSubmitModal(true)}
         />
       )}
