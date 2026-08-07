@@ -22,6 +22,7 @@ import {
   FolderSync
 } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
+import { getPublicBaseUrl } from '../utils/formatters';
 
 export const AdminDashboard = () => {
   const [albums, setAlbums] = useState([]);
@@ -467,8 +468,9 @@ export const AdminDashboard = () => {
           {/* Cards Grid */}
           <div className="grid grid-cols-1 gap-3">
             {filteredAlbums.map((album) => {
-              const clientUrl = `${window.location.origin}/album/${album._id}`;
-              const manageUrl = `${window.location.origin}/album/${album._id}/manage?token=${album.manageToken}`;
+              const base = getPublicBaseUrl();
+              const clientUrl = `${base}/album/${album._id}`;
+              const manageUrl = `${base}/album/${album._id}/manage?token=${album.manageToken}`;
               const isSelected = selectedIds.includes(album._id);
               const formattedDate = album.createdAt 
                 ? new Date(album.createdAt).toLocaleString('vi-VN', {

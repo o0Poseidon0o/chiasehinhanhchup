@@ -15,6 +15,7 @@ import {
   PlusCircle 
 } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
+import { getPublicBaseUrl } from '../utils/formatters';
 
 export const Home = () => {
   const [formData, setFormData] = useState({
@@ -70,12 +71,14 @@ export const Home = () => {
 
   const getClientUrl = () => {
     if (!successData) return '';
-    return `${window.location.origin}/album/${successData.albumId}`;
+    const base = getPublicBaseUrl();
+    return `${base}/album/${successData.albumId}`;
   };
 
   const getAdminUrl = () => {
     if (!successData) return '';
-    return `${window.location.origin}/album/${successData.albumId}/manage?token=${successData.manageToken}`;
+    const base = getPublicBaseUrl();
+    return `${base}/album/${successData.albumId}/manage?token=${successData.manageToken}`;
   };
 
   const copyToClipboard = (text, type) => {

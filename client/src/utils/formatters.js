@@ -29,3 +29,25 @@ export const cleanFileName = (fileName) => {
   }
   return fileName;
 };
+
+/**
+ * Lấy Public URL chuẩn hóa (loại bỏ hash preview của Vercel để khách không bị bắt login)
+ */
+export const getPublicBaseUrl = () => {
+  if (typeof window === 'undefined') return '';
+  const origin = window.location.origin;
+  
+  // project-commitHash-team.vercel.app -> project-team.vercel.app
+  const previewRegex = /^https:\/\/([a-zA-Z0-9_-]+)-[a-zA-Z0-9]{8,12}-([a-zA-Z0-9_-]+)\.vercel\.app$/;
+  if (previewRegex.test(origin)) {
+    return origin.replace(previewRegex, 'https://$1-$2.vercel.app');
+  }
+
+  // project-git-branch-team.vercel.app -> project-team.vercel.app
+  const gitBranchRegex = /^https:\/\/([a-zA-Z0-9_-]+)-git-[a-zA-Z0-9_-]+-([a-zA-Z0-9_-]+)\.vercel\.app$/;
+  if (gitBranchRegex.test(origin)) {
+    return origin.replace(gitBranchRegex, 'https://$1-$2.vercel.app');
+  }
+
+  return origin;
+};
