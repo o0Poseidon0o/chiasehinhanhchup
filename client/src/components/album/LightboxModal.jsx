@@ -1,0 +1,138 @@
+import React, { useEffect } from 'react';
+import { X, ChevronLeft, ChevronRight, Heart, MessageSquare, Download } from 'lucide-react';
+
+export const LightboxModal = ({
+  images = [],
+  currentIndex = -1,
+  onClose,
+  onNavigate,
+  selectedPhotos = [],
+  comments = {},
+  allowComment = true,
+  allowDownload = true,
+  isClosed = false,
+  onToggleSelect,
+  onCommentChange,
+}) => {
+  if (currentIndex < 0 || currentIndex >= images.length) return null;
+
+  const currentImage = images[currentIndex];
+  const isSelected = selectedPhotos.some((p) => p.fileId === currentImage.fileId);
+  const currentComment = comments[currentImage.fileId] || '';
+
+  // Bắt sự kiện phím bấm bàn phím (Left, Right, Escape)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
+        onNavigate(currentIndex - 1);
+      } else if (e.key === 'ArrowRight' && currentIndex < images.length - 1) {
+        onNavigate(currentIndex + 1);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentIndex, images.length, onClose, onNavigate]);
+
+  return (
+    <div className="fixed inset-0 bg-black/95 z-50 flex flex-col justify-between select-none animate-fade-in">
+      {/* Lightbox Header */}
+      <div className="p-4 flex items-center justify-between text-white border-b border-white/10 bg-black/40 backdrop-blur-md z-10">
+        <div>
+          <p className="text-sm font-semibold text-gold-100">{currentImage.fileName}</p>
+          <p className="text-[10px] text-[#a2998a]">
+            Ảnh {currentIndex + 1} / {images.length}
+          </p>
+        </div>
+
+        <div className="flex items-center space-x-3">
+          {/* Nút chọn ảnh ngay trong lightbox */}
+          <button
+            disabled={isClosed}
+            onClick={() => onToggleSelect && onToggleSelect(currentImage)}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              isSelected
+                ? 'bg-gold-500 text-gold-950 shadow-md'
+                : 'bg-white/10 hover:bg-white/20 text-white'
+            }`}
+          >
+            <Heart className={`w-4 h-4 ${isSelected ? 'fill-current' : ''}`} />
+            <span>{isSelected ? 'Đã Chọn' : 'Chọn Ảnh Này'}</span>
+          </button>
+
+          {/* Nút tải ảnh */}
+          {allowDownload && (
+            <a
+              href={`https://docs.google.com/uc?export=download&id=${currentImage.fileId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all text-white"
+              title="Tải ảnh gốc về máy"
+            >
+              <Download className="w-4 h-4" />
+            </a>
+          )}
+
+          {/* Nút đóng */}
+          <button
+            onClick={onClose}
+            className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all text-white"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Lightbox Main Preview */}
+      <div className="flex-grow flex items-center justify-between relative px-4 sm:px-12 overflow-hidden">
+        <button
+          disabled={currentIndex === 0}
+          onClick={() => onNavigate(currentIndex - 1)}
+          className="absolute left-4 z-10 p-2.5 bg-black/50 hover:bg-gold-500 hover:text-gold-950 text-white disabled:opacity-20 rounded-full transition-all backdrop-blur-sm"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+
+        <div className="w-full h-[72vh] flex items-center justify-center p-2">
+          <img
+            src={currentImage.embedUrl || currentImage.thumbnailUrl}
+            alt={currentImage.fileName}
+            className="max-w-full max-h-full object-contain rounded-md shadow-2xl transition-opacity duration-300"
+          />
+        </div>
+
+        <button
+          disabled={currentIndex === images.length - 1}
+          onClick={() => onNavigate(currentIndex + 1)}
+          className="absolute right-4 z-10 p-2.5 bg-black/50 hover:bg-gold-500 hover:text-gold-950 text-white disabled:opacity-20 rounded-full transition-all backdrop-blur-sm"
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
+      </div>
+
+      {/* Lightbox Footer Ghi chú */}
+      {allowComment && (
+        <div className="p-4 bg-[#0c0b0a] border-t border-[#221f1c]">
+          <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center gap-3">
+            <div className="flex items-center space-x-1.5 text-gold-400 text-xs font-semibold shrink-0">
+              <MessageSquare className="w-4 h-4" />
+              <span>Ghi chú sửa ảnh:</span>
+            </div>
+            <input
+              type="text"
+              disabled={isClosed}
+              value={currentComment}
+              onChange={(e) => onCommentChange && onCommentChange(currentImage.fileId, e.target.value)}
+              placeholder="Nhập yêu cầu chỉnh sửa cho bức ảnh này (ví dụ: bóp eo, xóa người nền...)"
+              className="flex-grow w-full bg-[#161412] border border-[#2b2722] rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-gold-500 text-[#f5eedf]"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default LightboxModal;

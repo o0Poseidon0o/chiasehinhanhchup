@@ -1,0 +1,112 @@
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: '/api/albums',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 25000,
+});
+
+// Helper xử lý thông điệp lỗi từ API
+const extractErrorMessage = (error, defaultMsg = 'Có lỗi xảy ra, vui lòng thử lại.') => {
+  return error.response?.data?.message || error.message || defaultMsg;
+};
+
+export const albumApi = {
+  /**
+   * Tạo Album mới
+   */
+  async create(data) {
+    try {
+      const response = await api.post('/', data);
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không thể tạo album. Vui lòng kiểm tra lại link Google Drive.'));
+    }
+  },
+
+  /**
+   * Lấy thông tin Album cho khách hàng xem & chọn ảnh
+   */
+  async getById(id, passcode = '') {
+    try {
+      const config = {};
+      if (passcode) {
+        config.headers = { 'x-passcode': passcode };
+      }
+      const response = await api.get(`/${id}`, config);
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không thể tải album.'));
+    }
+  },
+
+  /**
+   * Xác thực mã PIN của album
+   */
+  async verifyPasscode(id, passcode) {
+    try {
+      const response = await api.post(`/${id}/verify-passcode`, { passcode });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Mã PIN không chính xác.'));
+    }
+  },
+
+  /**
+   * Gửi danh sách lựa chọn ảnh của khách
+   */
+  async submitSelection(id, payload) {
+    try {
+      const response = await api.post(`/${id}/submit`, payload);
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không thể gửi danh sách chọn ảnh.'));
+    }
+  },
+
+  /**
+   * Lấy dữ liệu quản trị Album (Admin)
+   */
+  async getManageData(id, token) {
+    try {
+      const response = await api.get(`/${id}/manage`, {
+        params: { token },
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không có quyền truy cập trang quản lý này.'));
+    }
+  },
+
+  /**
+   * Khóa Album (Admin)
+   */
+  async lockAlbum(id, token) {
+    try {
+      const response = await api.put(`/${id}/lock`, null, {
+        params: { token },
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không thể khóa album.'));
+    }
+  },
+
+  /**
+   * Mở khóa Album (Admin)
+   */
+  async unlockAlbum(id, token) {
+    try {
+      const response = await api.put(`/${id}/unlock`, null, {
+        params: { token },
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không thể mở khóa album.'));
+    }
+  },
+};
+
+export default albumApi;
