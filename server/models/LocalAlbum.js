@@ -97,6 +97,22 @@ class LocalAlbum {
     const albums = JSON.parse(raw || '[]');
     return albums.map(a => new LocalAlbum(a));
   }
+
+  /**
+   * Xóa album theo ID
+   * @param {string} id
+   */
+  static async findByIdAndDelete(id) {
+    if (!id) return null;
+    ensureDbFile();
+    const raw = fs.readFileSync(DB_FILE_PATH, 'utf8');
+    const albums = JSON.parse(raw || '[]');
+    const index = albums.findIndex(a => a._id.toString() === id.toString());
+    if (index === -1) return null;
+    const [deleted] = albums.splice(index, 1);
+    fs.writeFileSync(DB_FILE_PATH, JSON.stringify(albums, null, 2), 'utf8');
+    return new LocalAlbum(deleted);
+  }
 }
 
 module.exports = LocalAlbum;

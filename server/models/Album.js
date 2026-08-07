@@ -64,6 +64,13 @@ class Album {
     }
     return await MongooseAlbum.find(query);
   }
+
+  static async findByIdAndDelete(id) {
+    if (global.useLocalDB) {
+      return await LocalAlbum.findByIdAndDelete(id);
+    }
+    return await MongooseAlbum.findByIdAndDelete(id);
+  }
 }
 
 module.exports = Album;

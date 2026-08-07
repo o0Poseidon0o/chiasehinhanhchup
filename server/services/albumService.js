@@ -55,7 +55,44 @@ const createAlbum = async (payload) => {
 };
 
 /**
- * 2. Lấy thông tin Album an toàn cho Khách hàng
+ * 2. Lấy danh sách tất cả Album cho Admin Dashboard
+ */
+const getAllAlbums = async (search = '') => {
+  const rawAlbums = await Album.find();
+  
+  // Sắp xếp theo ngày tạo mới nhất trước
+  let list = Array.isArray(rawAlbums) ? [...rawAlbums] : [];
+  list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+  // Lọc theo từ khóa tìm kiếm nếu có
+  if (search && search.trim()) {
+    const q = search.trim().toLowerCase();
+    list = list.filter(a => {
+      const titleMatch = (a.title || '').toLowerCase().includes(q);
+      const clientNameMatch = (a.clientInfo?.name || '').toLowerCase().includes(q);
+      const clientPhoneMatch = (a.clientInfo?.phone || '').toLowerCase().includes(q);
+      return titleMatch || clientNameMatch || clientPhoneMatch;
+    });
+  }
+
+  return list.map(a => ({
+    _id: a._id,
+    title: a.title,
+    status: a.status || 'selecting',
+    createdAt: a.createdAt,
+    hasPasscode: Boolean(a.passcode),
+    maxSelect: a.maxSelect || 0,
+    allowDownload: a.allowDownload !== undefined ? a.allowDownload : true,
+    allowComment: a.allowComment !== undefined ? a.allowComment : true,
+    imagesCount: Array.isArray(a.images) ? a.images.length : 0,
+    selectedCount: Array.isArray(a.selectedImages) ? a.selectedImages.length : 0,
+    clientInfo: a.clientInfo || { name: '', phone: '', note: '' },
+    manageToken: a.manageToken
+  }));
+};
+
+/**
+ * 3. Lấy thông tin Album an toàn cho Khách hàng
  */
 const getAlbumForClient = async (id, providedPasscode) => {
   const album = await Album.findById(id);
@@ -80,7 +117,7 @@ const getAlbumForClient = async (id, providedPasscode) => {
 };
 
 /**
- * 3. Xác thực mã PIN của Khách hàng
+ * 4. Xác thực mã PIN của Khách hàng
  */
 const verifyPasscode = async (id, passcode) => {
   const album = await Album.findById(id);
@@ -100,7 +137,7 @@ const verifyPasscode = async (id, passcode) => {
 };
 
 /**
- * 4. Khách hàng gửi chốt danh sách chọn ảnh
+ * 5. Khách hàng gửi chốt danh sách chọn ảnh
  */
 const submitSelection = async (id, payload) => {
   const { clientInfo, selectedImages } = payload;
@@ -155,7 +192,7 @@ const submitSelection = async (id, payload) => {
 };
 
 /**
- * 5. Lấy toàn bộ thông tin Album cho Admin quản trị
+ * 6. Lấy toàn bộ thông tin Album cho Admin quản trị
  */
 const getAlbumForAdmin = async (id, token) => {
   const album = await Album.findById(id);
@@ -165,7 +202,7 @@ const getAlbumForAdmin = async (id, token) => {
     throw error;
   }
 
-  if (album.manageToken !== token) {
+  if (token && album.manageToken !== token) {
     const error = new Error('Bạn không có quyền truy cập trang quản lý này (Token không đúng).');
     error.statusCode = 403;
     throw error;
@@ -175,7 +212,7 @@ const getAlbumForAdmin = async (id, token) => {
 };
 
 /**
- * 6. Khóa hoặc Mở khóa Album
+ * 7. Khóa hoặc Mở khóa Album
  */
 const toggleAlbumStatus = async (id, token, action) => {
   const album = await Album.findById(id);
@@ -185,7 +222,7 @@ const toggleAlbumStatus = async (id, token, action) => {
     throw error;
   }
 
-  if (album.manageToken !== token) {
+  if (token && album.manageToken !== token) {
     const error = new Error('Quyền truy cập bị từ chối.');
     error.statusCode = 403;
     throw error;
@@ -206,11 +243,62 @@ const toggleAlbumStatus = async (id, token, action) => {
   }
 };
 
+/**
+ * 8. Xóa một Album theo ID
+ */
+const deleteAlbum = async (id, token) => {
+  const album = await Album.findById(id);
+  if (!album) {
+    const error = new Error('Không tìm thấy Album để xóa.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (token && album.manageToken && album.manageToken !== token) {
+    const error = new Error('Mã Token quản lý không hợp lệ, không thể xóa album.');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  await Album.findByIdAndDelete(id);
+
+  return {
+    success: true,
+    message: `Đã xóa album "${album.title}" thành công để giải phóng bộ nhớ.`
+  };
+};
+
+/**
+ * 9. Xóa hàng loạt nhiều Album
+ */
+const deleteBulkAlbums = async (ids = []) => {
+  if (!Array.isArray(ids) || ids.length === 0) {
+    const error = new Error('Danh sách ID album cần xóa không hợp lệ.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  let deletedCount = 0;
+  for (const id of ids) {
+    const deleted = await Album.findByIdAndDelete(id);
+    if (deleted) deletedCount++;
+  }
+
+  return {
+    success: true,
+    deletedCount,
+    message: `Đã xóa thành công ${deletedCount} album để giải phóng dung lượng.`
+  };
+};
+
 module.exports = {
   createAlbum,
+  getAllAlbums,
   getAlbumForClient,
   verifyPasscode,
   submitSelection,
   getAlbumForAdmin,
-  toggleAlbumStatus
+  toggleAlbumStatus,
+  deleteAlbum,
+  deleteBulkAlbums
 };

@@ -5,6 +5,7 @@ import Footer from './components/common/Footer';
 import Home from './pages/Home';
 import AlbumView from './pages/AlbumView';
 import AdminManage from './pages/AdminManage';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   return (
@@ -17,6 +18,8 @@ function App() {
         <main className="flex-grow w-full max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/dashboard" element={<AdminDashboard />} />
             <Route path="/album/:id" element={<AlbumView />} />
             <Route path="/album/:id/manage" element={<AdminManage />} />
           </Routes>

@@ -384,8 +384,14 @@ export const Home = () => {
               </p>
             </div>
 
-            {/* Create Another Button */}
-            <div className="pt-2 flex justify-center">
+            {/* Action Buttons */}
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                to="/admin"
+                className="bg-gold-500 hover:bg-gold-400 text-gold-950 font-bold py-3 px-6 rounded-xl transition-all flex items-center space-x-2 text-xs shadow-md shadow-gold-500/10"
+              >
+                <span>Xem Tất Cả Album Trong Dashboard</span>
+              </Link>
               <button
                 onClick={resetForm}
                 className="bg-[#1a1816] hover:bg-[#221f1c] border border-[#2b2722] hover:border-gold-500/30 text-[#f5eedf] font-semibold py-3 px-6 rounded-xl transition-all flex items-center space-x-2 text-xs"
@@ -395,6 +401,19 @@ export const Home = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Footer shortcut to Dashboard */}
+      {!successData && (
+        <div className="text-center pt-2">
+          <Link
+            to="/admin"
+            className="inline-flex items-center space-x-2 text-xs text-[#a2998a] hover:text-gold-300 transition-colors"
+          >
+            <span>👉 Bạn muốn xem và xóa bớt các album cũ đã tạo?</span>
+            <strong className="text-gold-400 underline">Vào trang Quản Lý Album</strong>
+          </Link>
         </div>
       )}
     </div>

@@ -1,10 +1,11 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Camera, PlusCircle } from 'lucide-react';
+import { Camera, PlusCircle, FolderKanban } from 'lucide-react';
 
 export const Navbar = () => {
   const location = useLocation();
   const isHome = location.pathname === '/';
+  const isAdmin = location.pathname === '/admin' || location.pathname === '/dashboard';
 
   return (
     <header className="border-b border-[#221f1c] bg-[#0c0b0a]/80 backdrop-blur-md sticky top-0 z-30">
@@ -23,15 +24,30 @@ export const Navbar = () => {
           </div>
         </Link>
 
-        {!isHome && (
+        {/* Navigation links */}
+        <div className="flex items-center space-x-2.5">
           <Link 
-            to="/" 
-            className="flex items-center space-x-1.5 bg-[#161412] hover:bg-[#221f1c] border border-[#2b2722] hover:border-gold-500/40 text-gold-200 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200"
+            to="/admin" 
+            className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
+              isAdmin 
+                ? 'bg-gold-500 text-gold-950 shadow-md shadow-gold-500/10' 
+                : 'bg-[#161412] hover:bg-[#221f1c] border border-[#2b2722] hover:border-gold-500/40 text-gold-200'
+            }`}
           >
-            <PlusCircle className="w-4 h-4 text-gold-400" />
-            <span>Tạo Album Mới</span>
+            <FolderKanban className={`w-4 h-4 ${isAdmin ? 'text-gold-950' : 'text-gold-400'}`} />
+            <span>Quản Lý Album</span>
           </Link>
-        )}
+
+          {!isHome && (
+            <Link 
+              to="/" 
+              className="flex items-center space-x-1.5 bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-gold-950 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 shadow-md shadow-gold-500/10"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Tạo Mới</span>
+            </Link>
+          )}
+        </div>
       </div>
     </header>
   );

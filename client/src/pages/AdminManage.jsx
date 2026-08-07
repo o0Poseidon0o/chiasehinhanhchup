@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, Lock, Unlock, RefreshCw, AlertCircle, Info } from 'lucide-react';
+import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Lock, Unlock, RefreshCw, AlertCircle, Info, Trash2, FolderKanban, AlertTriangle } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { AdminSettingsCard } from '../components/admin/AdminSettingsCard';
@@ -12,12 +12,15 @@ import { LightboxModal } from '../components/album/LightboxModal';
 export const AdminManage = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const token = searchParams.get('token');
 
   const [album, setAlbum] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [lightboxIndex, setLightboxIndex] = useState(-1);
 
@@ -66,6 +69,21 @@ export const AdminManage = () => {
     }
   };
 
+  /**
+   * Xử lý Xóa album để giải phóng bộ nhớ
+   */
+  const handleDeleteAlbum = async () => {
+    try {
+      setDeleteLoading(true);
+      await albumApi.deleteAlbum(id, token);
+      navigate('/admin');
+    } catch (err) {
+      alert(err.message || 'Lỗi khi xóa album.');
+      setDeleteLoading(false);
+      setShowDeleteModal(false);
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner message="Đang tải dữ liệu quản trị album..." />;
   }
@@ -78,12 +96,21 @@ export const AdminManage = () => {
         </div>
         <h2 className="text-xl font-bold text-red-300">Quyền truy cập bị từ chối</h2>
         <p className="text-sm text-[#a2998a] leading-relaxed">{error}</p>
-        <Link
-          to="/"
-          className="inline-block bg-[#1a1816] hover:bg-[#221f1c] border border-[#2b2722] text-[#f5eedf] px-6 py-2.5 rounded-xl text-xs font-semibold transition-all"
-        >
-          Quay lại Trang Chủ
-        </Link>
+        <div className="flex items-center justify-center gap-3">
+          <Link
+            to="/admin"
+            className="inline-flex items-center space-x-1.5 bg-[#1a1816] hover:bg-[#221f1c] border border-[#2b2722] text-gold-300 px-5 py-2.5 rounded-xl text-xs font-semibold transition-all"
+          >
+            <FolderKanban className="w-4 h-4" />
+            <span>Quản Lý Album</span>
+          </Link>
+          <Link
+            to="/"
+            className="inline-block bg-[#1a1816] hover:bg-[#221f1c] border border-[#2b2722] text-[#f5eedf] px-5 py-2.5 rounded-xl text-xs font-semibold transition-all"
+          >
+            Trang Chủ
+          </Link>
+        </div>
       </div>
     );
   }
@@ -98,22 +125,22 @@ export const AdminManage = () => {
         <div className="space-y-1">
           <div className="flex items-center space-x-2">
             <Link
-              to="/"
+              to="/admin"
               className="text-xs text-[#a2998a] hover:text-gold-400 flex items-center space-x-1 transition-colors"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Trang chủ</span>
+              <FolderKanban className="w-3.5 h-3.5" />
+              <span>Tất cả Album</span>
             </Link>
             <span className="text-[#6e665a]">•</span>
             <span className="text-xs text-gold-400 font-semibold uppercase tracking-wider">
-              Trang Quản Trị Album
+              Chi Tiết Quản Trị
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-gold-100">{album.title}</h1>
         </div>
 
-        {/* Action buttons: Lock/Unlock + Refresh */}
-        <div className="flex items-center gap-2">
+        {/* Action buttons: Lock/Unlock + Delete + Refresh */}
+        <div className="flex flex-wrap items-center gap-2">
           {album.status === 'selecting' ? (
             <button
               disabled={actionLoading}
@@ -121,7 +148,7 @@ export const AdminManage = () => {
               className="bg-red-950/40 border border-red-500/30 text-red-400 hover:bg-red-900/40 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all shadow-sm disabled:opacity-50"
             >
               <Lock className="w-3.5 h-3.5" />
-              <span>Khóa Album Khách</span>
+              <span>Khóa Album</span>
             </button>
           ) : (
             <button
@@ -133,6 +160,15 @@ export const AdminManage = () => {
               <span>Mở Khóa Album</span>
             </button>
           )}
+
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="bg-rose-950/30 border border-rose-600/30 text-rose-400 hover:bg-rose-900/40 px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all"
+            title="Xóa album để giải phóng bộ nhớ"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Xóa Album</span>
+          </button>
 
           <button
             onClick={fetchAlbumManageData}
@@ -189,6 +225,61 @@ export const AdminManage = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal Xác Nhận Xóa Album */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#181512] border border-[#2e2821] max-w-md w-full rounded-3xl p-6 shadow-2xl space-y-5">
+            <div className="flex items-center space-x-3 text-rose-400">
+              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-2xl">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg text-rose-200">Xác Nhận Xóa Album</h3>
+                <span className="text-xs text-rose-400/80">Giải phóng dung lượng lưu trữ</span>
+              </div>
+            </div>
+
+            <div className="text-sm text-[#cfc5b4] bg-[#100e0c] p-4 rounded-2xl border border-[#26211a] space-y-2">
+              <p>
+                Bạn có chắc chắn muốn xóa album <strong className="text-gold-200">"{album.title}"</strong> không?
+              </p>
+              <p className="text-xs text-[#8e8474]">
+                Sau khi xóa, link chọn ảnh của khách hàng sẽ ngừng hoạt động.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deleteLoading}
+                className="px-4 py-2.5 rounded-xl bg-[#221f1c] hover:bg-[#2c2723] text-[#a2998a] hover:text-[#cfc5b4] text-xs font-semibold transition-colors"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAlbum}
+                disabled={deleteLoading}
+                className="flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-lg shadow-rose-600/20 disabled:opacity-50"
+              >
+                {deleteLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Đang xóa...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Xác nhận xóa</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Lightbox Modal cho Admin xem ảnh phóng to kèm ghi chú */}
       {lightboxIndex >= 0 && selectedCount > 0 && (

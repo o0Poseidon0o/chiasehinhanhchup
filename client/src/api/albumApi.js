@@ -27,6 +27,20 @@ export const albumApi = {
   },
 
   /**
+   * Lấy danh sách tất cả các Album (Admin Dashboard)
+   */
+  async getAll(search = '') {
+    try {
+      const response = await api.get('/', {
+        params: search ? { search } : {},
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không thể tải danh sách album.'));
+    }
+  },
+
+  /**
    * Lấy thông tin Album cho khách hàng xem & chọn ảnh
    */
   async getById(id, passcode = '') {
@@ -107,6 +121,32 @@ export const albumApi = {
       throw new Error(extractErrorMessage(error, 'Không thể mở khóa album.'));
     }
   },
+
+  /**
+   * Xóa một Album để giải phóng bộ nhớ
+   */
+  async deleteAlbum(id, token = '') {
+    try {
+      const response = await api.delete(`/${id}`, {
+        params: token ? { token } : {},
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không thể xóa album.'));
+    }
+  },
+
+  /**
+   * Xóa nhiều Album hàng loạt
+   */
+  async deleteBulk(ids = []) {
+    try {
+      const response = await api.post('/bulk-delete', { ids });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không thể xóa các album đã chọn.'));
+    }
+  }
 };
 
 export default albumApi;

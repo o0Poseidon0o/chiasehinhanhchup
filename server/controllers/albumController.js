@@ -15,6 +15,21 @@ const createAlbum = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc    Lấy danh sách tất cả các Album (Admin Dashboard)
+ * @route   GET /api/albums
+ * @access  Public / Admin
+ */
+const getAlbums = asyncHandler(async (req, res) => {
+  const { search } = req.query;
+  const albums = await albumService.getAllAlbums(search);
+  res.status(200).json({
+    success: true,
+    count: albums.length,
+    data: albums
+  });
+});
+
+/**
  * @desc    Lấy thông tin Album cho khách hàng
  * @route   GET /api/albums/:id
  * @access  Public (Protected by optional passcode)
@@ -57,11 +72,11 @@ const submitSelection = asyncHandler(async (req, res) => {
 /**
  * @desc    Lấy dữ liệu quản trị Album (Admin)
  * @route   GET /api/albums/:id/manage
- * @access  Private (Manage Token required)
+ * @access  Private (Manage Token)
  */
 const getManageAlbum = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const token = req.manageToken;
+  const token = req.manageToken || req.query.token || req.headers['x-manage-token'];
   
   const album = await albumService.getAlbumForAdmin(id, token);
   res.status(200).json({
@@ -77,7 +92,7 @@ const getManageAlbum = asyncHandler(async (req, res) => {
  */
 const lockAlbum = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const token = req.manageToken;
+  const token = req.manageToken || req.query.token || req.headers['x-manage-token'];
   
   const result = await albumService.toggleAlbumStatus(id, token, 'lock');
   res.status(200).json({
@@ -93,7 +108,7 @@ const lockAlbum = asyncHandler(async (req, res) => {
  */
 const unlockAlbum = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const token = req.manageToken;
+  const token = req.manageToken || req.query.token || req.headers['x-manage-token'];
   
   const result = await albumService.toggleAlbumStatus(id, token, 'unlock');
   res.status(200).json({
@@ -102,12 +117,39 @@ const unlockAlbum = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * @desc    Xóa Album để giải phóng bộ nhớ
+ * @route   DELETE /api/albums/:id
+ * @access  Public / Admin
+ */
+const deleteAlbum = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const token = req.manageToken || req.query.token || req.headers['x-manage-token'];
+
+  const result = await albumService.deleteAlbum(id, token);
+  res.status(200).json(result);
+});
+
+/**
+ * @desc    Xóa hàng loạt nhiều Album
+ * @route   POST /api/albums/bulk-delete
+ * @access  Public / Admin
+ */
+const deleteBulkAlbums = asyncHandler(async (req, res) => {
+  const { ids } = req.body;
+  const result = await albumService.deleteBulkAlbums(ids);
+  res.status(200).json(result);
+});
+
 module.exports = {
   createAlbum,
+  getAlbums,
   getAlbum,
   verifyPasscode,
   submitSelection,
   getManageAlbum,
   lockAlbum,
-  unlockAlbum
+  unlockAlbum,
+  deleteAlbum,
+  deleteBulkAlbums
 };
