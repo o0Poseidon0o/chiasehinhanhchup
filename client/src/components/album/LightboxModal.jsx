@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, Heart, MessageSquare, Download } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, ChevronLeft, ChevronRight, Heart, MessageSquare, Download, Check, Edit2, Trash2 } from 'lucide-react';
 
 export const LightboxModal = ({
   images = [],
@@ -20,9 +20,38 @@ export const LightboxModal = ({
   const isSelected = selectedPhotos.some((p) => p.fileId === currentImage.fileId);
   const currentComment = comments[currentImage.fileId] || '';
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(currentComment);
+
+  // Đồng bộ draft khi đổi ảnh hoặc comment thay đổi
+  useEffect(() => {
+    setDraft(currentComment);
+    setIsEditing(false);
+  }, [currentIndex, currentComment]);
+
+  const handleSave = () => {
+    if (isClosed) return;
+    if (onCommentChange) {
+      onCommentChange(currentImage.fileId, draft.trim(), true);
+    }
+    setIsEditing(false);
+  };
+
+  const handleDelete = () => {
+    if (isClosed) return;
+    setDraft('');
+    if (onCommentChange) {
+      onCommentChange(currentImage.fileId, '');
+    }
+    setIsEditing(false);
+  };
+
   // Bắt sự kiện phím bấm bàn phím (Left, Right, Escape)
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Không chuyển ảnh nếu đang gõ chữ trong ô ghi chú
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
       if (e.key === 'Escape') {
         onClose();
       } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
@@ -95,7 +124,7 @@ export const LightboxModal = ({
           <ChevronLeft className="w-6 h-6" />
         </button>
 
-        <div className="w-full h-[72vh] flex items-center justify-center p-2">
+        <div className="w-full h-[70vh] flex items-center justify-center p-2">
           <img
             src={currentImage.embedUrl || currentImage.thumbnailUrl}
             alt={currentImage.fileName}
@@ -114,20 +143,59 @@ export const LightboxModal = ({
 
       {/* Lightbox Footer Ghi chú */}
       {allowComment && (
-        <div className="p-4 bg-[#0c0b0a] border-t border-[#221f1c]">
+        <div className="p-3 sm:p-4 bg-[#0c0b0a] border-t border-[#221f1c]">
           <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center gap-3">
             <div className="flex items-center space-x-1.5 text-gold-400 text-xs font-semibold shrink-0">
               <MessageSquare className="w-4 h-4" />
               <span>Ghi chú sửa ảnh:</span>
             </div>
-            <input
-              type="text"
-              disabled={isClosed}
-              value={currentComment}
-              onChange={(e) => onCommentChange && onCommentChange(currentImage.fileId, e.target.value)}
-              placeholder="Nhập yêu cầu chỉnh sửa cho bức ảnh này (ví dụ: bóp eo, xóa người nền...)"
-              className="flex-grow w-full bg-[#161412] border border-[#2b2722] rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-gold-500 text-[#f5eedf]"
-            />
+
+            {currentComment && !isEditing ? (
+              <div className="flex-grow w-full flex items-center justify-between bg-[#161412] border border-[#2b2722] rounded-xl px-4 py-2 text-xs">
+                <span className="text-[#f5eedf] italic truncate">"{currentComment}"</span>
+                {!isClosed && (
+                  <div className="flex items-center space-x-2 shrink-0 ml-2">
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="px-2.5 py-1 bg-gold-500/15 hover:bg-gold-500/25 border border-gold-500/40 text-gold-300 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                      <span>Sửa</span>
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      className="px-2.5 py-1 bg-red-950/30 hover:bg-red-900/40 border border-red-500/30 text-rose-300 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Xóa</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex-grow w-full flex items-center gap-2">
+                <input
+                  type="text"
+                  disabled={isClosed}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder="Nhập yêu cầu chỉnh sửa (ví dụ: bóp eo, xóa mụn, làm sáng...)"
+                  className="flex-grow bg-[#161412] border border-[#2b2722] rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-gold-500 text-[#f5eedf]"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSave();
+                  }}
+                />
+                {!isClosed && (
+                  <button
+                    onClick={handleSave}
+                    className="px-4 py-2 bg-gold-500 hover:bg-gold-400 text-gold-950 font-bold text-xs rounded-xl transition-all shrink-0 flex items-center space-x-1 shadow-md"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Lưu Ghi Chú</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -136,3 +204,4 @@ export const LightboxModal = ({
 };
 
 export default LightboxModal;
+

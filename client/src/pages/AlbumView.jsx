@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowRight, Info, AlertCircle, RefreshCw, Image as ImageIcon } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
@@ -34,8 +34,16 @@ export const AlbumView = () => {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Ref theo dõi việc khởi tạo các ảnh đã được lưu sẵn từ trước (tránh nạp đè state khi user đang thao tác)
+  const hasInitializedRef = useRef(false);
+
+  // Reset initialized flag khi đổi id album
+  useEffect(() => {
+    hasInitializedRef.current = false;
+  }, [id]);
+
   /**
-   * Tải thông tin album từ API
+   * Tải thông tin album từ API (không phụ thuộc vào selectedPhotos.length để không làm reload trang khi tick ảnh)
    */
   const fetchAlbum = useCallback(async (currentPasscode = '', isSilent = false) => {
     try {
@@ -54,8 +62,13 @@ export const AlbumView = () => {
         setNeedsPasscode(false);
         setAlbum(data.album);
 
-        // Nạp lại các ảnh đã chọn nếu đã submit trước đó và chưa có lựa chọn tạm
-        if (data.album.selectedImages && data.album.selectedImages.length > 0 && selectedPhotos.length === 0) {
+        // Nạp lại các ảnh đã chọn duy nhất 1 lần đầu khi mở album
+        if (
+          data.album.selectedImages &&
+          data.album.selectedImages.length > 0 &&
+          !hasInitializedRef.current
+        ) {
+          hasInitializedRef.current = true;
           setSelectedPhotos(data.album.selectedImages);
           const initialComments = {};
           data.album.selectedImages.forEach((img) => {
@@ -70,7 +83,7 @@ export const AlbumView = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [id, selectedPhotos.length]);
+  }, [id]);
 
   // Kiểm tra passcode đã lưu trong sessionStorage khi mount & tự động đồng bộ
   useEffect(() => {
@@ -145,14 +158,28 @@ export const AlbumView = () => {
   };
 
   /**
-   * Cập nhật ghi chú cho từng ảnh
+   * Cập nhật ghi chú cho từng ảnh (có tự động tick chọn ảnh nếu người dùng thêm ghi chú)
    */
-  const handleCommentChange = (fileId, text) => {
+  const handleCommentChange = (fileId, text, autoSelect = false) => {
     if (isClosed) return;
-    setComments(prev => ({ ...prev, [fileId]: text }));
-    setSelectedPhotos(prev =>
-      prev.map((p) => (p.fileId === fileId ? { ...p, comment: text } : p))
-    );
+
+    setComments((prev) => ({ ...prev, [fileId]: text }));
+
+    setSelectedPhotos((prev) => {
+      const exists = prev.some((p) => p.fileId === fileId);
+      if (exists) {
+        return prev.map((p) => (p.fileId === fileId ? { ...p, comment: text } : p));
+      } else if (autoSelect && text.trim().length > 0 && album?.images) {
+        const targetImg = album.images.find((img) => img.fileId === fileId);
+        if (targetImg) {
+          if (album.maxSelect > 0 && prev.length >= album.maxSelect) {
+            return prev;
+          }
+          return [...prev, { ...targetImg, comment: text }];
+        }
+      }
+      return prev;
+    });
   };
 
   /**
@@ -178,14 +205,14 @@ export const AlbumView = () => {
         fileName: p.fileName,
         thumbnailUrl: p.thumbnailUrl,
         embedUrl: p.embedUrl,
-        comment: (comments[p.fileId] !== undefined ? comments[p.fileId] : p.comment) || ''
+        comment: (comments[p.fileId] !== undefined ? comments[p.fileId] : p.comment) || '',
       }));
 
       await albumApi.submitSelection(id, {
         clientInfo: {
           name: clientInfo.name.trim(),
           phone: clientInfo.phone.trim(),
-          note: (clientInfo.note || '').trim()
+          note: (clientInfo.note || '').trim(),
         },
         selectedImages: payloadImages,
       });
@@ -314,7 +341,10 @@ export const AlbumView = () => {
               isSelected={isSelected}
               isClosed={isClosed}
               comment={comments[image.fileId]}
+              allowComment={album.allowComment}
+              allowDownload={album.allowDownload}
               onToggleSelect={handleToggleSelect}
+              onCommentChange={handleCommentChange}
               onOpenLightbox={setLightboxIndex}
             />
           );
@@ -368,3 +398,4 @@ export const AlbumView = () => {
 };
 
 export default AlbumView;
+
