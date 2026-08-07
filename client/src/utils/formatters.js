@@ -31,23 +31,16 @@ export const cleanFileName = (fileName) => {
 };
 
 /**
- * Lấy Public URL chuẩn hóa (loại bỏ hash preview của Vercel để khách không bị bắt login)
+ * Lấy Public URL chuẩn hóa (tự động loại bỏ suffix team/preview Vercel để link luôn công khai, không bắt đăng nhập)
  */
 export const getPublicBaseUrl = () => {
   if (typeof window === 'undefined') return '';
-  const origin = window.location.origin;
+  let origin = window.location.origin;
+
+  // Loại bỏ các suffix team / preview như -lenhans-projects.vercel.app -> .vercel.app
+  // Ví dụ: https://chiasehinhanhchup-lenhans-projects.vercel.app -> https://chiasehinhanhchup.vercel.app
+  origin = origin.replace(/-[a-zA-Z0-9_-]+-projects\.vercel\.app$/i, '.vercel.app');
+  origin = origin.replace(/-git-[a-zA-Z0-9_-]+\.vercel\.app$/i, '.vercel.app');
   
-  // project-commitHash-team.vercel.app -> project-team.vercel.app
-  const previewRegex = /^https:\/\/([a-zA-Z0-9_-]+)-[a-zA-Z0-9]{8,12}-([a-zA-Z0-9_-]+)\.vercel\.app$/;
-  if (previewRegex.test(origin)) {
-    return origin.replace(previewRegex, 'https://$1-$2.vercel.app');
-  }
-
-  // project-git-branch-team.vercel.app -> project-team.vercel.app
-  const gitBranchRegex = /^https:\/\/([a-zA-Z0-9_-]+)-git-[a-zA-Z0-9_-]+-([a-zA-Z0-9_-]+)\.vercel\.app$/;
-  if (gitBranchRegex.test(origin)) {
-    return origin.replace(gitBranchRegex, 'https://$1-$2.vercel.app');
-  }
-
   return origin;
 };
