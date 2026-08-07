@@ -7,15 +7,64 @@ const DB_FILE_PATH = process.env.VERCEL
   : path.join(__dirname, '../data/albums.json');
 
 /**
- * Đảm bảo file JSON và thư mục tồn tại
+ * Đảm bảo file JSON và thư mục tồn tại, đồng thời hợp lệ
  */
 const ensureDbFile = () => {
-  const dir = path.dirname(DB_FILE_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+  try {
+    const dir = path.dirname(DB_FILE_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    if (!fs.existsSync(DB_FILE_PATH)) {
+      fs.writeFileSync(DB_FILE_PATH, JSON.stringify([], null, 2), 'utf8');
+    }
+  } catch (err) {
+    console.error('ensureDbFile error:', err.message);
   }
-  if (!fs.existsSync(DB_FILE_PATH)) {
-    fs.writeFileSync(DB_FILE_PATH, JSON.stringify([], null, 2), 'utf8');
+};
+
+/**
+ * Đọc dữ liệu từ file JSON một cách an toàn tuyệt đối
+ * @returns {Array<Object>}
+ */
+const readDb = () => {
+  ensureDbFile();
+  try {
+    const raw = fs.readFileSync(DB_FILE_PATH, 'utf8');
+    if (!raw || typeof raw !== 'string') {
+      return [];
+    }
+    const trimmed = raw.trim();
+    if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
+      writeDb([]);
+      return [];
+    }
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+    writeDb([]);
+    return [];
+  } catch (err) {
+    console.error('Lỗi khi đọc file CSDL LocalAlbum, tự động reset về []:', err.message);
+    try {
+      writeDb([]);
+    } catch (_) {}
+    return [];
+  }
+};
+
+/**
+ * Ghi dữ liệu vào file JSON một cách an toàn
+ * @param {Array<Object>} albums 
+ */
+const writeDb = (albums) => {
+  ensureDbFile();
+  const safeData = Array.isArray(albums) ? albums : [];
+  try {
+    fs.writeFileSync(DB_FILE_PATH, JSON.stringify(safeData, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Lỗi khi ghi file CSDL LocalAlbum:', err.message);
   }
 };
 
@@ -25,18 +74,18 @@ const ensureDbFile = () => {
 class LocalAlbum {
   constructor(data = {}) {
     this._id = data._id || crypto.randomBytes(12).toString('hex');
-    this.title = data.title;
-    this.driveFolderUrl = data.driveFolderUrl;
-    this.driveFolderId = data.driveFolderId;
+    this.title = data.title || 'Album';
+    this.driveFolderUrl = data.driveFolderUrl || '';
+    this.driveFolderId = data.driveFolderId || '';
     this.passcode = data.passcode || '';
-    this.manageToken = data.manageToken;
-    this.maxSelect = data.maxSelect || 0;
-    this.allowDownload = data.allowDownload !== undefined ? data.allowDownload : true;
-    this.allowComment = data.allowComment !== undefined ? data.allowComment : true;
+    this.manageToken = data.manageToken || crypto.randomBytes(16).toString('hex');
+    this.maxSelect = Number(data.maxSelect) || 0;
+    this.allowDownload = data.allowDownload !== undefined ? Boolean(data.allowDownload) : true;
+    this.allowComment = data.allowComment !== undefined ? Boolean(data.allowComment) : true;
     this.status = data.status || 'selecting';
     this.clientInfo = data.clientInfo || { name: '', phone: '', note: '' };
-    this.images = data.images || [];
-    this.selectedImages = data.selectedImages || [];
+    this.images = Array.isArray(data.images) ? data.images : [];
+    this.selectedImages = Array.isArray(data.selectedImages) ? data.selectedImages : [];
     this.createdAt = data.createdAt ? new Date(data.createdAt) : new Date();
   }
 
@@ -44,10 +93,8 @@ class LocalAlbum {
    * Lưu hoặc cập nhật album vào file JSON
    */
   async save() {
-    ensureDbFile();
-    const raw = fs.readFileSync(DB_FILE_PATH, 'utf8');
-    const albums = JSON.parse(raw || '[]');
-    const index = albums.findIndex(a => a._id.toString() === this._id.toString());
+    const albums = readDb();
+    const index = albums.findIndex(a => a && a._id && a._id.toString() === this._id.toString());
 
     const serialized = {
       _id: this._id,
@@ -72,7 +119,7 @@ class LocalAlbum {
       albums.push(serialized);
     }
 
-    fs.writeFileSync(DB_FILE_PATH, JSON.stringify(albums, null, 2), 'utf8');
+    writeDb(albums);
     return this;
   }
 
@@ -82,10 +129,8 @@ class LocalAlbum {
    */
   static async findById(id) {
     if (!id) return null;
-    ensureDbFile();
-    const raw = fs.readFileSync(DB_FILE_PATH, 'utf8');
-    const albums = JSON.parse(raw || '[]');
-    const found = albums.find(a => a._id.toString() === id.toString());
+    const albums = readDb();
+    const found = albums.find(a => a && a._id && a._id.toString() === id.toString());
     if (!found) return null;
     return new LocalAlbum(found);
   }
@@ -94,10 +139,10 @@ class LocalAlbum {
    * Lấy danh sách tất cả album
    */
   static async find() {
-    ensureDbFile();
-    const raw = fs.readFileSync(DB_FILE_PATH, 'utf8');
-    const albums = JSON.parse(raw || '[]');
-    return albums.map(a => new LocalAlbum(a));
+    const albums = readDb();
+    return albums
+      .filter(a => a && a._id)
+      .map(a => new LocalAlbum(a));
   }
 
   /**
@@ -106,13 +151,11 @@ class LocalAlbum {
    */
   static async findByIdAndDelete(id) {
     if (!id) return null;
-    ensureDbFile();
-    const raw = fs.readFileSync(DB_FILE_PATH, 'utf8');
-    const albums = JSON.parse(raw || '[]');
-    const index = albums.findIndex(a => a._id.toString() === id.toString());
+    const albums = readDb();
+    const index = albums.findIndex(a => a && a._id && a._id.toString() === id.toString());
     if (index === -1) return null;
     const [deleted] = albums.splice(index, 1);
-    fs.writeFileSync(DB_FILE_PATH, JSON.stringify(albums, null, 2), 'utf8');
+    writeDb(albums);
     return new LocalAlbum(deleted);
   }
 }

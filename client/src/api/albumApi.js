@@ -99,7 +99,7 @@ export const albumApi = {
    */
   async lockAlbum(id, token) {
     try {
-      const response = await api.put(`/${id}/lock`, null, {
+      const response = await api.put(`/${id}/lock`, {}, {
         params: { token },
       });
       return response.data;
@@ -113,7 +113,7 @@ export const albumApi = {
    */
   async unlockAlbum(id, token) {
     try {
-      const response = await api.put(`/${id}/unlock`, null, {
+      const response = await api.put(`/${id}/unlock`, {}, {
         params: { token },
       });
       return response.data;
@@ -153,7 +153,7 @@ export const albumApi = {
    */
   async syncDrivePhotos(id, token = '') {
     try {
-      const response = await api.post(`/${id}/sync`, null, {
+      const response = await api.post(`/${id}/sync`, {}, {
         params: token ? { token } : {},
       });
       return response.data;
