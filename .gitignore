@@ -38,3 +38,5 @@ ehthumbs.db
 Thumbs.db
 .vscode/
 .idea/
+*.timestamp-*.mjs
+*.timestamp-*.js
