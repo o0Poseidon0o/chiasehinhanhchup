@@ -70,11 +70,25 @@ export const SubmitModal = ({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Thông báo nếu thông tin đã được Studio nhập sẵn */}
+          {(initialClientInfo?.name || initialClientInfo?.phone) && (
+            <div className="bg-gold-500/10 border border-gold-500/20 rounded-xl p-3 text-xs text-gold-300 flex items-start space-x-2">
+              <CheckCircle2 className="w-4 h-4 text-gold-400 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                Studio đã nhập sẵn thông tin của bạn. Vui lòng xác nhận và bấm <strong>GỬI LỰA CHỌN</strong>.
+              </div>
+            </div>
+          )}
+
           {/* Họ tên */}
           <div className="space-y-1.5">
             <label className="block text-xs uppercase tracking-wider text-[#a2998a] font-semibold flex items-center justify-between">
               <span>Họ và tên của bạn</span>
-              <span className="text-[10px] text-[#70685c] font-normal lowercase">(tùy chọn)</span>
+              {initialClientInfo?.name ? (
+                <span className="text-[10px] text-gold-400 font-normal lowercase">(Studio đã điền)</span>
+              ) : (
+                <span className="text-[10px] text-[#70685c] font-normal lowercase">(tùy chọn)</span>
+              )}
             </label>
             <div className="relative">
               <User className="absolute left-3.5 top-3 w-4 h-4 text-gold-400/60" />
@@ -93,7 +107,11 @@ export const SubmitModal = ({
           <div className="space-y-1.5">
             <label className="block text-xs uppercase tracking-wider text-[#a2998a] font-semibold flex items-center justify-between">
               <span>Số điện thoại liên hệ</span>
-              <span className="text-[10px] text-[#70685c] font-normal lowercase">(tùy chọn)</span>
+              {initialClientInfo?.phone ? (
+                <span className="text-[10px] text-gold-400 font-normal lowercase">(Studio đã điền)</span>
+              ) : (
+                <span className="text-[10px] text-[#70685c] font-normal lowercase">(tùy chọn)</span>
+              )}
             </label>
             <div className="relative">
               <Phone className="absolute left-3.5 top-3 w-4 h-4 text-gold-400/60" />

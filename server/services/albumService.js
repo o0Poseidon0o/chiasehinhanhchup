@@ -6,7 +6,7 @@ const { generateToken, sanitizeAlbumForClient } = require('../utils/helpers');
  * 1. Tạo mới một Album từ đường link Google Drive
  */
 const createAlbum = async (payload) => {
-  const { title, driveFolderUrl, passcode, maxSelect, allowDownload, allowComment } = payload;
+  const { title, driveFolderUrl, passcode, maxSelect, allowDownload, allowComment, clientName, clientPhone, clientNote, clientInfo } = payload;
 
   let folderId = 'mock-demo';
   let images = [];
@@ -32,6 +32,12 @@ const createAlbum = async (payload) => {
 
   const manageToken = generateToken(16);
 
+  const initialClientInfo = {
+    name: (clientName || clientInfo?.name || '').trim(),
+    phone: (clientPhone || clientInfo?.phone || '').trim(),
+    note: (clientNote || clientInfo?.note || '').trim()
+  };
+
   const newAlbum = new Album({
     title: title.trim(),
     driveFolderUrl: driveFolderUrl.trim(),
@@ -41,6 +47,7 @@ const createAlbum = async (payload) => {
     maxSelect: Number(maxSelect) || 0,
     allowDownload: allowDownload !== undefined ? Boolean(allowDownload) : true,
     allowComment: allowComment !== undefined ? Boolean(allowComment) : true,
+    clientInfo: initialClientInfo,
     images
   });
 
@@ -221,9 +228,9 @@ const submitSelection = async (id, payload) => {
 
   album.selectedImages = mappedSelectedImages;
   album.clientInfo = {
-    name: (clientInfo && clientInfo.name) ? clientInfo.name.trim() : 'Khách hàng',
-    phone: (clientInfo && clientInfo.phone) ? clientInfo.phone.trim() : '',
-    note: (clientInfo && clientInfo.note) ? clientInfo.note.trim() : '',
+    name: (clientInfo && clientInfo.name && clientInfo.name.trim()) ? clientInfo.name.trim() : (album.clientInfo?.name || 'Khách hàng'),
+    phone: (clientInfo && clientInfo.phone && clientInfo.phone.trim()) ? clientInfo.phone.trim() : (album.clientInfo?.phone || ''),
+    note: (clientInfo && clientInfo.note && clientInfo.note.trim()) ? clientInfo.note.trim() : (album.clientInfo?.note || ''),
     submittedAt: new Date()
   };
   album.status = 'submitted';
@@ -466,6 +473,15 @@ const updateAlbumSettings = async (id, token, settings = {}) => {
 
   if (settings.passcode !== undefined) {
     album.passcode = String(settings.passcode).trim();
+  }
+
+  if (settings.clientName !== undefined || settings.clientPhone !== undefined || settings.clientNote !== undefined || settings.clientInfo !== undefined) {
+    album.clientInfo = {
+      name: settings.clientName !== undefined ? String(settings.clientName).trim() : (settings.clientInfo?.name !== undefined ? String(settings.clientInfo.name).trim() : (album.clientInfo?.name || '')),
+      phone: settings.clientPhone !== undefined ? String(settings.clientPhone).trim() : (settings.clientInfo?.phone !== undefined ? String(settings.clientInfo.phone).trim() : (album.clientInfo?.phone || '')),
+      note: settings.clientNote !== undefined ? String(settings.clientNote).trim() : (settings.clientInfo?.note !== undefined ? String(settings.clientInfo.note).trim() : (album.clientInfo?.note || '')),
+      submittedAt: album.clientInfo?.submittedAt
+    };
   }
 
   if (settings.status !== undefined && ['selecting', 'submitted', 'locked'].includes(settings.status)) {

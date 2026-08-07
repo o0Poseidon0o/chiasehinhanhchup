@@ -11,7 +11,9 @@ import {
   FileText, 
   Loader2, 
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  User,
+  Phone
 } from 'lucide-react';
 import { albumApi } from '../../api/albumApi';
 
@@ -24,6 +26,9 @@ export const EditAlbumModal = ({
 }) => {
   const [formData, setFormData] = useState({
     title: '',
+    clientName: '',
+    clientPhone: '',
+    clientNote: '',
     maxSelect: 0,
     allowDownload: true,
     allowComment: true,
@@ -39,6 +44,9 @@ export const EditAlbumModal = ({
     if (album) {
       setFormData({
         title: album.title || '',
+        clientName: album.clientInfo?.name || '',
+        clientPhone: album.clientInfo?.phone || '',
+        clientNote: album.clientInfo?.note || '',
         maxSelect: album.maxSelect !== undefined ? album.maxSelect : 0,
         allowDownload: album.allowDownload !== undefined ? album.allowDownload : true,
         allowComment: album.allowComment !== undefined ? album.allowComment : true,
@@ -72,6 +80,9 @@ export const EditAlbumModal = ({
       const manageToken = token || album.manageToken;
       const res = await albumApi.updateSettings(album._id || album.id, manageToken, {
         title: formData.title,
+        clientName: formData.clientName,
+        clientPhone: formData.clientPhone,
+        clientNote: formData.clientNote,
         maxSelect: Number(formData.maxSelect) || 0,
         allowDownload: formData.allowDownload,
         allowComment: formData.allowComment,
@@ -146,6 +157,54 @@ export const EditAlbumModal = ({
               className="w-full bg-[#0c0d10] border border-[#242938] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-gold-500 transition-colors"
               placeholder="Tên album..."
             />
+          </div>
+
+          {/* Thông tin Khách Hàng */}
+          <div className="p-4 rounded-2xl bg-[#0c0d10]/80 border border-[#242938] space-y-3">
+            <div className="flex items-center space-x-2 border-b border-[#1b1f2e] pb-2">
+              <User className="w-4 h-4 text-gold-400" />
+              <span className="text-xs font-bold text-white uppercase tracking-wider">
+                Thông Tin Khách Hàng
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Tên khách */}
+              <div className="space-y-1">
+                <label className="block text-[11px] text-[#94a3b8]">Tên Khách Hàng / Cặp Đôi</label>
+                <input
+                  type="text"
+                  value={formData.clientName}
+                  onChange={(e) => handleChange('clientName', e.target.value)}
+                  placeholder="Anh Hoàng & Chị Mai"
+                  className="w-full bg-[#141720] border border-[#242938] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-gold-500"
+                />
+              </div>
+
+              {/* SĐT */}
+              <div className="space-y-1">
+                <label className="block text-[11px] text-[#94a3b8]">Số điện thoại / Zalo</label>
+                <input
+                  type="text"
+                  value={formData.clientPhone}
+                  onChange={(e) => handleChange('clientPhone', e.target.value)}
+                  placeholder="0912 345 678"
+                  className="w-full bg-[#141720] border border-[#242938] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-gold-500"
+                />
+              </div>
+            </div>
+
+            {/* Ghi chú */}
+            <div className="space-y-1">
+              <label className="block text-[11px] text-[#94a3b8]">Ghi chú ban đầu từ Studio</label>
+              <input
+                type="text"
+                value={formData.clientNote}
+                onChange={(e) => handleChange('clientNote', e.target.value)}
+                placeholder="Ví dụ: Ưu tiên tone màu ấm..."
+                className="w-full bg-[#141720] border border-[#242938] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-gold-500"
+              />
+            </div>
           </div>
 
           {/* 2. Số lượng ảnh chọn tối đa (maxSelect) */}

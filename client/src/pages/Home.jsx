@@ -12,7 +12,9 @@ import {
   ExternalLink, 
   Loader2, 
   AlertCircle, 
-  PlusCircle 
+  PlusCircle,
+  User,
+  Phone
 } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
 import { getPublicBaseUrl } from '../utils/formatters';
@@ -21,6 +23,9 @@ export const Home = () => {
   const [formData, setFormData] = useState({
     title: '',
     driveFolderUrl: '',
+    clientName: '',
+    clientPhone: '',
+    clientNote: '',
     passcode: '',
     maxSelect: 0,
     allowDownload: true,
@@ -46,6 +51,9 @@ export const Home = () => {
     setFormData({
       title: 'Demo Album Cưới Hoàng & Mai - Studio Khát Vọng',
       driveFolderUrl: 'mock',
+      clientName: 'Anh Hoàng & Chị Mai',
+      clientPhone: '0912 345 678',
+      clientNote: 'Ưu tiên tone màu ấm giúp mình nhé studio',
       passcode: '1234',
       maxSelect: 4,
       allowDownload: true,
@@ -97,6 +105,9 @@ export const Home = () => {
     setFormData({
       title: '',
       driveFolderUrl: '',
+      clientName: '',
+      clientPhone: '',
+      clientNote: '',
       passcode: '',
       maxSelect: 0,
       allowDownload: true,
@@ -185,6 +196,70 @@ export const Home = () => {
               💡 Thư mục Google Drive phải bật quyền chia sẻ:{' '}
               <strong className="text-[#d4cbba]">"Bất kỳ ai có đường liên kết đều có thể xem (Viewer)"</strong>.
             </p>
+          </div>
+
+          {/* Thông Tin Khách Hàng (Dành cho Studio nhập sẵn tránh sai sót từ khách) */}
+          <div className="bg-[#13110f]/80 border border-[#2b2722] rounded-xl p-4 sm:p-5 space-y-4">
+            <div className="flex items-center space-x-2 border-b border-[#25211c] pb-2.5">
+              <User className="w-4 h-4 text-gold-400" />
+              <span className="text-xs uppercase tracking-wider text-gold-300 font-bold">
+                Thông Tin Khách Hàng (Studio nhập sẵn)
+              </span>
+              <span className="text-[10px] text-[#8e8576] ml-auto">Tránh khách nhập sai</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Tên khách hàng */}
+              <div className="space-y-1.5">
+                <label className="block text-xs text-[#a2998a] font-semibold">
+                  Tên Khách Hàng / Cặp Đôi
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-3 w-4 h-4 text-gold-400/60" />
+                  <input
+                    type="text"
+                    name="clientName"
+                    value={formData.clientName}
+                    onChange={handleChange}
+                    placeholder="Ví dụ: Anh Hoàng & Chị Mai"
+                    className="w-full bg-[#181614] border border-[#2b2722] rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-gold-500 transition-all text-[#f5eedf]"
+                  />
+                </div>
+              </div>
+
+              {/* Số điện thoại / Zalo */}
+              <div className="space-y-1.5">
+                <label className="block text-xs text-[#a2998a] font-semibold">
+                  Số Điện Thoại / Zalo
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3.5 top-3 w-4 h-4 text-gold-400/60" />
+                  <input
+                    type="tel"
+                    name="clientPhone"
+                    value={formData.clientPhone}
+                    onChange={handleChange}
+                    placeholder="Ví dụ: 0912 345 678"
+                    className="w-full bg-[#181614] border border-[#2b2722] rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-gold-500 transition-all text-[#f5eedf]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Ghi chú / Lời nhắn cho khách */}
+            <div className="space-y-1.5">
+              <label className="block text-xs text-[#a2998a] font-semibold">
+                Ghi chú ban đầu / Yêu cầu từ khách
+              </label>
+              <input
+                type="text"
+                name="clientNote"
+                value={formData.clientNote}
+                onChange={handleChange}
+                placeholder="Ví dụ: Gói Studio 30 ảnh, ưu tiên tone màu ấm..."
+                className="w-full bg-[#181614] border border-[#2b2722] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-gold-500 transition-all text-[#f5eedf]"
+              />
+            </div>
           </div>
 
           {/* Config options grid */}
