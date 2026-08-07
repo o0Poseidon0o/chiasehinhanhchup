@@ -38,7 +38,7 @@ app.use(globalErrorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`🚀 Server đang chạy trên cổng ${PORT} [Mode: ${process.env.NODE_ENV || 'development'}]`);
   });
