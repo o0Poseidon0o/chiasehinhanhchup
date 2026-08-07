@@ -149,7 +149,7 @@ export const albumApi = {
   },
 
   /**
-   * Đồng bộ lại danh sách ảnh mới nhất từ Google Drive
+   * Đồng bộ lại danh sách ảnh mới nhất từ Google Drive cho 1 album
    */
   async syncDrivePhotos(id, token = '') {
     try {
@@ -159,6 +159,18 @@ export const albumApi = {
       return response.data;
     } catch (error) {
       throw new Error(extractErrorMessage(error, 'Không thể đồng bộ ảnh từ Google Drive. Vui lòng kiểm tra quyền chia sẻ thư mục.'));
+    }
+  },
+
+  /**
+   * Tự động đồng bộ toàn bộ tất cả album đang hoạt động
+   */
+  async syncAll() {
+    try {
+      const response = await api.post('/sync-all', {});
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không thể đồng bộ toàn bộ album.'));
     }
   }
 };

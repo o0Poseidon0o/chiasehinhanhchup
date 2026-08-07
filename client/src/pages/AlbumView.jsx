@@ -72,10 +72,31 @@ export const AlbumView = () => {
     }
   }, [id, selectedPhotos.length]);
 
-  // Kiểm tra passcode đã lưu trong sessionStorage khi mount
+  // Kiểm tra passcode đã lưu trong sessionStorage khi mount & tự động đồng bộ
   useEffect(() => {
     const savedPasscode = sessionStorage.getItem(`passcode_${id}`) || '';
     fetchAlbum(savedPasscode);
+
+    // Tự động kiểm tra và đồng bộ ảnh mới khi người dùng quay lại tab trình duyệt
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const pass = sessionStorage.getItem(`passcode_${id}`) || '';
+        fetchAlbum(pass, true);
+      }
+    };
+
+    // Tự động đồng bộ định kỳ mỗi 45 giây trong nền (nếu album chưa khóa)
+    const interval = setInterval(() => {
+      const pass = sessionStorage.getItem(`passcode_${id}`) || '';
+      fetchAlbum(pass, true);
+    }, 45000);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(interval);
+    };
   }, [id, fetchAlbum]);
 
   /**

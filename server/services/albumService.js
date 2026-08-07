@@ -393,6 +393,38 @@ const syncAlbumImages = async (id, token) => {
   };
 };
 
+/**
+ * 11. Tự động đồng bộ toàn bộ tất cả album đang hoạt động
+ */
+const syncAllAlbums = async () => {
+  const albums = await Album.find();
+  const activeAlbums = (Array.isArray(albums) ? albums : []).filter(a => a && a.status !== 'locked');
+
+  let updatedCount = 0;
+  let totalNewImages = 0;
+
+  await Promise.allSettled(
+    activeAlbums.map(async (album) => {
+      const prevCount = (album.images || []).length;
+      await refreshAlbumImagesFromDrive(album);
+      const newCount = (album.images || []).length;
+      if (newCount > prevCount) {
+        updatedCount++;
+        totalNewImages += (newCount - prevCount);
+      }
+      return { id: album._id, title: album.title, imagesCount: newCount };
+    })
+  );
+
+  return {
+    success: true,
+    message: `Đã tự động đồng bộ ${activeAlbums.length} album! (Có ${updatedCount} album có ảnh mới, thêm ${totalNewImages} ảnh).`,
+    syncedCount: activeAlbums.length,
+    updatedAlbumsCount: updatedCount,
+    totalNewImages
+  };
+};
+
 module.exports = {
   createAlbum,
   getAllAlbums,
@@ -403,5 +435,6 @@ module.exports = {
   toggleAlbumStatus,
   deleteAlbum,
   deleteBulkAlbums,
-  syncAlbumImages
+  syncAlbumImages,
+  syncAllAlbums
 };

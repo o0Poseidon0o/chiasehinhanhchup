@@ -34,6 +34,7 @@ export const AdminDashboard = () => {
 
   // State cho việc đồng bộ Drive từ Dashboard
   const [syncingId, setSyncingId] = useState(null);
+  const [syncingAll, setSyncingAll] = useState(false);
   const [dashboardNotice, setDashboardNotice] = useState(null);
 
   // State cho Modal xác nhận xóa
@@ -62,7 +63,30 @@ export const AdminDashboard = () => {
   }, [fetchAlbums]);
 
   /**
-   * Đồng bộ ảnh từ Google Drive ngay trên dashboard
+   * Tự động đồng bộ toàn bộ Album từ Google Drive một lượt
+   */
+  const handleSyncAll = async () => {
+    try {
+      setSyncingAll(true);
+      const res = await albumApi.syncAll();
+      setDashboardNotice({
+        type: 'success',
+        text: res.message || 'Đã đồng bộ toàn bộ album thành công!'
+      });
+      await fetchAlbums();
+    } catch (err) {
+      setDashboardNotice({
+        type: 'error',
+        text: `Lỗi đồng bộ toàn bộ: ${err.message}`
+      });
+    } finally {
+      setSyncingAll(false);
+      setTimeout(() => setDashboardNotice(null), 8000);
+    }
+  };
+
+  /**
+   * Đồng bộ ảnh từ Google Drive cho 1 album đơn lẻ
    */
   const handleSyncAlbum = async (album) => {
     try {
@@ -236,10 +260,21 @@ export const AdminDashboard = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Nút Đồng bộ toàn bộ Album */}
+          <button
+            onClick={handleSyncAll}
+            disabled={syncingAll || loading || albums.length === 0}
+            className="flex items-center space-x-2 px-4 py-3 rounded-2xl bg-[#1d1a17] hover:bg-[#282420] border border-gold-500/30 hover:border-gold-500/60 text-gold-300 font-semibold text-xs sm:text-sm transition-all disabled:opacity-50 shadow-md hover:scale-[1.02]"
+            title="Tự động quét và cập nhật ảnh mới từ Google Drive cho tất cả các album"
+          >
+            <FolderSync className={`w-4 h-4 text-gold-400 ${syncingAll ? 'animate-spin' : ''}`} />
+            <span>{syncingAll ? 'Đang đồng bộ...' : 'Đồng bộ tất cả'}</span>
+          </button>
+
           <button
             onClick={fetchAlbums}
-            disabled={loading}
+            disabled={loading || syncingAll}
             className="p-3 rounded-2xl bg-[#1d1a17] hover:bg-[#282420] border border-[#2f2923] text-[#cfc5b4] transition-all hover:text-gold-300 disabled:opacity-50"
             title="Làm mới danh sách"
           >

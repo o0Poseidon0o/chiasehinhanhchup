@@ -154,6 +154,16 @@ const syncAlbum = asyncHandler(async (req, res) => {
   res.status(200).json(result);
 });
 
+/**
+ * @desc    Tự động đồng bộ toàn bộ album từ Google Drive
+ * @route   POST /api/albums/sync-all
+ * @access  Public / Admin
+ */
+const syncAllAlbums = asyncHandler(async (req, res) => {
+  const result = await albumService.syncAllAlbums();
+  res.status(200).json(result);
+});
+
 module.exports = {
   createAlbum,
   getAlbums,
@@ -165,5 +175,6 @@ module.exports = {
   unlockAlbum,
   deleteAlbum,
   deleteBulkAlbums,
-  syncAlbum
+  syncAlbum,
+  syncAllAlbums
 };

@@ -10,6 +10,7 @@ const {
 // Public routes for client & photo selection
 router.post('/', validateCreateAlbum, albumController.createAlbum);
 router.get('/', albumController.getAlbums);
+router.post('/sync-all', albumController.syncAllAlbums);
 router.post('/bulk-delete', albumController.deleteBulkAlbums);
 router.get('/:id', albumController.getAlbum);
 router.delete('/:id', albumController.deleteAlbum);
