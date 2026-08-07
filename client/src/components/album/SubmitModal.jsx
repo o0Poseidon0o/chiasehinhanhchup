@@ -30,10 +30,6 @@ export const SubmitModal = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.phone.trim()) {
-      alert('Vui lòng điền đầy đủ Họ Tên và Số Điện Thoại.');
-      return;
-    }
     onSubmit({
       name: formData.name.trim(),
       phone: formData.phone.trim(),
@@ -76,18 +72,18 @@ export const SubmitModal = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Họ tên */}
           <div className="space-y-1.5">
-            <label className="block text-xs uppercase tracking-wider text-[#a2998a] font-semibold">
-              Họ và tên của bạn <span className="text-red-500">*</span>
+            <label className="block text-xs uppercase tracking-wider text-[#a2998a] font-semibold flex items-center justify-between">
+              <span>Họ và tên của bạn</span>
+              <span className="text-[10px] text-[#70685c] font-normal lowercase">(tùy chọn)</span>
             </label>
             <div className="relative">
               <User className="absolute left-3.5 top-3 w-4 h-4 text-gold-400/60" />
               <input
                 type="text"
                 name="name"
-                required
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="Ví dụ: Nguyễn Văn A"
+                placeholder="Ví dụ: Nguyễn Văn A (có thể bỏ qua)"
                 className="w-full bg-[#1a1816] border border-[#2b2722] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#f5eedf] focus:outline-none focus:border-gold-500 transition-all placeholder:text-[#554e44]"
               />
             </div>
@@ -95,18 +91,18 @@ export const SubmitModal = ({
 
           {/* Số điện thoại */}
           <div className="space-y-1.5">
-            <label className="block text-xs uppercase tracking-wider text-[#a2998a] font-semibold">
-              Số điện thoại liên hệ <span className="text-red-500">*</span>
+            <label className="block text-xs uppercase tracking-wider text-[#a2998a] font-semibold flex items-center justify-between">
+              <span>Số điện thoại liên hệ</span>
+              <span className="text-[10px] text-[#70685c] font-normal lowercase">(tùy chọn)</span>
             </label>
             <div className="relative">
               <Phone className="absolute left-3.5 top-3 w-4 h-4 text-gold-400/60" />
               <input
                 type="tel"
                 name="phone"
-                required
                 value={formData.phone}
                 onChange={handleChange}
-                placeholder="Ví dụ: 0912 345 678"
+                placeholder="Ví dụ: 0912 345 678 (có thể bỏ qua)"
                 className="w-full bg-[#1a1816] border border-[#2b2722] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#f5eedf] focus:outline-none focus:border-gold-500 transition-all placeholder:text-[#554e44]"
               />
             </div>

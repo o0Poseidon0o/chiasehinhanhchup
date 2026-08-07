@@ -23,7 +23,11 @@ import {
   Edit3,
   Download,
   MessageSquare,
-  Hash
+  Hash,
+  ShieldAlert,
+  KeyRound,
+  LogOut,
+  Loader2
 } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
 import { getPublicBaseUrl } from '../utils/formatters';
@@ -37,6 +41,12 @@ export const AdminDashboard = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState([]);
   const [copiedLink, setCopiedLink] = useState(null);
+
+  // State xác thực Admin
+  const [isAuthorized, setIsAuthorized] = useState(Boolean(sessionStorage.getItem('adminPassword')));
+  const [adminPasswordInput, setAdminPasswordInput] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
 
   // State cho việc sửa cài đặt Album
   const [editingAlbum, setEditingAlbum] = useState(null);
@@ -55,13 +65,23 @@ export const AdminDashboard = () => {
   });
 
   const fetchAlbums = useCallback(async () => {
+    if (!sessionStorage.getItem('adminPassword')) {
+      setIsAuthorized(false);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
       const res = await albumApi.getAll();
       setAlbums(res.data || []);
+      setIsAuthorized(true);
     } catch (err) {
       setError(err.message || 'Không thể tải danh sách album.');
+      if (err.message.includes('Mật khẩu Admin') || err.message.includes('401')) {
+        sessionStorage.removeItem('adminPassword');
+        setIsAuthorized(false);
+      }
     } finally {
       setLoading(false);
     }
@@ -70,6 +90,32 @@ export const AdminDashboard = () => {
   useEffect(() => {
     fetchAlbums();
   }, [fetchAlbums]);
+
+  const handleAdminLogin = async (e) => {
+    e.preventDefault();
+    if (!adminPasswordInput.trim()) {
+      setAuthError('Vui lòng nhập mật khẩu Admin.');
+      return;
+    }
+    setAuthLoading(true);
+    setAuthError('');
+    try {
+      await albumApi.adminLogin(adminPasswordInput.trim());
+      sessionStorage.setItem('adminPassword', adminPasswordInput.trim());
+      setIsAuthorized(true);
+      fetchAlbums();
+    } catch (err) {
+      setAuthError(err.message || 'Mật khẩu Admin không chính xác.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleAdminLogout = () => {
+    sessionStorage.removeItem('adminPassword');
+    setIsAuthorized(false);
+    setAlbums([]);
+  };
 
   /**
    * Tự động đồng bộ toàn bộ Album từ Google Drive một lượt
@@ -251,6 +297,58 @@ export const AdminDashboard = () => {
     }
   };
 
+  if (!isAuthorized) {
+    return (
+      <div className="max-w-md mx-auto my-16 p-6 sm:p-8 bg-[#141210] border border-[#2b2722] rounded-3xl shadow-2xl space-y-6 text-center animate-fade-in relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-gold-600 via-gold-400 to-gold-600" />
+        <div className="w-16 h-16 bg-gold-500/10 border border-gold-500/30 text-gold-400 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-gold-100">Bảo Vệ Trang Quản Trị</h2>
+          <p className="text-xs text-[#a2998a] leading-relaxed">
+            Trang này dành riêng cho Admin/Chủ sở hữu. Vui lòng nhập Mật khẩu Admin để truy cập toàn bộ Album.
+          </p>
+        </div>
+
+        {authError && (
+          <div className="p-3 bg-red-950/50 border border-red-500/40 text-red-300 text-xs rounded-xl flex items-center justify-center space-x-2">
+            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+            <span>{authError}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleAdminLogin} className="space-y-4">
+          <div className="relative">
+            <KeyRound className="absolute left-3.5 top-3.5 w-4 h-4 text-gold-400/60" />
+            <input
+              type="password"
+              value={adminPasswordInput}
+              onChange={(e) => setAdminPasswordInput(e.target.value)}
+              placeholder="Nhập mật khẩu Admin..."
+              className="w-full bg-[#1a1816] border border-[#2b2722] rounded-xl pl-10 pr-4 py-3 text-sm text-[#f5eedf] focus:outline-none focus:border-gold-500 transition-all placeholder:text-[#554e44]"
+              autoFocus
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={authLoading}
+            className="w-full bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-gold-950 font-bold py-3 rounded-xl text-sm transition-all shadow-lg flex items-center justify-center space-x-2 disabled:opacity-50"
+          >
+            {authLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Đang kiểm tra...</span>
+              </>
+            ) : (
+              <span>XÁC NHẬN ĐĂNG NHẬP</span>
+            )}
+          </button>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-fadeIn pb-16">
       {/* Header Bar */}
@@ -296,6 +394,14 @@ export const AdminDashboard = () => {
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>Tạo Album Mới</span>
           </Link>
+          <button
+            onClick={handleAdminLogout}
+            className="flex items-center space-x-1.5 px-4 py-3 rounded-2xl bg-[#1d1a17] hover:bg-red-950/40 border border-red-500/20 hover:border-red-500/50 text-red-300 text-xs sm:text-sm font-medium transition-all"
+            title="Đăng xuất khỏi trang Admin"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Đăng xuất</span>
+          </button>
         </div>
       </div>
 

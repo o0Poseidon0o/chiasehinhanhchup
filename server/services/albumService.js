@@ -221,9 +221,9 @@ const submitSelection = async (id, payload) => {
 
   album.selectedImages = mappedSelectedImages;
   album.clientInfo = {
-    name: clientInfo.name.trim(),
-    phone: clientInfo.phone.trim(),
-    note: clientInfo.note ? clientInfo.note.trim() : '',
+    name: (clientInfo && clientInfo.name) ? clientInfo.name.trim() : 'Khách hàng',
+    phone: (clientInfo && clientInfo.phone) ? clientInfo.phone.trim() : '',
+    note: (clientInfo && clientInfo.note) ? clientInfo.note.trim() : '',
     submittedAt: new Date()
   };
   album.status = 'submitted';
@@ -481,6 +481,19 @@ const updateAlbumSettings = async (id, token, settings = {}) => {
   };
 };
 
+/**
+ * Xác thực Mật khẩu Admin
+ */
+const verifyAdminPassword = async (adminPassword) => {
+  const expectedPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  if (!adminPassword || adminPassword !== expectedPassword) {
+    const error = new Error('Mật khẩu Admin không chính xác.');
+    error.statusCode = 401;
+    throw error;
+  }
+  return { success: true, message: 'Đăng nhập Admin thành công.' };
+};
+
 module.exports = {
   createAlbum,
   getAllAlbums,
@@ -493,5 +506,6 @@ module.exports = {
   deleteBulkAlbums,
   syncAlbumImages,
   syncAllAlbums,
-  updateAlbumSettings
+  updateAlbumSettings,
+  verifyAdminPassword
 };

@@ -13,7 +13,25 @@ const extractErrorMessage = (error, defaultMsg = 'Có lỗi xảy ra, vui lòng 
   return error.response?.data?.message || error.message || defaultMsg;
 };
 
+// Helper lấy header Admin từ sessionStorage
+const getAdminHeaders = () => {
+  const adminPassword = sessionStorage.getItem('adminPassword') || '';
+  return adminPassword ? { 'x-admin-password': adminPassword } : {};
+};
+
 export const albumApi = {
+  /**
+   * Xác thực mật khẩu Admin
+   */
+  async adminLogin(adminPassword) {
+    try {
+      const response = await api.post('/admin/login', { adminPassword });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Mật khẩu Admin không chính xác.'));
+    }
+  },
+
   /**
    * Tạo Album mới
    */
@@ -33,6 +51,7 @@ export const albumApi = {
     try {
       const response = await api.get('/', {
         params: search ? { search } : {},
+        headers: getAdminHeaders()
       });
       return response.data;
     } catch (error) {
@@ -155,7 +174,9 @@ export const albumApi = {
    */
   async deleteBulk(ids = []) {
     try {
-      const response = await api.post('/bulk-delete', { ids });
+      const response = await api.post('/bulk-delete', { ids }, {
+        headers: getAdminHeaders()
+      });
       return response.data;
     } catch (error) {
       throw new Error(extractErrorMessage(error, 'Không thể xóa các album đã chọn.'));
@@ -181,7 +202,9 @@ export const albumApi = {
    */
   async syncAll() {
     try {
-      const response = await api.post('/sync-all', {});
+      const response = await api.post('/sync-all', {}, {
+        headers: getAdminHeaders()
+      });
       return response.data;
     } catch (error) {
       throw new Error(extractErrorMessage(error, 'Không thể đồng bộ toàn bộ album.'));

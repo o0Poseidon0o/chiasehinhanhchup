@@ -23,13 +23,7 @@ const validateCreateAlbum = (req, res, next) => {
  * Middleware kiểm tra dữ liệu khi submit chọn ảnh
  */
 const validateSubmitSelection = (req, res, next) => {
-  const { clientInfo, selectedImages } = req.body;
-
-  if (!clientInfo || !clientInfo.name || !clientInfo.phone) {
-    const error = new Error('Vui lòng điền đầy đủ Họ Tên và Số Điện Thoại.');
-    error.statusCode = 400;
-    return next(error);
-  }
+  const { selectedImages } = req.body;
 
   if (!Array.isArray(selectedImages) || selectedImages.length === 0) {
     const error = new Error('Vui lòng chọn ít nhất 1 hình ảnh trước khi gửi.');
@@ -56,8 +50,25 @@ const validateManageToken = (req, res, next) => {
   next();
 };
 
+/**
+ * Middleware kiểm tra mật khẩu Admin toàn hệ thống
+ */
+const validateAdminPassword = (req, res, next) => {
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const provided = req.headers['x-admin-password'] || req.query.adminPassword || req.body?.adminPassword;
+
+  if (!provided || provided !== adminPassword) {
+    const error = new Error('Mật khẩu Admin không chính xác hoặc bạn không có quyền truy cập trang quản trị.');
+    error.statusCode = 401;
+    return next(error);
+  }
+
+  next();
+};
+
 module.exports = {
   validateCreateAlbum,
   validateSubmitSelection,
-  validateManageToken
+  validateManageToken,
+  validateAdminPassword
 };

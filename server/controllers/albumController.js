@@ -177,6 +177,17 @@ const updateAlbumSettings = asyncHandler(async (req, res) => {
   res.status(200).json(result);
 });
 
+/**
+ * @desc    Xác thực Mật khẩu Admin
+ * @route   POST /api/albums/admin/login
+ * @access  Public
+ */
+const verifyAdminPassword = asyncHandler(async (req, res) => {
+  const { adminPassword } = req.body;
+  const result = await albumService.verifyAdminPassword(adminPassword);
+  res.status(200).json(result);
+});
+
 module.exports = {
   createAlbum,
   getAlbums,
@@ -190,5 +201,6 @@ module.exports = {
   deleteBulkAlbums,
   syncAlbum,
   syncAllAlbums,
-  updateAlbumSettings
+  updateAlbumSettings,
+  verifyAdminPassword
 };

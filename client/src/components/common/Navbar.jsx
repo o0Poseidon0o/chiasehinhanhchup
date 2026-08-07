@@ -30,18 +30,20 @@ export const Navbar = () => {
           {/* Bộ đổi giao diện Sáng / Tối */}
           <ThemeSelector />
 
-          <Link 
-            to="/admin" 
-            className={`flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
-              isAdmin 
-                ? 'bg-gold-500 text-gold-950 shadow-md shadow-gold-500/10' 
-                : 'bg-[#161412] hover:bg-[#221f1c] border border-[#2b2722] hover:border-gold-500/40 text-gold-200'
-            }`}
-          >
-            <FolderKanban className={`w-4 h-4 ${isAdmin ? 'text-gold-950' : 'text-gold-400'}`} />
-            <span className="hidden sm:inline">Quản Lý Album</span>
-            <span className="sm:hidden">Quản Lý</span>
-          </Link>
+          {(isAdmin || Boolean(sessionStorage.getItem('adminPassword'))) && (
+            <Link 
+              to="/admin" 
+              className={`flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                isAdmin 
+                  ? 'bg-gold-500 text-gold-950 shadow-md shadow-gold-500/10' 
+                  : 'bg-[#161412] hover:bg-[#221f1c] border border-[#2b2722] hover:border-gold-500/40 text-gold-200'
+              }`}
+            >
+              <FolderKanban className={`w-4 h-4 ${isAdmin ? 'text-gold-950' : 'text-gold-400'}`} />
+              <span className="hidden sm:inline">Quản Lý Album</span>
+              <span className="sm:hidden">Quản Lý</span>
+            </Link>
+          )}
 
           {!isHome && (
             <Link 
