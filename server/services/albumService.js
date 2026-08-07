@@ -81,6 +81,8 @@ const getAllAlbums = async (search = '') => {
     status: a.status || 'selecting',
     createdAt: a.createdAt,
     hasPasscode: Boolean(a.passcode),
+    passcode: a.passcode || '',
+    driveFolderUrl: a.driveFolderUrl || '',
     maxSelect: a.maxSelect || 0,
     allowDownload: a.allowDownload !== undefined ? a.allowDownload : true,
     allowComment: a.allowComment !== undefined ? a.allowComment : true,
@@ -425,6 +427,60 @@ const syncAllAlbums = async () => {
   };
 };
 
+/**
+ * 12. Cập nhật Cài đặt Album (maxSelect, allowDownload, allowComment, passcode, title, status)
+ */
+const updateAlbumSettings = async (id, token, settings = {}) => {
+  const album = await Album.findById(id);
+  if (!album) {
+    const error = new Error('Không tìm thấy Album để cập nhật cài đặt.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (token && album.manageToken && album.manageToken !== token) {
+    const error = new Error('Mã Token quản lý không hợp lệ.');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  if (settings.title !== undefined) {
+    const trimmedTitle = String(settings.title).trim();
+    if (trimmedTitle) {
+      album.title = trimmedTitle;
+    }
+  }
+
+  if (settings.maxSelect !== undefined) {
+    const max = Number(settings.maxSelect);
+    album.maxSelect = isNaN(max) || max < 0 ? 0 : max;
+  }
+
+  if (settings.allowDownload !== undefined) {
+    album.allowDownload = Boolean(settings.allowDownload);
+  }
+
+  if (settings.allowComment !== undefined) {
+    album.allowComment = Boolean(settings.allowComment);
+  }
+
+  if (settings.passcode !== undefined) {
+    album.passcode = String(settings.passcode).trim();
+  }
+
+  if (settings.status !== undefined && ['selecting', 'submitted', 'locked'].includes(settings.status)) {
+    album.status = settings.status;
+  }
+
+  await album.save();
+
+  return {
+    success: true,
+    message: 'Đã cập nhật cài đặt album thành công!',
+    data: album
+  };
+};
+
 module.exports = {
   createAlbum,
   getAllAlbums,
@@ -436,5 +492,6 @@ module.exports = {
   deleteAlbum,
   deleteBulkAlbums,
   syncAlbumImages,
-  syncAllAlbums
+  syncAllAlbums,
+  updateAlbumSettings
 };

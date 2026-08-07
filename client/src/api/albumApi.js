@@ -123,6 +123,20 @@ export const albumApi = {
   },
 
   /**
+   * Cập nhật Cài đặt Album (maxSelect, allowDownload, allowComment, passcode, title, status)
+   */
+  async updateSettings(id, token, data) {
+    try {
+      const response = await api.put(`/${id}/settings`, data, {
+        params: token ? { token } : {},
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không thể cập nhật cài đặt album.'));
+    }
+  },
+
+  /**
    * Xóa một Album để giải phóng bộ nhớ
    */
   async deleteAlbum(id, token = '') {

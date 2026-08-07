@@ -20,6 +20,7 @@ router.post('/:id/submit', validateSubmitSelection, albumController.submitSelect
 // Admin management routes (Secured by manageToken)
 router.post('/:id/sync', albumController.syncAlbum);
 router.get('/:id/manage', validateManageToken, albumController.getManageAlbum);
+router.put('/:id/settings', albumController.updateAlbumSettings);
 router.put('/:id/lock', validateManageToken, albumController.lockAlbum);
 router.put('/:id/unlock', validateManageToken, albumController.unlockAlbum);
 

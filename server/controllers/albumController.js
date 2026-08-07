@@ -164,6 +164,19 @@ const syncAllAlbums = asyncHandler(async (req, res) => {
   res.status(200).json(result);
 });
 
+/**
+ * @desc    Cập nhật các thiết lập của Album (maxSelect, allowDownload, allowComment, passcode, title, status)
+ * @route   PUT /api/albums/:id/settings
+ * @access  Admin (manageToken)
+ */
+const updateAlbumSettings = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const token = req.manageToken || req.query.token || req.headers['x-manage-token'];
+
+  const result = await albumService.updateAlbumSettings(id, token, req.body);
+  res.status(200).json(result);
+});
+
 module.exports = {
   createAlbum,
   getAlbums,
@@ -176,5 +189,6 @@ module.exports = {
   deleteAlbum,
   deleteBulkAlbums,
   syncAlbum,
-  syncAllAlbums
+  syncAllAlbums,
+  updateAlbumSettings
 };

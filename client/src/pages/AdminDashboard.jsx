@@ -19,10 +19,15 @@ import {
   AlertTriangle,
   FileText,
   Filter,
-  FolderSync
+  FolderSync,
+  Edit3,
+  Download,
+  MessageSquare,
+  Hash
 } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
 import { getPublicBaseUrl } from '../utils/formatters';
+import { EditAlbumModal } from '../components/admin/EditAlbumModal';
 
 export const AdminDashboard = () => {
   const [albums, setAlbums] = useState([]);
@@ -32,6 +37,9 @@ export const AdminDashboard = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState([]);
   const [copiedLink, setCopiedLink] = useState(null);
+
+  // State cho việc sửa cài đặt Album
+  const [editingAlbum, setEditingAlbum] = useState(null);
 
   // State cho việc đồng bộ Drive từ Dashboard
   const [syncingId, setSyncingId] = useState(null);
@@ -514,7 +522,7 @@ export const AdminDashboard = () => {
                       </div>
 
                       {/* Meta info bar */}
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-[#8e8474]">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-[#8e8474]">
                         <span className="flex items-center gap-1">
                           <ImageIcon className="w-3.5 h-3.5 text-gold-400/70" />
                           <span>Tổng: <strong className="text-[#cfc5b4]">{album.imagesCount}</strong> ảnh</span>
@@ -525,7 +533,26 @@ export const AdminDashboard = () => {
                           <span>Đã chọn: <strong className="text-emerald-300">{album.selectedCount}</strong> ảnh</span>
                         </span>
 
-                        <span>Ngày tạo: <strong className="text-[#cfc5b4]">{formattedDate}</strong></span>
+                        <span className="flex items-center gap-1 bg-[#1a1714] px-2 py-0.5 rounded-md border border-[#26211a]">
+                          <Hash className="w-3 h-3 text-gold-400" />
+                          <span>Tối đa: <strong className="text-gold-200">{album.maxSelect > 0 ? `${album.maxSelect} ảnh` : 'Không giới hạn'}</strong></span>
+                        </span>
+
+                        <span className={`flex items-center gap-1 px-2 py-0.5 rounded-md border text-[11px] ${
+                          album.allowDownload !== false ? 'bg-emerald-950/30 border-emerald-500/20 text-emerald-300' : 'bg-red-950/30 border-red-500/20 text-red-300'
+                        }`}>
+                          <Download className="w-3 h-3" />
+                          <span>Tải ảnh: {album.allowDownload !== false ? 'Bật' : 'Tắt'}</span>
+                        </span>
+
+                        <span className={`flex items-center gap-1 px-2 py-0.5 rounded-md border text-[11px] ${
+                          album.allowComment !== false ? 'bg-emerald-950/30 border-emerald-500/20 text-emerald-300' : 'bg-red-950/30 border-red-500/20 text-red-300'
+                        }`}>
+                          <MessageSquare className="w-3 h-3" />
+                          <span>Ghi chú: {album.allowComment !== false ? 'Bật' : 'Tắt'}</span>
+                        </span>
+
+                        <span>Ngày: <strong className="text-[#cfc5b4]">{formattedDate}</strong></span>
                       </div>
 
                       {/* Customer info if submitted */}
@@ -557,6 +584,16 @@ export const AdminDashboard = () => {
 
                   {/* Right Action buttons */}
                   <div className="flex flex-wrap items-center gap-2 pt-2 lg:pt-0 border-t lg:border-t-0 border-[#221f1c] justify-end">
+                    {/* Sửa Cài đặt nhanh (Modal) */}
+                    <button
+                      onClick={() => setEditingAlbum(album)}
+                      className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-gold-500/10 hover:bg-gold-500/20 border border-gold-500/30 hover:border-gold-500/50 text-gold-300 hover:text-gold-200 text-xs font-bold transition-all"
+                      title="Chỉnh sửa số ảnh chọn, quyền tải, ghi chú & mã PIN"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Cài đặt</span>
+                    </button>
+
                     {/* Sync from Google Drive */}
                     <button
                       onClick={() => handleSyncAlbum(album)}
@@ -601,10 +638,10 @@ export const AdminDashboard = () => {
                     {/* Go to Manage page */}
                     <Link
                       to={manageUrl}
-                      className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-gold-500/10 hover:bg-gold-500/20 border border-gold-500/30 text-gold-300 hover:text-gold-200 text-xs font-bold transition-all"
+                      className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-[#1a1714] hover:bg-[#26221d] border border-[#2b2722] text-[#cfc5b4] hover:text-gold-200 text-xs font-semibold transition-all"
                     >
-                      <Settings className="w-3.5 h-3.5" />
-                      <span>Quản trị</span>
+                      <Settings className="w-3.5 h-3.5 text-gold-400" />
+                      <span>Chi tiết</span>
                     </Link>
 
                     {/* Delete Album */}
@@ -621,6 +658,24 @@ export const AdminDashboard = () => {
             })}
           </div>
         </div>
+      )}
+
+      {/* Modal Chỉnh Sửa Cài Đặt Nhanh */}
+      {editingAlbum && (
+        <EditAlbumModal
+          isOpen={Boolean(editingAlbum)}
+          onClose={() => setEditingAlbum(null)}
+          album={editingAlbum}
+          token={editingAlbum.manageToken}
+          onSaved={() => {
+            fetchAlbums();
+            setDashboardNotice({
+              type: 'success',
+              text: `Đã cập nhật cài đặt cho album "${editingAlbum.title}" thành công!`
+            });
+            setTimeout(() => setDashboardNotice(null), 5000);
+          }}
+        />
       )}
 
       {/* Delete Confirmation Modal */}
