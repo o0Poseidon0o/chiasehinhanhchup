@@ -2,7 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const DB_FILE_PATH = path.join(__dirname, '../data/albums.json');
+const DB_FILE_PATH = process.env.VERCEL 
+  ? '/tmp/albums.json' 
+  : path.join(__dirname, '../data/albums.json');
 
 /**
  * Đảm bảo file JSON và thư mục tồn tại
