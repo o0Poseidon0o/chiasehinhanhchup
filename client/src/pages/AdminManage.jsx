@@ -273,9 +273,10 @@ export const AdminManage = () => {
 
         {/* Cột phải: Thanh công cụ copy/xuất file & Danh sách chi tiết ảnh khách chọn */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Thanh công cụ copy tên file cho Lightroom/Photoshop */}
+          {/* Thanh công cụ copy/xuất file */}
           <AdminCopyToolbar
             selectedImages={selectedImages}
+            clientInfo={album.clientInfo}
             albumTitle={album.title}
           />
 

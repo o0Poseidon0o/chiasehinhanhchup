@@ -134,15 +134,13 @@ export const AlbumView = () => {
 
     if (isSelected) {
       setSelectedPhotos(selectedPhotos.filter((p) => p.fileId !== image.fileId));
-      const nextComments = { ...comments };
-      delete nextComments[image.fileId];
-      setComments(nextComments);
     } else {
       if (album.maxSelect > 0 && selectedPhotos.length >= album.maxSelect) {
         alert(`Bạn chỉ được chọn tối đa ${album.maxSelect} ảnh.`);
         return;
       }
-      setSelectedPhotos([...selectedPhotos, image]);
+      const existingComment = comments[image.fileId] || image.comment || '';
+      setSelectedPhotos([...selectedPhotos, { ...image, comment: existingComment }]);
     }
   };
 
@@ -151,9 +149,9 @@ export const AlbumView = () => {
    */
   const handleCommentChange = (fileId, text) => {
     if (isClosed) return;
-    setComments({ ...comments, [fileId]: text });
-    setSelectedPhotos(
-      selectedPhotos.map((p) => (p.fileId === fileId ? { ...p, comment: text } : p))
+    setComments(prev => ({ ...prev, [fileId]: text }));
+    setSelectedPhotos(prev =>
+      prev.map((p) => (p.fileId === fileId ? { ...p, comment: text } : p))
     );
   };
 
@@ -174,11 +172,25 @@ export const AlbumView = () => {
   const handleClientSubmit = async (clientInfo) => {
     setSubmitting(true);
     try {
+      // Đảm bảo toàn bộ ảnh được gán chính xác comment mới nhất
+      const payloadImages = selectedPhotos.map((p) => ({
+        fileId: p.fileId,
+        fileName: p.fileName,
+        thumbnailUrl: p.thumbnailUrl,
+        embedUrl: p.embedUrl,
+        comment: (comments[p.fileId] !== undefined ? comments[p.fileId] : p.comment) || ''
+      }));
+
       await albumApi.submitSelection(id, {
-        clientInfo,
-        selectedImages: selectedPhotos,
+        clientInfo: {
+          name: clientInfo.name.trim(),
+          phone: clientInfo.phone.trim(),
+          note: (clientInfo.note || '').trim()
+        },
+        selectedImages: payloadImages,
       });
-      alert('Gửi lựa chọn ảnh thành công! Cảm ơn bạn.');
+
+      alert('Gửi lựa chọn ảnh và ghi chú thành công! Cảm ơn bạn.');
       setShowSubmitModal(false);
       const savedPasscode = sessionStorage.getItem(`passcode_${id}`) || '';
       fetchAlbum(savedPasscode);
@@ -339,7 +351,10 @@ export const AlbumView = () => {
       {/* Modal gửi chốt thông tin */}
       {showSubmitModal && (
         <SubmitModal
+          isOpen={showSubmitModal}
           selectedCount={selectedPhotos.length}
+          selectedImages={selectedPhotos}
+          initialClientInfo={album.clientInfo}
           maxSelect={album.maxSelect}
           onClose={() => setShowSubmitModal(false)}
           onSubmit={handleClientSubmit}

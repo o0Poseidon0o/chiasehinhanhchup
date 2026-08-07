@@ -22,6 +22,37 @@ export const formatFileList = (selectedImages = [], separator = 'comma') => {
 };
 
 /**
+ * Format danh sách chi tiết ảnh kèm ghi chú của từng ảnh và lời nhắn khách
+ * @param {Array<Object>} selectedImages 
+ * @param {Object} clientInfo 
+ * @param {string} albumTitle 
+ * @returns {string}
+ */
+export const formatDetailedList = (selectedImages = [], clientInfo = {}, albumTitle = 'Album') => {
+  if (!Array.isArray(selectedImages) || selectedImages.length === 0) return '';
+
+  let text = `DANH SÁCH ẢNH CHỌN - ${albumTitle.toUpperCase()}\n`;
+  if (clientInfo?.name) {
+    text += `Khách hàng: ${clientInfo.name} - SĐT: ${clientInfo.phone || 'N/A'}\n`;
+  }
+  if (clientInfo?.note) {
+    text += `Lời nhắn chung: "${clientInfo.note}"\n`;
+  }
+  text += `Tổng số lượng: ${selectedImages.length} ảnh\n`;
+  text += `----------------------------------------\n`;
+
+  selectedImages.forEach((img, idx) => {
+    text += `${idx + 1}. ${img.fileName}`;
+    if (img.comment && img.comment.trim().length > 0) {
+      text += ` => [Ghi chú: ${img.comment.trim()}]`;
+    }
+    text += `\n`;
+  });
+
+  return text;
+};
+
+/**
  * Tải file script Windows Batch (.bat) để tự động sao chép các file ảnh đã chọn vào thư mục "Da_Chon"
  * @param {Array<Object>} selectedImages 
  * @param {string} albumTitle 
