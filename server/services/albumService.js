@@ -291,6 +291,62 @@ const deleteBulkAlbums = async (ids = []) => {
   };
 };
 
+/**
+ * 10. Đồng bộ lại danh sách ảnh từ Google Drive khi người dùng upload thêm ảnh mới
+ */
+const syncAlbumImages = async (id, token) => {
+  const album = await Album.findById(id);
+  if (!album) {
+    const error = new Error('Không tìm thấy Album để đồng bộ.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (token && album.manageToken && album.manageToken !== token) {
+    const error = new Error('Token quản lý không hợp lệ.');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  let latestImages = [];
+  if (album.driveFolderUrl === 'mock' || album.driveFolderId === 'mock-demo') {
+    latestImages = getMockImages();
+  } else {
+    // Trích xuất lại folderId nếu chưa có
+    let folderId = album.driveFolderId;
+    if (!folderId || folderId === 'undefined') {
+      folderId = extractFolderId(album.driveFolderUrl);
+      album.driveFolderId = folderId;
+    }
+
+    if (!folderId) {
+      const error = new Error('Không thể xác định Folder ID từ link Google Drive của album.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    latestImages = await fetchImagesFromFolder(folderId);
+  }
+
+  const existingFileIds = new Set((album.images || []).map(img => img.fileId));
+  const newImagesAdded = latestImages.filter(img => !existingFileIds.has(img.fileId));
+  
+  // Cập nhật danh sách ảnh mới nhất
+  const previousCount = (album.images || []).length;
+  album.images = latestImages;
+
+  await album.save();
+
+  return {
+    success: true,
+    message: `Đồng bộ thành công! Hiện có ${latestImages.length} ảnh (Phát hiện thêm mới ${newImagesAdded.length} ảnh).`,
+    previousCount,
+    totalImages: latestImages.length,
+    newAddedCount: newImagesAdded.length,
+    images: latestImages
+  };
+};
+
 module.exports = {
   createAlbum,
   getAllAlbums,
@@ -300,5 +356,6 @@ module.exports = {
   getAlbumForAdmin,
   toggleAlbumStatus,
   deleteAlbum,
-  deleteBulkAlbums
+  deleteBulkAlbums,
+  syncAlbumImages
 };

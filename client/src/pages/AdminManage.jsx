@@ -1,6 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Lock, Unlock, RefreshCw, AlertCircle, Info, Trash2, FolderKanban, AlertTriangle } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Lock, 
+  Unlock, 
+  RefreshCw, 
+  AlertCircle, 
+  Info, 
+  Trash2, 
+  FolderKanban, 
+  AlertTriangle,
+  FolderSync,
+  CheckCircle2,
+  Image as ImageIcon
+} from 'lucide-react';
 import { albumApi } from '../api/albumApi';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { AdminSettingsCard } from '../components/admin/AdminSettingsCard';
@@ -21,6 +34,10 @@ export const AdminManage = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // State cho việc đồng bộ Google Drive
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncMessage, setSyncMessage] = useState(null);
 
   const [lightboxIndex, setLightboxIndex] = useState(-1);
 
@@ -49,6 +66,30 @@ export const AdminManage = () => {
   useEffect(() => {
     fetchAlbumManageData();
   }, [fetchAlbumManageData]);
+
+  /**
+   * Đồng bộ lại ảnh từ Google Drive khi người dùng upload thêm ảnh
+   */
+  const handleSyncDrive = async () => {
+    try {
+      setSyncLoading(true);
+      setSyncMessage(null);
+      const res = await albumApi.syncDrivePhotos(id, token);
+      setSyncMessage({
+        type: 'success',
+        text: res.message || `Đồng bộ thành công! Hiện có ${res.totalImages} ảnh.`
+      });
+      await fetchAlbumManageData();
+    } catch (err) {
+      setSyncMessage({
+        type: 'error',
+        text: err.message || 'Lỗi khi đồng bộ ảnh từ Google Drive.'
+      });
+    } finally {
+      setSyncLoading(false);
+      setTimeout(() => setSyncMessage(null), 7000);
+    }
+  };
 
   /**
    * Xử lý Khóa / Mở khóa album
@@ -117,6 +158,7 @@ export const AdminManage = () => {
 
   const selectedImages = album.selectedImages || [];
   const selectedCount = selectedImages.length;
+  const totalImages = Array.isArray(album.images) ? album.images.length : 0;
 
   return (
     <div className="space-y-8 animate-fade-in pb-16">
@@ -136,11 +178,28 @@ export const AdminManage = () => {
               Chi Tiết Quản Trị
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gold-100">{album.title}</h1>
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gold-100">{album.title}</h1>
+            <span className="text-xs text-[#8e8474] flex items-center gap-1">
+              <ImageIcon className="w-3.5 h-3.5 text-gold-400" />
+              Tổng: <strong className="text-gold-200">{totalImages}</strong> ảnh
+            </span>
+          </div>
         </div>
 
-        {/* Action buttons: Lock/Unlock + Delete + Refresh */}
+        {/* Action buttons: Sync Drive + Lock/Unlock + Delete + Refresh */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Nút Đồng Bộ Ảnh Google Drive */}
+          <button
+            onClick={handleSyncDrive}
+            disabled={syncLoading}
+            className="bg-gold-500/10 hover:bg-gold-500/20 border border-gold-500/40 hover:border-gold-400 text-gold-300 hover:text-gold-200 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all shadow-sm disabled:opacity-50"
+            title="Đồng bộ lại khi bạn vừa upload thêm ảnh mới lên Google Drive"
+          >
+            <FolderSync className={`w-4 h-4 ${syncLoading ? 'animate-spin text-gold-400' : 'text-gold-400'}`} />
+            <span>{syncLoading ? 'Đang quét Drive...' : 'Đồng bộ ảnh từ Drive'}</span>
+          </button>
+
           {album.status === 'selecting' ? (
             <button
               disabled={actionLoading}
@@ -180,11 +239,29 @@ export const AdminManage = () => {
         </div>
       </div>
 
+      {/* Sync Notification Banner */}
+      {syncMessage && (
+        <div
+          className={`p-4 rounded-2xl border flex items-start space-x-3 text-xs sm:text-sm animate-fadeIn shadow-lg ${
+            syncMessage.type === 'success'
+              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+              : 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+          }`}
+        >
+          {syncMessage.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+          ) : (
+            <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+          )}
+          <div className="leading-relaxed font-medium">{syncMessage.text}</div>
+        </div>
+      )}
+
       {/* Main Grid: Cài đặt + Thông tin khách & Công cụ copy + Danh sách ảnh */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Cột trái: Cài đặt & Thông tin khách */}
         <div className="lg:col-span-1 space-y-6">
-          <AdminSettingsCard album={album} />
+          <AdminSettingsCard album={album} onSync={handleSyncDrive} syncLoading={syncLoading} />
           <AdminClientInfoCard clientInfo={album.clientInfo} />
         </div>
 

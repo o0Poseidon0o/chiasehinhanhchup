@@ -18,7 +18,8 @@ import {
   Phone, 
   AlertTriangle,
   FileText,
-  Filter
+  Filter,
+  FolderSync
 } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
 
@@ -30,6 +31,10 @@ export const AdminDashboard = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState([]);
   const [copiedLink, setCopiedLink] = useState(null);
+
+  // State cho việc đồng bộ Drive từ Dashboard
+  const [syncingId, setSyncingId] = useState(null);
+  const [dashboardNotice, setDashboardNotice] = useState(null);
 
   // State cho Modal xác nhận xóa
   const [deleteModal, setDeleteModal] = useState({
@@ -56,14 +61,63 @@ export const AdminDashboard = () => {
     fetchAlbums();
   }, [fetchAlbums]);
 
-  // Sao chép link vào clipboard
+  /**
+   * Đồng bộ ảnh từ Google Drive ngay trên dashboard
+   */
+  const handleSyncAlbum = async (album) => {
+    try {
+      setSyncingId(album._id);
+      const res = await albumApi.syncDrivePhotos(album._id, album.manageToken);
+      setDashboardNotice({
+        type: 'success',
+        text: `"${album.title}": ${res.message}`
+      });
+      await fetchAlbums();
+    } catch (err) {
+      setDashboardNotice({
+        type: 'error',
+        text: `Lỗi đồng bộ "${album.title}": ${err.message}`
+      });
+    } finally {
+      setSyncingId(null);
+      setTimeout(() => setDashboardNotice(null), 6000);
+    }
+  };
+
+  /**
+   * Sao chép link vào clipboard
+   */
   const handleCopy = (text, type, id) => {
     navigator.clipboard.writeText(text);
     setCopiedLink(`${type}-${id}`);
-    setTimeout(() => setCopiedLink(null), 2000);
+    setTimeout(() => {
+      setCopiedLink(null);
+    }, 2000);
   };
 
-  // Mở Modal xóa 1 album
+  /**
+   * Chọn / Bỏ chọn 1 album
+   */
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  /**
+   * Chọn / Bỏ chọn tất cả album đang hiển thị
+   */
+  const selectAllFiltered = (filtered) => {
+    if (selectedIds.length === filtered.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filtered.map((a) => a._id));
+    }
+  };
+
+  /**
+   * Mở modal xóa đơn lẻ
+   */
   const openDeleteSingle = (album) => {
     setDeleteModal({
       isOpen: true,
@@ -73,7 +127,9 @@ export const AdminDashboard = () => {
     });
   };
 
-  // Mở Modal xóa nhiều album
+  /**
+   * Mở modal xóa nhiều album đã chọn
+   */
   const openDeleteBulk = () => {
     if (selectedIds.length === 0) return;
     setDeleteModal({
@@ -84,60 +140,54 @@ export const AdminDashboard = () => {
     });
   };
 
-  // Thực hiện xóa
-  const handleConfirmDelete = async () => {
+  /**
+   * Thực hiện xóa album sau khi xác nhận
+   */
+  const confirmDelete = async () => {
     try {
-      setDeleteModal(prev => ({ ...prev, loading: true }));
+      setDeleteModal((prev) => ({ ...prev, loading: true }));
       if (deleteModal.isBulk) {
         await albumApi.deleteBulk(selectedIds);
-        setAlbums(prev => prev.filter(a => !selectedIds.includes(a._id)));
         setSelectedIds([]);
       } else if (deleteModal.album) {
         await albumApi.deleteAlbum(deleteModal.album._id, deleteModal.album.manageToken);
-        setAlbums(prev => prev.filter(a => a._id !== deleteModal.album._id));
+        setSelectedIds((prev) => prev.filter((id) => id !== deleteModal.album._id));
       }
       setDeleteModal({ isOpen: false, album: null, isBulk: false, loading: false });
+      await fetchAlbums();
     } catch (err) {
       alert(err.message || 'Lỗi khi xóa album.');
-      setDeleteModal(prev => ({ ...prev, loading: false }));
+      setDeleteModal((prev) => ({ ...prev, loading: false }));
     }
   };
 
-  // Checkbox chọn album
-  const toggleSelect = (id) => {
-    setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
-  };
-
-  const selectAllFiltered = (filteredList) => {
-    if (selectedIds.length === filteredList.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(filteredList.map(a => a._id));
-    }
-  };
-
-  // Bộ lọc dữ liệu
-  const filteredAlbums = albums.filter(album => {
-    // Lọc theo search
+  /**
+   * Lọc danh sách album theo từ khóa tìm kiếm & trạng thái
+   */
+  const filteredAlbums = albums.filter((album) => {
     const q = searchQuery.toLowerCase().trim();
     const titleMatch = (album.title || '').toLowerCase().includes(q);
     const clientNameMatch = (album.clientInfo?.name || '').toLowerCase().includes(q);
-    const clientPhoneMatch = (album.clientInfo?.phone || '').toLowerCase().includes(q);
-    const matchesSearch = !q || titleMatch || clientNameMatch || clientPhoneMatch;
+    const phoneMatch = (album.clientInfo?.phone || '').toLowerCase().includes(q);
+    const matchesSearch = !q || titleMatch || clientNameMatch || phoneMatch;
 
-    // Lọc theo trạng thái
-    const matchesStatus = statusFilter === 'all' || album.status === statusFilter;
+    if (!matchesSearch) return false;
 
-    return matchesSearch && matchesStatus;
+    if (statusFilter === 'selecting') return album.status === 'selecting';
+    if (statusFilter === 'submitted') return album.status === 'submitted';
+    if (statusFilter === 'locked') return album.status === 'locked';
+
+    return true;
   });
 
-  // Thống kê nhanh
+  /**
+   * Tính toán thống kê nhanh
+   */
   const stats = {
     total: albums.length,
-    selecting: albums.filter(a => a.status === 'selecting').length,
-    submitted: albums.filter(a => a.status === 'submitted').length,
+    selecting: albums.filter((a) => a.status === 'selecting').length,
+    submitted: albums.filter((a) => a.status === 'submitted').length,
+    locked: albums.filter((a) => a.status === 'locked').length,
     totalSelectedPhotos: albums.reduce((acc, a) => acc + (a.selectedCount || 0), 0)
   };
 
@@ -145,44 +195,44 @@ export const AdminDashboard = () => {
     switch (status) {
       case 'submitted':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-950/60 border border-emerald-500/30 text-emerald-400">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            Đã chốt ({selectedCount} ảnh)
+            <span>Đã chốt ({selectedCount} ảnh)</span>
           </span>
         );
       case 'locked':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-zinc-800 border border-zinc-600/30 text-zinc-400">
             <Lock className="w-3.5 h-3.5" />
-            Đã khóa
+            <span>Đã khóa</span>
           </span>
         );
+      case 'selecting':
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-gold-500/10 text-gold-400 border border-gold-500/20">
-            <Clock className="w-3.5 h-3.5 animate-pulse" />
-            Đang chọn ảnh
+          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-gold-950/60 border border-gold-500/30 text-gold-400">
+            <Clock className="w-3.5 h-3.5" />
+            <span>Đang chọn</span>
           </span>
         );
     }
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn pb-12">
-      {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[#141210] p-6 sm:p-8 rounded-3xl border border-[#26221d] shadow-2xl relative overflow-hidden">
-        <div className="absolute -top-24 -right-24 w-72 h-72 bg-gold-500/5 rounded-full blur-3xl pointer-events-none" />
-        <div>
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="p-2.5 bg-gold-500/10 border border-gold-500/20 rounded-2xl text-gold-400">
-              <FolderKanban className="w-6 h-6" />
+    <div className="space-y-8 animate-fadeIn pb-16">
+      {/* Header Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[#221f1c] pb-6 gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center space-x-2">
+            <div className="p-2 rounded-xl bg-gold-500/10 border border-gold-500/20 text-gold-400">
+              <FolderKanban className="w-5 h-5" />
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gold-100 tracking-tight">
               Quản Lý Album & Dọn Dẹp
             </h1>
           </div>
           <p className="text-sm text-[#a2998a] max-w-xl">
-            Xem toàn bộ link album khách hàng, theo dõi trạng thái chọn ảnh và chủ động xóa các album cũ để giải phóng bộ nhớ.
+            Xem toàn bộ link album khách hàng, theo dõi trạng thái chọn ảnh, cập nhật ảnh mới từ Drive và chủ động xóa các album cũ để giải phóng bộ nhớ.
           </p>
         </div>
 
@@ -204,6 +254,24 @@ export const AdminDashboard = () => {
           </Link>
         </div>
       </div>
+
+      {/* Notice Banner */}
+      {dashboardNotice && (
+        <div
+          className={`p-4 rounded-2xl border flex items-start space-x-3 text-xs sm:text-sm animate-fadeIn shadow-lg ${
+            dashboardNotice.type === 'success'
+              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+              : 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+          }`}
+        >
+          {dashboardNotice.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+          ) : (
+            <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+          )}
+          <div className="leading-relaxed font-medium">{dashboardNotice.text}</div>
+        </div>
+      )}
 
       {/* Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -258,84 +326,97 @@ export const AdminDashboard = () => {
         <div className="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
           <Filter className="w-4 h-4 text-[#8e8474] mr-1 hidden sm:block" />
           {[
-            { key: 'all', label: 'Tất cả' },
-            { key: 'selecting', label: 'Đang chọn' },
-            { key: 'submitted', label: 'Đã gửi chốt' },
-            { key: 'locked', label: 'Đã khóa' }
-          ].map(f => (
+            { id: 'all', label: 'Tất cả', count: stats.total },
+            { id: 'selecting', label: 'Đang chọn', count: stats.selecting },
+            { id: 'submitted', label: 'Đã chốt', count: stats.submitted },
+            { id: 'locked', label: 'Đã khóa', count: stats.locked }
+          ].map((tab) => (
             <button
-              key={f.key}
-              onClick={() => setStatusFilter(f.key)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
-                statusFilter === f.key
-                  ? 'bg-gold-500 text-gold-950 shadow-md shadow-gold-500/10'
-                  : 'bg-[#1a1714] text-[#a2998a] hover:bg-[#26221d] hover:text-[#cfc5b4]'
+              key={tab.id}
+              onClick={() => setStatusFilter(tab.id)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center space-x-1.5 ${
+                statusFilter === tab.id
+                  ? 'bg-gold-500/20 text-gold-300 border border-gold-500/40'
+                  : 'bg-[#1a1714] text-[#8e8474] hover:text-[#cfc5b4] border border-transparent'
               }`}
             >
-              {f.label}
+              <span>{tab.label}</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/40 text-[#a2998a]">
+                {tab.count}
+              </span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Bulk Action Banner */}
+      {/* Bulk Action Toolbar */}
       {selectedIds.length > 0 && (
-        <div className="bg-rose-950/40 border border-rose-800/40 px-5 py-3.5 rounded-2xl flex items-center justify-between animate-fadeIn">
-          <span className="text-sm font-medium text-rose-200">
-            Đã chọn <strong className="text-rose-100">{selectedIds.length}</strong> album
-          </span>
-          <button
-            onClick={openDeleteBulk}
-            className="flex items-center space-x-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-colors shadow-lg shadow-rose-600/20"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Xóa {selectedIds.length} Album Đã Chọn</span>
-          </button>
+        <div className="bg-gold-500/10 border border-gold-500/30 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 animate-fadeIn">
+          <div className="flex items-center space-x-2 text-sm text-gold-200">
+            <span className="font-bold">{selectedIds.length}</span>
+            <span>album đã được chọn</span>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setSelectedIds([])}
+              className="px-3.5 py-1.5 rounded-xl bg-[#221f1c] hover:bg-[#2c2723] text-xs font-semibold text-[#a2998a] hover:text-[#cfc5b4] transition-colors"
+            >
+              Bỏ chọn tất cả
+            </button>
+            <button
+              onClick={openDeleteBulk}
+              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-lg shadow-rose-600/20"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Xóa {selectedIds.length} album đã chọn</span>
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Album List */}
+      {/* Main Album List */}
       {loading ? (
-        <div className="text-center py-20 bg-[#141210] rounded-3xl border border-[#24201b]">
-          <RefreshCw className="w-8 h-8 text-gold-500 animate-spin mx-auto mb-3" />
+        <div className="py-20 text-center space-y-3">
+          <RefreshCw className="w-8 h-8 mx-auto animate-spin text-gold-500" />
           <p className="text-sm text-[#8e8474]">Đang tải danh sách album...</p>
         </div>
       ) : error ? (
-        <div className="text-center py-16 bg-[#141210] rounded-3xl border border-rose-900/30 p-6">
-          <AlertTriangle className="w-8 h-8 text-rose-500 mx-auto mb-3" />
-          <p className="text-sm text-rose-300 mb-4">{error}</p>
+        <div className="p-8 rounded-2xl bg-red-950/20 border border-red-500/20 text-center space-y-3">
+          <AlertTriangle className="w-8 h-8 mx-auto text-red-400" />
+          <p className="text-sm text-red-300">{error}</p>
           <button
             onClick={fetchAlbums}
-            className="px-4 py-2 bg-[#221f1c] hover:bg-[#2c2723] rounded-xl text-xs font-semibold text-gold-300"
+            className="px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-xs font-bold text-red-300 border border-red-500/30 transition-all"
           >
             Thử lại
           </button>
         </div>
       ) : filteredAlbums.length === 0 ? (
-        <div className="text-center py-20 bg-[#141210] rounded-3xl border border-[#24201b] p-8">
-          <FolderKanban className="w-12 h-12 text-[#4f483d] mx-auto mb-4" />
-          <h3 className="text-lg font-bold text-gold-200 mb-1">
-            {searchQuery || statusFilter !== 'all' ? 'Không tìm thấy album phù hợp' : 'Chưa có album nào'}
-          </h3>
-          <p className="text-sm text-[#8e8474] max-w-md mx-auto mb-6">
-            {searchQuery || statusFilter !== 'all'
-              ? 'Hãy thử thay đổi từ khóa tìm kiếm hoặc bỏ chọn các bộ lọc trạng thái.'
-              : 'Hãy bắt đầu bằng cách tạo album chia sẻ ảnh đầu tiên từ link Google Drive.'}
-          </p>
-          {!searchQuery && statusFilter === 'all' && (
-            <Link
-              to="/"
-              className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-gold-500 text-gold-950 font-bold text-xs"
-            >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span>Tạo Album Ngay</span>
-            </Link>
-          )}
+        <div className="py-20 text-center space-y-4 bg-[#141210] rounded-3xl border border-[#24201b]">
+          <div className="w-14 h-14 mx-auto rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center text-gold-400">
+            <FolderKanban className="w-7 h-7" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-base font-bold text-gold-200">Không tìm thấy album nào</h2>
+            <p className="text-xs text-[#8e8474] max-w-sm mx-auto">
+              {searchQuery || statusFilter !== 'all'
+                ? 'Không có album nào khớp với bộ lọc hiện tại. Thử xóa tìm kiếm hoặc chọn bộ lọc khác.'
+                : 'Chưa có album nào được tạo. Hãy bấm nút dưới đây để tạo album đầu tiên.'}
+            </p>
+          </div>
+          <Link
+            to="/"
+            className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-gold-500 hover:bg-gold-400 text-gold-950 text-xs font-bold transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Tạo Album Ngay</span>
+          </Link>
         </div>
       ) : (
         <div className="space-y-3">
-          {/* Header row with Select All */}
-          <div className="flex items-center justify-between px-4 py-2 text-xs font-semibold text-[#7e7464] uppercase tracking-wider">
+          {/* Header Row for Selection */}
+          <div className="flex items-center justify-between px-4 text-xs font-semibold text-[#8e8474]">
             <div className="flex items-center space-x-3">
               <input
                 type="checkbox"
@@ -363,6 +444,8 @@ export const AdminDashboard = () => {
                     minute: '2-digit'
                   })
                 : 'Chưa rõ';
+
+              const isSyncing = syncingId === album._id;
 
               return (
                 <div
@@ -437,6 +520,17 @@ export const AdminDashboard = () => {
 
                   {/* Right Action buttons */}
                   <div className="flex flex-wrap items-center gap-2 pt-2 lg:pt-0 border-t lg:border-t-0 border-[#221f1c] justify-end">
+                    {/* Sync from Google Drive */}
+                    <button
+                      onClick={() => handleSyncAlbum(album)}
+                      disabled={isSyncing}
+                      className="flex items-center space-x-1 px-3 py-2 rounded-xl bg-[#1a1714] hover:bg-[#26221d] border border-[#2b2722] hover:border-gold-500/40 text-[#cfc5b4] hover:text-gold-300 text-xs font-semibold transition-all disabled:opacity-50"
+                      title="Đồng bộ lại khi bạn vừa upload thêm ảnh mới lên Google Drive"
+                    >
+                      <FolderSync className={`w-3.5 h-3.5 text-gold-400 ${isSyncing ? 'animate-spin' : ''}`} />
+                      <span>{isSyncing ? 'Đang quét...' : 'Đồng bộ'}</span>
+                    </button>
+
                     {/* Copy Client Link */}
                     <button
                       onClick={() => handleCopy(clientUrl, 'client', album._id)}
@@ -446,7 +540,7 @@ export const AdminDashboard = () => {
                       {copiedLink === `client-${album._id}` ? (
                         <>
                           <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-emerald-400">Đã chép link</span>
+                          <span className="text-emerald-400">Đã chép</span>
                         </>
                       ) : (
                         <>
@@ -469,7 +563,7 @@ export const AdminDashboard = () => {
 
                     {/* Go to Manage page */}
                     <Link
-                      to={`/album/${album._id}/manage?token=${album.manageToken}`}
+                      to={manageUrl}
                       className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-gold-500/10 hover:bg-gold-500/20 border border-gold-500/30 text-gold-300 hover:text-gold-200 text-xs font-bold transition-all"
                     >
                       <Settings className="w-3.5 h-3.5" />
@@ -492,7 +586,7 @@ export const AdminDashboard = () => {
         </div>
       )}
 
-      {/* Modal Xác Nhận Xóa */}
+      {/* Delete Confirmation Modal */}
       {deleteModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
           <div className="bg-[#181512] border border-[#2e2821] max-w-md w-full rounded-3xl p-6 shadow-2xl space-y-5">
@@ -502,27 +596,25 @@ export const AdminDashboard = () => {
               </div>
               <div>
                 <h3 className="font-bold text-lg text-rose-200">
-                  {deleteModal.isBulk ? `Xóa ${selectedIds.length} Album?` : 'Xác Nhận Xóa Album'}
+                  {deleteModal.isBulk ? `Xóa ${selectedIds.length} Album Đã Chọn` : 'Xác Nhận Xóa Album'}
                 </h3>
-                <span className="text-xs text-rose-400/80">Hành động này sẽ giải phóng bộ nhớ lưu trữ</span>
+                <span className="text-xs text-rose-400/80">Hành động này không thể hoàn tác</span>
               </div>
             </div>
 
             <div className="text-sm text-[#cfc5b4] bg-[#100e0c] p-4 rounded-2xl border border-[#26211a] space-y-2">
               {deleteModal.isBulk ? (
                 <p>
-                  Bạn có chắc chắn muốn xóa vĩnh viễn <strong>{selectedIds.length} album</strong> đã chọn không? Toàn bộ danh sách chọn ảnh và thông tin khách hàng liên quan sẽ bị gỡ bỏ.
+                  Bạn có chắc chắn muốn xóa vĩnh viễn <strong className="text-gold-200">{selectedIds.length} album</strong> đã chọn không? Link khách hàng của các album này sẽ ngừng hoạt động ngay lập tức.
                 </p>
               ) : (
-                <>
-                  <p>
-                    Bạn có chắc chắn muốn xóa album: <strong className="text-gold-200">"{deleteModal.album?.title}"</strong>?
-                  </p>
-                  <p className="text-xs text-[#8e8474]">
-                    Album có <strong>{deleteModal.album?.imagesCount}</strong> ảnh và <strong>{deleteModal.album?.selectedCount}</strong> ảnh đã chọn.
-                  </p>
-                </>
+                <p>
+                  Bạn có chắc chắn muốn xóa album <strong className="text-gold-200">"{deleteModal.album?.title}"</strong> không? Link gửi cho khách hàng sẽ không thể truy cập sau khi xóa.
+                </p>
               )}
+              <p className="text-xs text-[#8e8474]">
+                Việc xóa album cũ giúp giải phóng bộ nhớ database và giữ danh sách của bạn luôn gọn gàng.
+              </p>
             </div>
 
             <div className="flex items-center justify-end space-x-3 pt-2">
@@ -536,7 +628,7 @@ export const AdminDashboard = () => {
               </button>
               <button
                 type="button"
-                onClick={handleConfirmDelete}
+                onClick={confirmDelete}
                 disabled={deleteModal.loading}
                 className="flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-lg shadow-rose-600/20 disabled:opacity-50"
               >
@@ -548,7 +640,7 @@ export const AdminDashboard = () => {
                 ) : (
                   <>
                     <Trash2 className="w-4 h-4" />
-                    <span>Xác nhận xóa vĩnh viễn</span>
+                    <span>{deleteModal.isBulk ? `Xóa ${selectedIds.length} album` : 'Xác nhận xóa'}</span>
                   </>
                 )}
               </button>

@@ -146,6 +146,20 @@ export const albumApi = {
     } catch (error) {
       throw new Error(extractErrorMessage(error, 'Không thể xóa các album đã chọn.'));
     }
+  },
+
+  /**
+   * Đồng bộ lại danh sách ảnh mới nhất từ Google Drive
+   */
+  async syncDrivePhotos(id, token = '') {
+    try {
+      const response = await api.post(`/${id}/sync`, null, {
+        params: token ? { token } : {},
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không thể đồng bộ ảnh từ Google Drive. Vui lòng kiểm tra quyền chia sẻ thư mục.'));
+    }
   }
 };
 

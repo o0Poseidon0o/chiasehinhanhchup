@@ -141,6 +141,19 @@ const deleteBulkAlbums = asyncHandler(async (req, res) => {
   res.status(200).json(result);
 });
 
+/**
+ * @desc    Đồng bộ danh sách ảnh từ Google Drive
+ * @route   POST /api/albums/:id/sync
+ * @access  Public / Admin
+ */
+const syncAlbum = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const token = req.manageToken || req.query.token || req.headers['x-manage-token'];
+
+  const result = await albumService.syncAlbumImages(id, token);
+  res.status(200).json(result);
+});
+
 module.exports = {
   createAlbum,
   getAlbums,
@@ -151,5 +164,6 @@ module.exports = {
   lockAlbum,
   unlockAlbum,
   deleteAlbum,
-  deleteBulkAlbums
+  deleteBulkAlbums,
+  syncAlbum
 };
