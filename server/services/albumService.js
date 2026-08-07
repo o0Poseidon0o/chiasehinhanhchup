@@ -92,10 +92,50 @@ const getAllAlbums = async (search = '') => {
 };
 
 /**
+ * Helper: Tự động đồng bộ và nạp danh sách ảnh mới nhất từ Google Drive cho Album
+ */
+const refreshAlbumImagesFromDrive = async (album) => {
+  if (!album || album.status === 'locked') {
+    return album;
+  }
+
+  // Không thực hiện fetch API thật nếu là dữ liệu mock demo
+  if (album.driveFolderUrl === 'mock' || album.driveFolderId === 'mock-demo') {
+    return album;
+  }
+
+  try {
+    let folderId = album.driveFolderId;
+    if (!folderId || folderId === 'undefined') {
+      folderId = extractFolderId(album.driveFolderUrl);
+      album.driveFolderId = folderId;
+    }
+
+    if (!folderId) return album;
+
+    const latestImages = await fetchImagesFromFolder(folderId);
+    if (Array.isArray(latestImages) && latestImages.length > 0) {
+      const existingFileIds = new Set((album.images || []).map(img => img.fileId));
+      const hasDifferences = latestImages.length !== (album.images || []).length ||
+        latestImages.some(img => !existingFileIds.has(img.fileId));
+
+      if (hasDifferences) {
+        album.images = latestImages;
+        await album.save();
+      }
+    }
+  } catch (err) {
+    console.warn(`[Auto-Sync Drive] Không thể đồng bộ tự động cho album ${album._id}:`, err.message);
+  }
+
+  return album;
+};
+
+/**
  * 3. Lấy thông tin Album an toàn cho Khách hàng
  */
 const getAlbumForClient = async (id, providedPasscode) => {
-  const album = await Album.findById(id);
+  let album = await Album.findById(id);
   if (!album) {
     const error = new Error('Không tìm thấy Album này.');
     error.statusCode = 404;
@@ -109,6 +149,9 @@ const getAlbumForClient = async (id, providedPasscode) => {
       title: album.title
     };
   }
+
+  // Tự động kiểm tra và đồng bộ ảnh mới nhất từ Google Drive cho link khách hàng
+  album = await refreshAlbumImagesFromDrive(album);
 
   return {
     needsPasscode: false,
@@ -195,7 +238,7 @@ const submitSelection = async (id, payload) => {
  * 6. Lấy toàn bộ thông tin Album cho Admin quản trị
  */
 const getAlbumForAdmin = async (id, token) => {
-  const album = await Album.findById(id);
+  let album = await Album.findById(id);
   if (!album) {
     const error = new Error('Không tìm thấy Album này.');
     error.statusCode = 404;
@@ -207,6 +250,9 @@ const getAlbumForAdmin = async (id, token) => {
     error.statusCode = 403;
     throw error;
   }
+
+  // Tự động kiểm tra và đồng bộ ảnh mới nhất từ Google Drive cho trang Admin
+  album = await refreshAlbumImagesFromDrive(album);
 
   return album;
 };

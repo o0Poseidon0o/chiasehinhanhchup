@@ -88,29 +88,35 @@ const getMockImages = () => {
 const fetchImagesFromFolder = async (folderId) => {
   const apiKey = process.env.GOOGLE_API_KEY;
   if (!apiKey) {
-    throw new Error('Google API Key chưa được cấu hình trong file .env');
+    throw new Error('Google API Key chưa được cấu hình trong file .env hoặc Vercel Environment Variables');
   }
 
   const endpoint = 'https://www.googleapis.com/drive/v3/files';
+  let allFiles = [];
+  let pageToken = null;
   
   try {
-    const response = await axios.get(endpoint, {
-      params: {
-        q: `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`,
-        key: apiKey,
-        fields: 'files(id, name, mimeType, thumbnailLink, webViewLink, size)',
-        pageSize: 1000,
-        orderBy: 'name'
-      },
-      timeout: 15000
-    });
+    do {
+      const response = await axios.get(endpoint, {
+        params: {
+          q: `'${folderId}' in parents and (mimeType contains 'image/' or mimeType contains 'photo' or mimeType = 'application/vnd.google-apps.photo') and trashed = false`,
+          key: apiKey,
+          fields: 'nextPageToken, files(id, name, mimeType, thumbnailLink, webViewLink, size)',
+          pageSize: 1000,
+          pageToken: pageToken || undefined,
+          orderBy: 'name'
+        },
+        timeout: 15000
+      });
 
-    if (!response.data || !response.data.files) {
-      return [];
-    }
+      if (response.data && response.data.files) {
+        allFiles = allFiles.concat(response.data.files);
+      }
+      pageToken = response.data?.nextPageToken;
+    } while (pageToken);
 
     // Map lại thông tin ảnh với link CDN Googleusercontent tối ưu
-    return response.data.files.map(file => {
+    return allFiles.map(file => {
       const fileId = file.id;
       return {
         fileId: fileId,
