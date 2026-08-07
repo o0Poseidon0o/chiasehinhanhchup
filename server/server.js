@@ -8,7 +8,7 @@ const { notFoundHandler, globalErrorHandler } = require('./middlewares/errorHand
 // Nạp biến môi trường từ file .env
 dotenv.config();
 
-// Khởi tạo kết nối cơ sở dữ liệu (tự động fallback Local JSON nếu mất kết nối)
+// Khởi tạo kết nối cơ sở dữ liệu nền
 connectDB();
 
 const app = express();
@@ -18,12 +18,24 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Middleware đảm bảo DB luôn sẵn sàng trước khi xử lý mọi request API
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+  } catch (err) {
+    console.warn('DB connect middleware warning:', err.message);
+  }
+  next();
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  const mongoose = require('mongoose');
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    dbMode: global.useLocalDB ? 'Local JSON' : 'MongoDB'
+    dbMode: global.useLocalDB ? 'Local JSON' : 'MongoDB',
+    connectionState: mongoose.connection.readyState
   });
 });
 
