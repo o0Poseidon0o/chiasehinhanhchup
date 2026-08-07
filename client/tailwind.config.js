@@ -35,7 +35,7 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Outfit', 'Inter', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', '"Be Vietnam Pro"', 'Inter', 'Outfit', 'sans-serif'],
       }
     },
   },
