@@ -11,10 +11,8 @@ import {
   Menu,
   X,
   Sparkles,
-  ShieldCheck,
-  ExternalLink
+  ShieldCheck
 } from 'lucide-react';
-import { ThemeSelector } from './ThemeSelector';
 import { useAuth } from '../../context/AuthContext';
 
 export const Navbar = () => {
@@ -115,7 +113,6 @@ export const Navbar = () => {
 
         {/* Right Actions & Auth */}
         <div className="flex items-center space-x-2 sm:space-x-3">
-          <ThemeSelector />
 
           {/* Nếu là Nhiếp Ảnh Gia: Nút vào Studio Workspace riêng của họ */}
           {isLoggedIn && isPhotographer && (
