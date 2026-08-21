@@ -114,11 +114,11 @@ export const Navbar = () => {
         {/* Right Actions & Auth */}
         <div className="flex items-center space-x-2 sm:space-x-3">
 
-          {/* Nếu là Nhiếp Ảnh Gia: Nút vào Studio Workspace riêng của họ */}
+          {/* Nếu là Nhiếp Ảnh Gia: Nút vào Studio Workspace riêng của họ (Chỉ hiện từ màn hình sm) */}
           {isLoggedIn && isPhotographer && (
             <button
               onClick={handleStudioWorkspaceClick}
-              className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 shadow-md ${isWorkspace
+              className={`hidden sm:flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 shadow-md ${isWorkspace
                 ? 'bg-amber-500 text-amber-950 shadow-amber-500/20'
                 : 'bg-[#141720] hover:bg-[#1c2230] border border-amber-500/40 text-amber-300 hover:text-white'
                 }`}
@@ -128,9 +128,9 @@ export const Navbar = () => {
             </button>
           )}
 
-          {/* Nếu là Master Admin: Hiển thị cả 2 nút (👑 Master Admin + Studio Workspace) */}
+          {/* Nếu là Master Admin: Hiển thị cả 2 nút (Chỉ hiện từ màn hình sm) */}
           {isLoggedIn && isAdmin && (
-            <div className="flex items-center space-x-1.5 shrink-0">
+            <div className="hidden sm:flex items-center space-x-1.5 shrink-0">
               <button
                 onClick={handleAdminClick}
                 className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 shrink-0 ${isAdminPage
@@ -227,17 +227,25 @@ export const Navbar = () => {
           >
             Trang Chủ
           </Link>
+          <Link
+            to="/photographers"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block py-2 px-3 rounded-lg text-sm font-medium text-gray-200 hover:bg-white/5"
+          >
+            Nhiếp Ảnh Gia
+          </Link>
+          <Link
+            to="/bookings"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block py-2 px-3 rounded-lg text-sm font-medium text-gray-200 hover:bg-white/5"
+          >
+            Đặt Lịch Chụp
+          </Link>
           <button
             onClick={() => handleNavClick('categories-section')}
             className="w-full text-left py-2 px-3 rounded-lg text-sm font-medium text-gray-200 hover:bg-white/5"
           >
             Gói Chụp Ảnh
-          </button>
-          <button
-            onClick={() => handleNavClick('photographers-section')}
-            className="w-full text-left py-2 px-3 rounded-lg text-sm font-medium text-gray-200 hover:bg-white/5"
-          >
-            Nhiếp Ảnh Gia
           </button>
           <button
             onClick={() => handleNavClick('album-lookup')}
@@ -248,6 +256,17 @@ export const Navbar = () => {
           </button>
 
           <div className="pt-3 border-t border-[#242938] space-y-2">
+            {/* Nút Master Admin nổi bật ở Mobile Menu */}
+            {isLoggedIn && isAdmin && (
+              <button
+                onClick={handleAdminClick}
+                className="w-full py-2.5 px-3 bg-gradient-to-r from-amber-500 to-amber-400 text-amber-950 rounded-xl text-sm font-black flex items-center justify-center space-x-2 shadow-md"
+              >
+                <FolderKanban className="w-4 h-4 shrink-0" />
+                <span>👑 Trang Quản Lý Master Admin</span>
+              </button>
+            )}
+
             <button
               onClick={handleStudioWorkspaceClick}
               className="w-full py-2.5 px-3 bg-[#141720] border border-[#2b3245] text-white rounded-xl text-sm font-bold flex items-center justify-center space-x-2"
@@ -255,14 +274,6 @@ export const Navbar = () => {
               <PlusCircle className="w-4 h-4 text-amber-400" />
               <span>Vào Studio Workspace (Tạo Album)</span>
               {!isLoggedIn && <Lock className="w-3.5 h-3.5 text-amber-400" />}
-            </button>
-
-            <button
-              onClick={handleAdminClick}
-              className="w-full py-2.5 px-3 bg-[#141720] border border-[#2b3245] text-white rounded-xl text-sm font-semibold flex items-center justify-center space-x-2"
-            >
-              <FolderKanban className="w-4 h-4 text-amber-400" />
-              <span>Quản Lý Danh Sách Album</span>
             </button>
           </div>
         </div>
