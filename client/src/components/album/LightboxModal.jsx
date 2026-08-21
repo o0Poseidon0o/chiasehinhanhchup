@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, ChevronLeft, ChevronRight, Heart, MessageSquare, Download, Check, Edit2, Trash2 } from 'lucide-react';
 
 export const LightboxModal = ({
@@ -28,6 +29,18 @@ export const LightboxModal = ({
     setDraft(currentComment);
     setIsEditing(false);
   }, [currentIndex, currentComment]);
+
+  // Lock body scroll when modal is active
+  useEffect(() => {
+    if (currentIndex >= 0) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [currentIndex]);
 
   const handleSave = () => {
     if (isClosed) return;
@@ -87,30 +100,42 @@ export const LightboxModal = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/95 z-50 flex flex-col justify-between select-none animate-fade-in">
-      {/* Lightbox Header */}
-      <div className="p-4 flex items-center justify-between text-white border-b border-white/10 bg-black/40 backdrop-blur-md z-10">
-        <div>
-          <p className="text-sm font-semibold text-gold-100">{currentImage.fileName}</p>
-          <p className="text-[10px] text-[#a2998a]">
-            Ảnh {currentIndex + 1} / {images.length}
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-between h-screen w-screen overflow-hidden p-2 sm:p-4 select-none animate-fade-in"
+      onClick={onClose}
+    >
+      {/* Lightbox Header Bar (Top, Flex 0) */}
+      <div 
+        className="w-full max-w-7xl flex items-center justify-between shrink-0 z-20 pt-1 px-2"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Left File Info */}
+        <div className="flex items-center space-x-3 bg-[#141720]/90 backdrop-blur-xl px-4 py-2 rounded-2xl border border-[#242938] shadow-2xl max-w-[55vw] sm:max-w-md">
+          <span className="px-2.5 py-1 bg-amber-500/20 text-amber-300 font-mono text-xs font-black rounded-lg border border-amber-500/30 shrink-0">
+            {currentIndex + 1} / {images.length}
+          </span>
+          <p className="text-xs sm:text-sm font-bold text-white truncate">
+            {currentImage.fileName || `Ảnh #${currentIndex + 1}`}
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
+        {/* Right Action Buttons */}
+        <div className="flex items-center space-x-2 shrink-0">
           {/* Nút chọn ảnh ngay trong lightbox */}
           <button
             disabled={isClosed}
+            type="button"
             onClick={() => onToggleSelect && onToggleSelect(currentImage)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+            className={`px-3.5 py-2 rounded-2xl text-xs font-black flex items-center space-x-1.5 shadow-xl transition-all hover:scale-105 ${
               isSelected
-                ? 'bg-gold-500 text-gold-950 shadow-md'
-                : 'bg-white/10 hover:bg-white/20 text-white'
+                ? 'bg-amber-500 text-amber-950 shadow-amber-500/20'
+                : 'bg-white/10 hover:bg-white/20 text-white border border-white/15'
             }`}
           >
             <Heart className={`w-4 h-4 ${isSelected ? 'fill-current' : ''}`} />
-            <span>{isSelected ? 'Đã Chọn' : 'Chọn Ảnh Này'}</span>
+            <span className="hidden sm:inline">{isSelected ? 'Đã Chọn' : 'Chọn Ảnh Này'}</span>
+            <span className="sm:hidden">{isSelected ? 'Đã Chọn' : 'Chọn'}</span>
           </button>
 
           {/* Nút tải ảnh */}
@@ -119,7 +144,7 @@ export const LightboxModal = ({
               href={`https://docs.google.com/uc?export=download&id=${currentImage.fileId}`}
               target="_blank"
               rel="noreferrer"
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all text-white"
+              className="p-2 bg-white/10 hover:bg-white/20 border border-white/15 rounded-2xl transition-all text-white shadow-xl"
               title="Tải ảnh gốc về máy"
             >
               <Download className="w-4 h-4" />
@@ -128,67 +153,129 @@ export const LightboxModal = ({
 
           {/* Nút đóng */}
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all text-white"
+            className="p-2.5 sm:px-4 sm:py-2 bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white border border-red-500/30 rounded-2xl text-xs font-bold transition-all shadow-xl flex items-center space-x-1.5"
+            title="Tắt xem ảnh (Phím ESC)"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 stroke-[2.5]" />
+            <span className="hidden sm:inline font-bold">Đóng [ESC]</span>
           </button>
         </div>
       </div>
 
-      {/* Lightbox Main Preview */}
-      <div className="flex-grow flex items-center justify-between relative px-4 sm:px-12 overflow-hidden">
-        <button
-          disabled={currentIndex === 0}
-          onClick={() => onNavigate(currentIndex - 1)}
-          className="absolute left-4 z-10 p-2.5 bg-black/50 hover:bg-gold-500 hover:text-gold-950 text-white disabled:opacity-20 rounded-full transition-all backdrop-blur-sm"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
+      {/* Left Arrow Button */}
+      <button
+        disabled={currentIndex === 0}
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onNavigate(currentIndex - 1);
+        }}
+        className="fixed left-3 sm:left-6 top-1/2 -translate-y-1/2 z-30 p-3.5 sm:p-4 bg-black/70 hover:bg-amber-500 text-white hover:text-amber-950 disabled:opacity-20 rounded-full border border-white/20 backdrop-blur-xl transition-all hover:scale-110 active:scale-95 shadow-2xl"
+        title="Ảnh Trước (Phím ⬅️)"
+      >
+        <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8 stroke-[2.5]" />
+      </button>
 
-        <div className="w-full h-[70vh] flex items-center justify-center p-2">
-          <img
-            src={lightboxFallbackUrls[srcIndex] || currentImage.embedUrl || currentImage.thumbnailUrl}
-            alt={currentImage.fileName}
-            referrerPolicy="no-referrer"
-            onError={handleImageError}
-            className="max-w-full max-h-full object-contain rounded-md shadow-2xl transition-opacity duration-300"
-          />
-        </div>
-
-        <button
-          disabled={currentIndex === images.length - 1}
-          onClick={() => onNavigate(currentIndex + 1)}
-          className="absolute right-4 z-10 p-2.5 bg-black/50 hover:bg-gold-500 hover:text-gold-950 text-white disabled:opacity-20 rounded-full transition-all backdrop-blur-sm"
-        >
-          <ChevronRight className="w-6 h-6" />
-        </button>
+      {/* Center Main Preview Area */}
+      <div
+        className="flex-1 w-full flex items-center justify-center overflow-hidden my-1 px-12 sm:px-24 relative z-10 cursor-pointer"
+        onClick={onClose}
+      >
+        <img
+          src={lightboxFallbackUrls[srcIndex] || currentImage.embedUrl || currentImage.thumbnailUrl}
+          alt={currentImage.fileName}
+          referrerPolicy="no-referrer"
+          onError={handleImageError}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (currentIndex < images.length - 1) {
+              onNavigate(currentIndex + 1);
+            }
+          }}
+          className="max-h-[calc(100vh-210px)] max-w-full object-contain rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.9)] border border-[#242938] transition-all duration-300 transform hover:scale-[1.005]"
+        />
       </div>
 
-      {/* Lightbox Footer Ghi chú */}
+      {/* Right Arrow Button */}
+      <button
+        disabled={currentIndex === images.length - 1}
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onNavigate(currentIndex + 1);
+        }}
+        className="fixed right-3 sm:right-6 top-1/2 -translate-y-1/2 z-30 p-3.5 sm:p-4 bg-black/70 hover:bg-amber-500 text-white hover:text-amber-950 disabled:opacity-20 rounded-full border border-white/20 backdrop-blur-xl transition-all hover:scale-110 active:scale-95 shadow-2xl"
+        title="Ảnh Sau (Phím ➡️)"
+      >
+        <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8 stroke-[2.5]" />
+      </button>
+
+      {/* Bottom Thumbnail Strip Carousel */}
+      <div 
+        className="w-full shrink-0 flex items-center justify-center z-20 mb-1"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="max-w-[90vw] sm:max-w-4xl bg-[#141720]/90 backdrop-blur-xl p-1.5 px-3 rounded-2xl border border-[#242938] shadow-2xl flex items-center space-x-2 overflow-x-auto no-scrollbar">
+          {images.map((img, tIdx) => {
+            const isThumbSelected = selectedPhotos.some(p => p.fileId === img.fileId);
+            return (
+              <button
+                key={img.fileId || tIdx}
+                type="button"
+                onClick={() => onNavigate(tIdx)}
+                className={`relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden shrink-0 transition-all border-2 ${
+                  currentIndex === tIdx
+                    ? 'border-amber-400 ring-2 ring-amber-400/50 scale-105 opacity-100'
+                    : 'border-transparent opacity-50 hover:opacity-100 hover:scale-105'
+                }`}
+              >
+                <img
+                  src={img.thumbnailUrl || img.embedUrl}
+                  alt={`Thumb ${tIdx}`}
+                  className="w-full h-full object-cover"
+                />
+                {isThumbSelected && (
+                  <div className="absolute top-0.5 right-0.5 w-3 h-3 bg-amber-500 rounded-full flex items-center justify-center shadow-md">
+                    <Heart className="w-2 h-2 text-amber-950 fill-amber-950" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Lightbox Footer Ghi chú sửa ảnh */}
       {allowComment && (
-        <div className="p-3 sm:p-4 bg-[#0c0b0a] border-t border-[#221f1c]">
-          <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center gap-3">
-            <div className="flex items-center space-x-1.5 text-gold-400 text-xs font-semibold shrink-0">
-              <MessageSquare className="w-4 h-4" />
+        <div 
+          className="w-full shrink-0 z-20 bg-[#141720]/95 backdrop-blur-xl border-t border-[#242938] p-2.5 px-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
+            <div className="flex items-center space-x-1.5 text-amber-400 text-xs font-semibold shrink-0">
+              <MessageSquare className="w-4 h-4 text-amber-400" />
               <span>Ghi chú sửa ảnh:</span>
             </div>
 
             {currentComment && !isEditing ? (
-              <div className="flex-grow w-full flex items-center justify-between bg-[#161412] border border-[#2b2722] rounded-xl px-4 py-2 text-xs">
-                <span className="text-[#f5eedf] italic truncate">"{currentComment}"</span>
+              <div className="flex-grow w-full flex items-center justify-between bg-[#0c0d12] border border-[#242938] rounded-xl px-3.5 py-1.5 text-xs">
+                <span className="text-gray-200 italic truncate">"{currentComment}"</span>
                 {!isClosed && (
                   <div className="flex items-center space-x-2 shrink-0 ml-2">
                     <button
+                      type="button"
                       onClick={() => setIsEditing(true)}
-                      className="px-2.5 py-1 bg-gold-500/15 hover:bg-gold-500/25 border border-gold-500/40 text-gold-300 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
+                      className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
                     >
                       <Edit2 className="w-3 h-3" />
                       <span>Sửa</span>
                     </button>
                     <button
+                      type="button"
                       onClick={handleDelete}
-                      className="px-2.5 py-1 bg-red-950/30 hover:bg-red-900/40 border border-red-500/30 text-rose-300 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
+                      className="px-2.5 py-1 bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-rose-300 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all"
                     >
                       <Trash2 className="w-3 h-3" />
                       <span>Xóa</span>
@@ -204,17 +291,18 @@ export const LightboxModal = ({
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   placeholder="Nhập yêu cầu chỉnh sửa (ví dụ: bóp eo, xóa mụn, làm sáng...)"
-                  className="flex-grow bg-[#161412] border border-[#2b2722] rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-gold-500 text-[#f5eedf]"
+                  className="flex-grow bg-[#0c0d12] border border-[#242938] rounded-xl px-3.5 py-1.5 text-xs focus:outline-none focus:border-amber-400 text-white placeholder-gray-500"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleSave();
                   }}
                 />
                 {!isClosed && (
                   <button
+                    type="button"
                     onClick={handleSave}
-                    className="px-4 py-2 bg-gold-500 hover:bg-gold-400 text-gold-950 font-bold text-xs rounded-xl transition-all shrink-0 flex items-center space-x-1 shadow-md"
+                    className="px-4 py-1.5 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-amber-950 font-black text-xs rounded-xl transition-all shrink-0 flex items-center space-x-1 shadow-md"
                   >
-                    <Check className="w-4 h-4" />
+                    <Check className="w-4 h-4 stroke-[2.5]" />
                     <span>Lưu Ghi Chú</span>
                   </button>
                 )}
@@ -223,9 +311,11 @@ export const LightboxModal = ({
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 };
 
 export default LightboxModal;
+
 
