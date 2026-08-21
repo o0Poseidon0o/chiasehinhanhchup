@@ -10,14 +10,40 @@ import {
   Check, 
   X, 
   Hash, 
-  Lock 
+  Lock,
+  Copy,
+  Phone,
+  Share2
 } from 'lucide-react';
 import { StatusBadge } from '../common/StatusBadge';
 import { EditAlbumModal } from './EditAlbumModal';
+import { getPublicBaseUrl, generateClientShareText } from '../../utils/formatters';
 
 export const AdminSettingsCard = ({ album, onSync, syncLoading, onUpdate, token = '' }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedMsg, setCopiedMsg] = useState(false);
+
   const totalCount = album.images?.length || 0;
+  const clientUrl = `${getPublicBaseUrl()}/album/${album._id}`;
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(clientUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const handleCopyMessage = () => {
+    const msg = generateClientShareText({
+      clientName: album.clientInfo?.name,
+      albumTitle: album.title,
+      clientUrl: clientUrl,
+      passcode: album.passcode
+    });
+    navigator.clipboard.writeText(msg);
+    setCopiedMsg(true);
+    setTimeout(() => setCopiedMsg(false), 2000);
+  };
 
   return (
     <>
@@ -148,16 +174,68 @@ export const AdminSettingsCard = ({ album, onSync, syncLoading, onUpdate, token 
             </div>
           )}
 
-          <div className="pt-2 border-t border-[#221f1c]">
-            <a
-              href={`/album/${album._id}`}
-              target="_blank"
-              rel="noreferrer"
-              className="w-full bg-[#1a1816] hover:bg-[#221f1c] border border-[#2b2722] py-2.5 rounded-xl text-center flex items-center justify-center space-x-1.5 text-xs text-[#a2998a] hover:text-gold-200 transition-all"
-            >
-              <span>Xem giao diện Khách hàng</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
+          {/* Section: Gửi Link Cho Khách */}
+          <div className="pt-3 border-t border-[#221f1c] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-gold-300 uppercase tracking-wider flex items-center space-x-1">
+                <Share2 className="w-3.5 h-3.5 text-gold-400" />
+                <span>Gửi link cho Khách hàng</span>
+              </span>
+              <span className="text-[10px] text-[#8e8576]">Tương thích Vercel & Domain</span>
+            </div>
+
+            <div className="space-y-2">
+              <input
+                type="text"
+                readOnly
+                value={clientUrl}
+                className="w-full bg-[#13110f] border border-[#2b2722] text-xs font-mono text-gold-300 rounded-xl p-2.5 select-all focus:outline-none"
+              />
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="bg-gold-500 hover:bg-gold-400 text-gold-950 font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all shadow-sm"
+                >
+                  {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedLink ? 'Đã copy!' : 'Copy Link'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopyMessage}
+                  className="bg-[#1e1a16] hover:bg-[#28231e] border border-gold-500/40 text-gold-200 hover:text-gold-100 font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all"
+                  title="Copy tin nhắn soạn sẵn kèm lời chào và link gửi Zalo"
+                >
+                  {copiedMsg ? <Check className="w-3.5 h-3.5 text-green-400" /> : <MessageSquare className="w-3.5 h-3.5 text-gold-400" />}
+                  <span>{copiedMsg ? 'Đã copy!' : 'Tin Nhắn Zalo'}</span>
+                </button>
+              </div>
+
+              <div className="flex items-center space-x-2 pt-0.5">
+                {album.clientInfo?.phone && (
+                  <a
+                    href={`https://zalo.me/${album.clientInfo.phone.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-semibold py-2 px-3 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>Mở Zalo Khách</span>
+                  </a>
+                )}
+                <a
+                  href={clientUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 bg-[#1a1816] hover:bg-[#221f1c] border border-[#2b2722] text-[#a2998a] hover:text-gold-200 font-semibold py-2 px-3 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all"
+                >
+                  <span>Xem Khách</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </div>

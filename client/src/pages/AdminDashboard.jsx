@@ -27,13 +27,23 @@ import {
   ShieldAlert,
   KeyRound,
   LogOut,
-  Loader2
+  Loader2,
+  Users,
+  Award,
+  Camera,
+  Sparkles,
+  Calendar
 } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
 import { getPublicBaseUrl } from '../utils/formatters';
 import { EditAlbumModal } from '../components/admin/EditAlbumModal';
+import { AdminUserManagement } from '../components/admin/AdminUserManagement';
+import { AdminPhotographersHub } from '../components/admin/AdminPhotographersHub';
+import { AdminCategoriesManagement } from '../components/admin/AdminCategoriesManagement';
+import { AdminBookingsManagement } from '../components/admin/AdminBookingsManagement';
 
 export const AdminDashboard = () => {
+  const [activeTab, setActiveTab] = useState('albums'); // 'albums' | 'photographers' | 'bookings' | 'users' | 'categories'
   const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -405,6 +415,79 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
+      {/* Tab Navigation: Albums vs Photographers vs Bookings vs Users vs Categories */}
+      <div className="flex items-center space-x-2 bg-[#141720] p-1.5 rounded-2xl border border-[#242938] overflow-x-auto w-fit">
+        <button
+          onClick={() => setActiveTab('albums')}
+          className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+            activeTab === 'albums'
+              ? 'bg-amber-500 text-amber-950 shadow-md shadow-amber-500/20'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          <FolderKanban className="w-4 h-4" />
+          <span>📁 Kho Quản Lý Album ({albums.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('bookings')}
+          className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+            activeTab === 'bookings'
+              ? 'bg-amber-500 text-amber-950 shadow-md shadow-amber-500/20'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          <Calendar className="w-4 h-4" />
+          <span>📅 Quản Lý Lịch Booking & Tư Vấn</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('photographers')}
+          className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+            activeTab === 'photographers'
+              ? 'bg-amber-500 text-amber-950 shadow-md shadow-amber-500/20'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          <Camera className="w-4 h-4" />
+          <span>📷 Quản Lý Nhiếp Ảnh Gia & Duyệt Hồ Sơ</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+            activeTab === 'users'
+              ? 'bg-amber-500 text-amber-950 shadow-md shadow-amber-500/20'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>👥 Quản Lý Khách Hàng & Phân Quyền</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('categories')}
+          className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+            activeTab === 'categories'
+              ? 'bg-amber-500 text-amber-950 shadow-md shadow-amber-500/20'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 text-amber-300" />
+          <span>🎨 Quản Lý Thể Loại & Giao Diện CMS</span>
+        </button>
+      </div>
+
+      {activeTab === 'bookings' ? (
+        <AdminBookingsManagement />
+      ) : activeTab === 'photographers' ? (
+        <AdminPhotographersHub />
+      ) : activeTab === 'users' ? (
+        <AdminUserManagement />
+      ) : activeTab === 'categories' ? (
+        <AdminCategoriesManagement />
+      ) : (
+        <>
       {/* Notice Banner */}
       {dashboardNotice && (
         <div
@@ -845,6 +928,8 @@ export const AdminDashboard = () => {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

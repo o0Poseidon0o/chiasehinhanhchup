@@ -17,7 +17,7 @@ import {
   Phone
 } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
-import { getPublicBaseUrl } from '../utils/formatters';
+import { getPublicBaseUrl, generateClientShareText } from '../utils/formatters';
 
 export const Home = () => {
   const [formData, setFormData] = useState({
@@ -87,6 +87,21 @@ export const Home = () => {
     if (!successData) return '';
     const base = getPublicBaseUrl();
     return `${base}/album/${successData.albumId}/manage?token=${successData.manageToken}`;
+  };
+
+  const [copiedMsg, setCopiedMsg] = useState(false);
+
+  const handleCopyMessage = () => {
+    if (!successData) return;
+    const msg = generateClientShareText({
+      clientName: formData.clientName,
+      albumTitle: formData.title || 'Album ảnh',
+      clientUrl: getClientUrl(),
+      passcode: formData.passcode
+    });
+    navigator.clipboard.writeText(msg);
+    setCopiedMsg(true);
+    setTimeout(() => setCopiedMsg(false), 2000);
   };
 
   const copyToClipboard = (text, type) => {
@@ -394,20 +409,43 @@ export const Home = () => {
                   value={getClientUrl()}
                   className="flex-grow bg-[#0c0b0a] border border-[#221f1c] text-xs font-mono text-[#f5eedf] rounded-lg px-3 py-2.5 select-all focus:outline-none"
                 />
-                <div className="flex items-center space-x-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
                   <button
                     onClick={() => copyToClipboard(getClientUrl(), 'client')}
-                    className="flex-1 sm:flex-none px-4 py-2.5 bg-gold-500 hover:bg-gold-400 text-gold-950 font-bold rounded-lg text-xs flex items-center justify-center space-x-1.5 transition-all shadow-md"
+                    className="flex-1 sm:flex-none px-3.5 py-2.5 bg-gold-500 hover:bg-gold-400 text-gold-950 font-bold rounded-lg text-xs flex items-center justify-center space-x-1.5 transition-all shadow-md"
                   >
                     {copiedClient ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{copiedClient ? 'Đã copy' : 'Copy link'}</span>
                   </button>
+
+                  <button
+                    onClick={handleCopyMessage}
+                    className="flex-1 sm:flex-none px-3.5 py-2.5 bg-[#25221e] hover:bg-[#302c27] text-gold-300 font-bold border border-gold-500/40 rounded-lg text-xs flex items-center justify-center space-x-1.5 transition-all"
+                    title="Copy lời nhắn soạn sẵn kèm link và mã PIN gửi Zalo / SMS"
+                  >
+                    {copiedMsg ? <Check className="w-3.5 h-3.5 text-green-400" /> : <MessageSquare className="w-3.5 h-3.5 text-gold-400" />}
+                    <span>{copiedMsg ? 'Đã copy tin nhắn' : 'Copy Tin Nhắn Zalo'}</span>
+                  </button>
+
+                  {formData.clientPhone && (
+                    <a
+                      href={`https://zalo.me/${formData.clientPhone.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-3 py-2.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-semibold rounded-lg text-xs flex items-center justify-center space-x-1 transition-all"
+                      title="Mở nhắn tin Zalo với khách"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>Zalo</span>
+                    </a>
+                  )}
+
                   <a
                     href={getClientUrl()}
                     target="_blank"
                     rel="noreferrer"
                     className="p-2.5 bg-[#1e1c19] hover:bg-[#282522] border border-[#2b2722] text-[#f5eedf] rounded-lg transition-all"
-                    title="Mở tab mới"
+                    title="Mở tab mới xem thử giao diện khách"
                   >
                     <ExternalLink className="w-4 h-4" />
                   </a>
@@ -459,7 +497,7 @@ export const Home = () => {
               </div>
 
               <p className="text-[11px] text-[#8e8576] leading-relaxed">
-                💡 Trang quản trị cho phép bạn xem thông tin khách nộp, copy danh sách tên file vào Lightroom, tải file BAT gom ảnh tự động và khóa/mở khóa album.
+                💡 Trang quản trị cho phép bạn xem thông tin khách nộp, copy danh sách tên file vào Lightroom / Capture One, tải script gom ảnh tự động (Macbook & Windows) và khóa/mở khóa album.
               </p>
             </div>
 

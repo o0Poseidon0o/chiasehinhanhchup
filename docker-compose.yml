@@ -1,0 +1,52 @@
+services:
+  # ==========================================
+  # 1. BACKEND SERVER (Node.js Express)
+  # ==========================================
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: potonow_server
+    restart: unless-stopped
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - MONGODB_URI=${MONGODB_URI:-mongodb+srv://chonanhdb:Lenh%40n16587@chonanh.3evokx5.mongodb.net/?appName=chonanh}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-AIzaSyDA1h207K_i7gUbRFyTsMZR2BZrY_1fvV0}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+    volumes:
+      # Lưu trữ dữ liệu Local JSON nếu không dùng MongoDB ngoài
+      - server_data:/app/data
+    networks:
+      - potonow_network
+    # Port chỉ cần nội bộ giữa các container qua mạng potonow_network
+    # Mở port 5000 nếu bạn muốn gọi trực tiếp backend từ ngoài:
+    ports:
+      - "5000:5000"
+
+  # ==========================================
+  # 2. FRONTEND CLIENT (React + NGINX Web Server)
+  # ==========================================
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: potonow_client
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    networks:
+      - potonow_network
+
+# ==========================================
+# NETWORKS & VOLUMES
+# ==========================================
+networks:
+  potonow_network:
+    driver: bridge
+
+volumes:
+  server_data:
+    driver: local

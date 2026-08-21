@@ -12,6 +12,7 @@ const {
 router.post('/admin/login', albumController.verifyAdminPassword);
 
 // Public routes for client & photo selection
+router.get('/proxy-image/:fileId', albumController.proxyImage);
 router.post('/', validateCreateAlbum, albumController.createAlbum);
 router.get('/', validateAdminPassword, albumController.getAlbums);
 router.post('/sync-all', validateAdminPassword, albumController.syncAllAlbums);

@@ -31,16 +31,37 @@ export const cleanFileName = (fileName) => {
 };
 
 /**
- * Lấy Public URL chuẩn hóa (tự động loại bỏ suffix team/preview Vercel để link luôn công khai, không bắt đăng nhập)
+ * Lấy Public URL chuẩn hóa cho Album
+ * - Ưu tiên cấu hình VITE_APP_URL nếu có trong file .env hoặc Vercel Environment Variables.
+ * - Tự động lấy window.location.origin tương thích 100% với tên miền Vercel demo cũng như tên miền riêng sau này.
  */
 export const getPublicBaseUrl = () => {
   if (typeof window === 'undefined') return '';
-  let origin = window.location.origin;
-
-  // Loại bỏ các suffix team / preview như -lenhans-projects.vercel.app -> .vercel.app
-  // Ví dụ: https://chiasehinhanhchup-lenhans-projects.vercel.app -> https://chiasehinhanhchup.vercel.app
-  origin = origin.replace(/-[a-zA-Z0-9_-]+-projects\.vercel\.app$/i, '.vercel.app');
-  origin = origin.replace(/-git-[a-zA-Z0-9_-]+\.vercel\.app$/i, '.vercel.app');
   
-  return origin;
+  const envUrl = import.meta.env?.VITE_APP_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '') {
+    return envUrl.trim().replace(/\/$/, '');
+  }
+
+  return window.location.origin.replace(/\/$/, '');
 };
+
+/**
+ * Tạo nội dung tin nhắn chuẩn Studio để gửi nhanh cho khách qua Zalo / SMS / Messenger
+ */
+export const generateClientShareText = ({ clientName = '', albumTitle = 'Album ảnh', clientUrl = '', passcode = '' }) => {
+  let msg = `📸 STUDIO GỬI LINK CHỌN ẢNH\n`;
+  if (clientName && clientName.trim()) {
+    msg += `Kính chào anh/chị ${clientName.trim()}!\n`;
+  } else {
+    msg += `Kính chào anh/chị!\n`;
+  }
+  msg += `Studio xin gửi link album ảnh "${albumTitle}":\n`;
+  msg += `👉 Link chọn ảnh: ${clientUrl}\n`;
+  if (passcode && passcode.trim()) {
+    msg += `🔑 Mã PIN mở album: ${passcode.trim()}\n`;
+  }
+  msg += `\nAnh/chị truy cập link trên để chọn những tấm ảnh ưng ý nhất giúp Studio nhé! Trân trọng.`;
+  return msg;
+};
+

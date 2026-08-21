@@ -177,6 +177,49 @@ const updateAlbumSettings = asyncHandler(async (req, res) => {
   res.status(200).json(result);
 });
 
+const axios = require('axios');
+
+/**
+ * @desc    Proxy tải thumbnail ảnh Google Drive tránh chặn CORS / Referrer
+ * @route   GET /api/albums/proxy-image/:fileId
+ * @access  Public
+ */
+const proxyImage = asyncHandler(async (req, res) => {
+  const { fileId } = req.params;
+  const sz = req.query.sz || 800;
+
+  if (!fileId) {
+    return res.status(400).send('Missing fileId');
+  }
+
+  const urls = [
+    `https://drive.google.com/thumbnail?id=${fileId}&sz=w${sz}`,
+    `https://lh3.googleusercontent.com/d/${fileId}=s${sz}`,
+    `https://lh3.googleusercontent.com/u/0/d/${fileId}=w${sz}`,
+    `https://drive.google.com/uc?export=view&id=${fileId}`
+  ];
+
+  for (const url of urls) {
+    try {
+      const response = await axios.get(url, {
+        responseType: 'stream',
+        timeout: 8000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      });
+
+      res.setHeader('Content-Type', response.headers['content-type'] || 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return response.data.pipe(res);
+    } catch (_) {
+      continue;
+    }
+  }
+
+  return res.status(404).send('Image could not be fetched');
+});
+
 /**
  * @desc    Xác thực Mật khẩu Admin
  * @route   POST /api/albums/admin/login
@@ -202,5 +245,6 @@ module.exports = {
   syncAlbum,
   syncAllAlbums,
   updateAlbumSettings,
-  verifyAdminPassword
+  verifyAdminPassword,
+  proxyImage
 };

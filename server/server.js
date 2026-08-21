@@ -3,6 +3,8 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const albumRoutes = require('./routes/albumRoutes');
+const userRoutes = require('./routes/userRoutes');
+const photographerRoutes = require('./routes/photographerRoutes');
 const { notFoundHandler, globalErrorHandler } = require('./middlewares/errorHandler');
 
 // Nạp biến môi trường từ file .env
@@ -39,8 +41,13 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Gắn route API Album
+const categoryRoutes = require('./routes/categoryRoutes');
+
+// Gắn route API Album, User, Photographer CRM & Dynamic Categories
 app.use('/api/albums', albumRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/photographer', photographerRoutes);
+app.use('/api/categories', categoryRoutes);
 
 // Bắt lỗi 404 cho các route không tồn tại
 app.use(notFoundHandler);

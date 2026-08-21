@@ -83,7 +83,9 @@ class LocalAlbum {
     this.allowDownload = data.allowDownload !== undefined ? Boolean(data.allowDownload) : true;
     this.allowComment = data.allowComment !== undefined ? Boolean(data.allowComment) : true;
     this.status = data.status || 'selecting';
-    this.clientInfo = data.clientInfo || { name: '', phone: '', note: '' };
+    this.photographerId = data.photographerId || '';
+    this.photographerName = data.photographerName || '';
+    this.photographerEmail = data.photographerEmail || '';
     this.images = Array.isArray(data.images) ? data.images : [];
     this.selectedImages = Array.isArray(data.selectedImages) ? data.selectedImages : [];
     this.createdAt = data.createdAt ? new Date(data.createdAt) : new Date();
@@ -108,6 +110,9 @@ class LocalAlbum {
       allowComment: this.allowComment,
       status: this.status,
       clientInfo: this.clientInfo,
+      photographerId: this.photographerId,
+      photographerName: this.photographerName,
+      photographerEmail: this.photographerEmail,
       images: this.images,
       selectedImages: this.selectedImages,
       createdAt: this.createdAt

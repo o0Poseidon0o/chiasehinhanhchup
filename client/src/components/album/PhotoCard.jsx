@@ -47,6 +47,23 @@ export const PhotoCard = ({
     setIsEditingComment(false);
   };
 
+  const fallbackUrls = [
+    image.thumbnailUrl,
+    `https://drive.google.com/thumbnail?id=${image.fileId}&sz=w800`,
+    `https://lh3.googleusercontent.com/d/${image.fileId}=s800`,
+    `https://lh3.googleusercontent.com/u/0/d/${image.fileId}=w800`,
+    `https://drive.google.com/uc?export=view&id=${image.fileId}`,
+    `/api/albums/proxy-image/${image.fileId}?sz=800`
+  ].filter(Boolean);
+
+  const [srcIndex, setSrcIndex] = useState(0);
+
+  const handleImageError = () => {
+    if (srcIndex < fallbackUrls.length - 1) {
+      setSrcIndex(prev => prev + 1);
+    }
+  };
+
   return (
     <div
       className={`group relative bg-[#13110f] border rounded-xl overflow-hidden shadow-md transition-all duration-300 flex flex-col ${
@@ -61,9 +78,11 @@ export const PhotoCard = ({
         onClick={() => onOpenLightbox(index)}
       >
         <img
-          src={image.thumbnailUrl}
+          src={fallbackUrls[srcIndex] || image.thumbnailUrl}
           alt={image.fileName}
           loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={handleImageError}
           className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500 ease-out"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

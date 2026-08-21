@@ -1,7 +1,7 @@
 /**
  * Format danh sách tên file theo các định dạng phân cách
  * @param {Array<Object>} selectedImages 
- * @param {'comma'|'space'|'newline'} separator 
+ * @param {'comma'|'space'|'newline'|'pipe'} separator 
  * @returns {string}
  */
 export const formatFileList = (selectedImages = [], separator = 'comma') => {
@@ -16,6 +16,8 @@ export const formatFileList = (selectedImages = [], separator = 'comma') => {
       return names.join(' ');
     case 'newline':
       return names.join('\n');
+    case 'pipe':
+      return names.join('|');
     default:
       return names.join(', ');
   }
@@ -73,7 +75,76 @@ export const downloadBatScript = (selectedImages = [], albumTitle = 'album') => 
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Copy_Anh_${sanitizedTitle}.bat`;
+  a.download = `Copy_Anh_${sanitizedTitle}_Windows.bat`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+/**
+ * Tải file script macOS Shell (.command) để tự động sao chép các file ảnh đã chọn vào thư mục "Da_Chon" trên Macbook
+ * @param {Array<Object>} selectedImages 
+ * @param {string} albumTitle 
+ */
+export const downloadShellScript = (selectedImages = [], albumTitle = 'album') => {
+  if (!selectedImages.length) return;
+
+  const sanitizedTitle = albumTitle.replace(/[^a-zA-Z0-9_-]/g, '_');
+  let shContent = `#!/bin/bash\n`;
+  shContent += `# Script tu dong gom anh goc cho macOS / Linux (Capture One / Lightroom Workflow)\n`;
+  shContent += `DIR="$( cd "$( dirname "\${BASH_SOURCE[0]}" )" && pwd )"\n`;
+  shContent += `cd "$DIR"\n\n`;
+  shContent += `echo "=================================================="\n`;
+  shContent += `echo "  MACOS PHOTO AUTO COPY TOOL"\n`;
+  shContent += `echo "  Dang sao chep ${selectedImages.length} file anh da chon vao thư muc Da_Chon..."\n`;
+  shContent += `echo "=================================================="\n\n`;
+  shContent += `mkdir -p "Da_Chon"\n\n`;
+  shContent += `success_count=0\n`;
+
+  selectedImages.forEach(img => {
+    const safeName = (img.fileName || '').replace(/"/g, '\\"');
+    shContent += `if [ -f "${safeName}" ]; then\n`;
+    shContent += `  cp "${safeName}" "Da_Chon/" && echo "[✓] Da chep: ${safeName}" && success_count=$((success_count+1))\n`;
+    shContent += `else\n`;
+    shContent += `  echo "[X] Khong tim thay: ${safeName}"\n`;
+    shContent += `fi\n`;
+  });
+
+  shContent += `\necho ""\n`;
+  shContent += `echo "=================================================="\n`;
+  shContent += `echo " HOAN TAT! Da sao chep $success_count / ${selectedImages.length} file anh."\n`;
+  shContent += `echo " Thu muc chieu: $(pwd)/Da_Chon"\n`;
+  shContent += `echo "=================================================="\n`;
+  shContent += `read -p "Nhan Enter de thoat..." temp\n`;
+
+  const blob = new Blob([shContent], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Copy_Anh_${sanitizedTitle}_Mac.command`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+/**
+ * Tải file TXT danh sách tên ảnh (dùng trực tiếp cho Capture One "Select By Filename List")
+ * @param {Array<Object>} selectedImages 
+ * @param {string} albumTitle 
+ */
+export const downloadTextList = (selectedImages = [], albumTitle = 'album') => {
+  if (!selectedImages.length) return;
+
+  const sanitizedTitle = albumTitle.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const txtContent = selectedImages.map(img => img.fileName || '').join('\n');
+
+  const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Danh_sach_anh_${sanitizedTitle}.txt`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -106,3 +177,4 @@ export const downloadCsv = (selectedImages = [], albumTitle = 'album') => {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 };
+

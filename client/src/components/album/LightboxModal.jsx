@@ -65,6 +65,28 @@ export const LightboxModal = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentIndex, images.length, onClose, onNavigate]);
 
+  const lightboxFallbackUrls = [
+    currentImage.embedUrl,
+    currentImage.thumbnailUrl,
+    `https://drive.google.com/thumbnail?id=${currentImage.fileId}&sz=w1600`,
+    `https://lh3.googleusercontent.com/d/${currentImage.fileId}=s1600`,
+    `https://lh3.googleusercontent.com/u/0/d/${currentImage.fileId}=w1600`,
+    `https://drive.google.com/uc?export=view&id=${currentImage.fileId}`,
+    `/api/albums/proxy-image/${currentImage.fileId}?sz=1600`
+  ].filter(Boolean);
+
+  const [srcIndex, setSrcIndex] = useState(0);
+
+  useEffect(() => {
+    setSrcIndex(0);
+  }, [currentIndex]);
+
+  const handleImageError = () => {
+    if (srcIndex < lightboxFallbackUrls.length - 1) {
+      setSrcIndex(prev => prev + 1);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/95 z-50 flex flex-col justify-between select-none animate-fade-in">
       {/* Lightbox Header */}
@@ -126,8 +148,10 @@ export const LightboxModal = ({
 
         <div className="w-full h-[70vh] flex items-center justify-center p-2">
           <img
-            src={currentImage.embedUrl || currentImage.thumbnailUrl}
+            src={lightboxFallbackUrls[srcIndex] || currentImage.embedUrl || currentImage.thumbnailUrl}
             alt={currentImage.fileName}
+            referrerPolicy="no-referrer"
+            onError={handleImageError}
             className="max-w-full max-h-full object-contain rounded-md shadow-2xl transition-opacity duration-300"
           />
         </div>

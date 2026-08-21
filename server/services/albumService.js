@@ -6,7 +6,21 @@ const { generateToken, sanitizeAlbumForClient } = require('../utils/helpers');
  * 1. Tạo mới một Album từ đường link Google Drive
  */
 const createAlbum = async (payload) => {
-  const { title, driveFolderUrl, passcode, maxSelect, allowDownload, allowComment, clientName, clientPhone, clientNote, clientInfo } = payload;
+  const { 
+    title, 
+    driveFolderUrl, 
+    passcode, 
+    maxSelect, 
+    allowDownload, 
+    allowComment, 
+    clientName, 
+    clientPhone, 
+    clientNote, 
+    clientInfo,
+    photographerId,
+    photographerName,
+    photographerEmail
+  } = payload;
 
   let folderId = 'mock-demo';
   let images = [];
@@ -48,6 +62,9 @@ const createAlbum = async (payload) => {
     allowDownload: allowDownload !== undefined ? Boolean(allowDownload) : true,
     allowComment: allowComment !== undefined ? Boolean(allowComment) : true,
     clientInfo: initialClientInfo,
+    photographerId: photographerId || payload.photographerId || '',
+    photographerName: photographerName || payload.photographerName || '',
+    photographerEmail: photographerEmail || payload.photographerEmail || '',
     images
   });
 

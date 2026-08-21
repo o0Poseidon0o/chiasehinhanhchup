@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Nền -->
+  <rect width="200" height="200" fill="#f8f9fa" rx="20"/>
+  
+  <!-- Nắp đèn Flash / Phần trên máy ảnh -->
+  <path d="M 70 60 L 80 45 L 120 45 L 130 60 Z" fill="#2c3e50" />
+  
+  <!-- Thân máy ảnh -->
+  <rect x="40" y="60" width="120" height="80" rx="15" fill="#2c3e50" />
+  
+  <!-- Nút chụp -->
+  <circle cx="145" cy="75" r="5" fill="#e74c3c" />
+  
+  <!-- Vòng ngoài ống kính -->
+  <circle cx="100" cy="100" r="30" fill="#ecf0f1" />
+  
+  <!-- Kính bên trong ống kính -->
+  <circle cx="100" cy="100" r="22" fill="#34495e" />
+  
+  <!-- Biểu tượng trái tim (Date) phản chiếu trong ống kính -->
+  <path d="M 100 108 C 100 108 90 98 90 93 C 90 89 94 86 98 86 C 100 86 100 88 100 88 C 100 88 100 86 102 86 C 106 86 110 89 110 93 C 110 98 100 108 100 108 Z" fill="#e74c3c"/>
+  
+  <!-- Tên thương hiệu -->
+  <text x="100" y="170" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#2c3e50" text-anchor="middle" letter-spacing="1">Photodate</text>
+</svg>

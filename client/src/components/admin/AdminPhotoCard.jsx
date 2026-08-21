@@ -1,9 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { cleanFileName } from '../../utils/formatters';
 
 export const AdminPhotoCard = ({ image, index, onOpenLightbox }) => {
   const hasComment = Boolean(image.comment && image.comment.trim().length > 0);
+
+  const fallbackUrls = [
+    image.thumbnailUrl,
+    `https://drive.google.com/thumbnail?id=${image.fileId}&sz=w800`,
+    `https://lh3.googleusercontent.com/d/${image.fileId}=s800`,
+    `https://lh3.googleusercontent.com/u/0/d/${image.fileId}=w800`,
+    `https://drive.google.com/uc?export=view&id=${image.fileId}`,
+    `/api/albums/proxy-image/${image.fileId}?sz=800`
+  ].filter(Boolean);
+
+  const [srcIndex, setSrcIndex] = useState(0);
+
+  const handleImageError = () => {
+    if (srcIndex < fallbackUrls.length - 1) {
+      setSrcIndex(prev => prev + 1);
+    }
+  };
 
   return (
     <div className="group bg-[#13110f] border border-[#221f1c] hover:border-gold-500/40 rounded-xl overflow-hidden shadow-md transition-all duration-300 flex flex-col">
@@ -13,9 +30,11 @@ export const AdminPhotoCard = ({ image, index, onOpenLightbox }) => {
         onClick={() => onOpenLightbox(index)}
       >
         <img
-          src={image.thumbnailUrl}
+          src={fallbackUrls[srcIndex] || image.thumbnailUrl}
           alt={image.fileName}
           loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={handleImageError}
           className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500 ease-out"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

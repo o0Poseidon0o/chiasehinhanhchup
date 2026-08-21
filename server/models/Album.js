@@ -22,6 +22,9 @@ const albumSchema = new mongoose.Schema({
     note: { type: String, default: '', trim: true },
     submittedAt: { type: Date }
   },
+  photographerId: { type: String, default: '', trim: true },
+  photographerName: { type: String, default: '', trim: true },
+  photographerEmail: { type: String, default: '', trim: true },
   images: [{
     fileId: { type: String, required: true },
     fileName: { type: String, required: true },

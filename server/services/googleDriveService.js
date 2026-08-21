@@ -115,15 +115,21 @@ const fetchImagesFromFolder = async (folderId) => {
       pageToken = response.data?.nextPageToken;
     } while (pageToken);
 
-    // Map lại thông tin ảnh với link CDN Googleusercontent tối ưu
+    // Map lại thông tin ảnh với link thumbnail chuẩn và có signed token từ Google Drive API
     return allFiles.map(file => {
       const fileId = file.id;
+      const thumb = file.thumbnailLink 
+        ? file.thumbnailLink.replace(/=s\d+/, '=s600') 
+        : `https://drive.google.com/thumbnail?id=${fileId}&sz=w600`;
+      const embed = file.thumbnailLink 
+        ? file.thumbnailLink.replace(/=s\d+/, '=s1600') 
+        : `https://drive.google.com/thumbnail?id=${fileId}&sz=w1600`;
+
       return {
         fileId: fileId,
         fileName: file.name,
-        // s400: thumbnail xem lưới mượt mà, s1600: xem ảnh lớn phóng to Lightbox
-        thumbnailUrl: `https://lh3.googleusercontent.com/d/${fileId}=s400`,
-        embedUrl: `https://lh3.googleusercontent.com/d/${fileId}=s1600`
+        thumbnailUrl: thumb,
+        embedUrl: embed
       };
     });
   } catch (error) {
