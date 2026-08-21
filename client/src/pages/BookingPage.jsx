@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   Calendar, Camera, CheckCircle2, User, Phone, Mail, MapPin, 
-  Sparkles, ShieldCheck, ArrowRight, ArrowLeft, Clock, QrCode, Copy, Check,
+  Sparkles, ShieldCheck, ArrowRight, ArrowLeft, Clock, QrCode, Copy, Check, Lock,
   Users, Shirt, Scissors, Zap, BookOpen, Layers
 } from 'lucide-react';
 import { userApi } from '../api/userApi';
@@ -32,7 +32,7 @@ const ADDONS = [
 export const BookingPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, isLoggedIn, openAuthModal } = useAuth();
 
   const preFilledPhId = searchParams.get('phUserId');
   const preFilledPackage = searchParams.get('package');
@@ -190,6 +190,47 @@ export const BookingPage = () => {
       <div className="text-center py-32 space-y-4 animate-fade-in">
         <div className="w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto" />
         <p className="text-xs text-gray-400">Đang chuẩn bị trang Đặt Lịch Chụp Chi Tiết...</p>
+      </div>
+    );
+  }
+
+  // Yêu cầu đăng nhập tài khoản Khách Hàng mới được Đặt Lịch Chụp
+  if (!isLoggedIn) {
+    return (
+      <div className="max-w-2xl mx-auto my-8 bg-[#141720] border border-amber-500/40 rounded-3xl p-8 sm:p-12 text-center space-y-6 shadow-2xl animate-fade-in relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="w-16 h-16 bg-amber-500/15 border border-amber-500/30 text-amber-400 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-amber-500/10">
+          <Lock className="w-8 h-8 stroke-[2.5]" />
+        </div>
+
+        <div className="space-y-2">
+          <span className="px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold uppercase tracking-wider">
+            Yêu Cầu Đăng Nhập Khách Hàng
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-black text-white pt-2">
+            Đăng Nhập Để Đặt Lịch Chụp Ảnh
+          </h2>
+          <p className="text-xs sm:text-sm text-gray-400 max-w-md mx-auto leading-relaxed">
+            Bạn cần đăng nhập hoặc đăng ký tài khoản Khách Hàng để thực hiện đặt lịch chụp. Đăng nhập giúp bạn dễ dàng theo dõi trạng thái đơn hàng, chọn ảnh và làm việc trực tiếp với Studio.
+          </p>
+        </div>
+
+        <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <button
+            onClick={() => openAuthModal('/bookings', 'login', 'client')}
+            className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-amber-950 font-black rounded-2xl text-xs sm:text-sm shadow-xl shadow-amber-500/20 transition-all hover:scale-105 flex items-center justify-center space-x-2"
+          >
+            <Lock className="w-4 h-4" />
+            <span>Đăng Nhập Ngay</span>
+          </button>
+          <button
+            onClick={() => openAuthModal('/bookings', 'register', 'client')}
+            className="w-full sm:w-auto px-8 py-3.5 bg-[#0c0d12] hover:bg-[#1c2230] border border-[#242938] hover:border-amber-500/40 text-white font-bold rounded-2xl text-xs sm:text-sm transition-all"
+          >
+            Tạo Tài Khoản Khách Hàng
+          </button>
+        </div>
       </div>
     );
   }

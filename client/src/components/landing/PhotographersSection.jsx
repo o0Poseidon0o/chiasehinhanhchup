@@ -76,7 +76,7 @@ const DEFAULT_PHOTOGRAPHERS = [
 
 export const PhotographersSection = () => {
   const navigate = useNavigate();
-  const { openAuthModal } = useAuth();
+  const { isLoggedIn, openAuthModal } = useAuth();
   const [photographersList, setPhotographersList] = useState(DEFAULT_PHOTOGRAPHERS);
 
   useEffect(() => {
@@ -309,7 +309,14 @@ export const PhotographersSection = () => {
                     </button>
 
                     <button
-                      onClick={() => navigate(`/bookings?phUserId=${p._id}`)}
+                      onClick={() => {
+                        const targetPath = `/bookings?phUserId=${p._id}`;
+                        if (!isLoggedIn) {
+                          openAuthModal(targetPath, 'login', 'client');
+                        } else {
+                          navigate(targetPath);
+                        }
+                      }}
                       className="flex-1 py-2.5 px-3 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-amber-950 font-bold rounded-xl text-xs flex items-center justify-center space-x-1 shadow-md transition-all hover:scale-105"
                     >
                       <Calendar className="w-3.5 h-3.5 stroke-[2.5]" />

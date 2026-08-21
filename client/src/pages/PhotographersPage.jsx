@@ -7,6 +7,7 @@ import {
 import { userApi } from '../api/userApi';
 import { albumApi } from '../api/albumApi';
 import { BookingModal } from '../components/booking/BookingModal';
+import { useAuth } from '../context/AuthContext';
 
 const DEFAULT_PHOTOGRAPHERS = [
   {
@@ -108,6 +109,7 @@ const STYLES = ['Tất cả thể loại', 'Chân Dung', 'Pre-Wedding', 'Hàn Qu
 
 export const PhotographersPage = () => {
   const navigate = useNavigate();
+  const { isLoggedIn, openAuthModal } = useAuth();
   const [photographers, setPhotographers] = useState(DEFAULT_PHOTOGRAPHERS);
   const [loading, setLoading] = useState(true);
   
@@ -226,7 +228,12 @@ export const PhotographersPage = () => {
   });
 
   const handleBookDirect = (photographer) => {
-    navigate(`/bookings?phUserId=${photographer._id}`);
+    const targetPath = `/bookings?phUserId=${photographer._id}`;
+    if (!isLoggedIn) {
+      openAuthModal(targetPath, 'login', 'client');
+    } else {
+      navigate(targetPath);
+    }
   };
 
   const handleViewDetail = (photographer) => {

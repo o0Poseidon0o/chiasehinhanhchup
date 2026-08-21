@@ -9,6 +9,7 @@ import {
 import { userApi } from '../api/userApi';
 import { albumApi } from '../api/albumApi';
 import { categoryApi } from '../api/categoryApi';
+import { useAuth } from '../context/AuthContext';
 
 const DEFAULT_PACKAGES = [
   {
@@ -43,6 +44,7 @@ const DEFAULT_PACKAGES = [
 export const PhotographerDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isLoggedIn, openAuthModal } = useAuth();
   const [photographer, setPhotographer] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -198,8 +200,13 @@ export const PhotographerDetailPage = () => {
     setTimeout(() => setCopiedLink(false), 2500);
   };
 
-  const handleBookPackage = (pkgTitle) => {
-    navigate(`/bookings?phUserId=${photographer?._id}&package=${encodeURIComponent(pkgTitle)}`);
+  const handleBookPackage = (pkgTitle = '') => {
+    const targetPath = `/bookings?phUserId=${photographer?._id || id}${pkgTitle ? `&package=${encodeURIComponent(pkgTitle)}` : ''}`;
+    if (!isLoggedIn) {
+      openAuthModal(targetPath, 'login', 'client');
+    } else {
+      navigate(targetPath);
+    }
   };
 
   // Modern Camera Aperture & Pulse Glow Loading Screen
