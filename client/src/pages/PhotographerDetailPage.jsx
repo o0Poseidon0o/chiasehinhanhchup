@@ -51,6 +51,7 @@ export const PhotographerDetailPage = () => {
   const [portfolioImages, setPortfolioImages] = useState([]);
   const [loadingDrive, setLoadingDrive] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [fitMode, setFitMode] = useState('contain');
 
   const handlePrevImage = (e) => {
     if (e) e.stopPropagation();
