@@ -32,7 +32,8 @@ import {
   Award,
   Camera,
   Sparkles,
-  Calendar
+  Calendar,
+  Star
 } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
 import { getPublicBaseUrl } from '../utils/formatters';
@@ -41,6 +42,7 @@ import { AdminUserManagement } from '../components/admin/AdminUserManagement';
 import { AdminPhotographersHub } from '../components/admin/AdminPhotographersHub';
 import { AdminCategoriesManagement } from '../components/admin/AdminCategoriesManagement';
 import { AdminBookingsManagement } from '../components/admin/AdminBookingsManagement';
+import { AdminReviewsManagement } from '../components/admin/AdminReviewsManagement';
 
 export const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('albums'); // 'albums' | 'photographers' | 'bookings' | 'users' | 'categories'
@@ -385,6 +387,12 @@ export const AdminDashboard = () => {
           title: 'Quản Lý Thể Loại & Giao Diện CMS',
           subtitle: 'Tùy chỉnh danh mục thể loại dịch vụ chụp ảnh và nội dung giao diện landing page.'
         };
+      case 'reviews':
+        return {
+          icon: <Star className="w-5 h-5 text-gold-400 fill-gold-400" />,
+          title: 'Quản Lý Đánh Giá & Điểm Uy Tín',
+          subtitle: 'Kiểm duyệt nhận xét đánh giá từ Khách hàng, ẩn nhận xét rác và quản lý độ uy tín Studio.'
+        };
       case 'albums':
       default:
         return {
@@ -520,6 +528,18 @@ export const AdminDashboard = () => {
           <Sparkles className="w-4 h-4 shrink-0 text-amber-300" />
           <span className="truncate">Thể Loại & CMS</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab('reviews')}
+          className={`flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
+            activeTab === 'reviews'
+              ? 'bg-gradient-to-r from-gold-500 to-amber-500 text-gold-950 shadow-md shadow-gold-500/20 scale-[1.01]'
+              : 'text-[#a2998a] hover:text-white hover:bg-[#1a1714]'
+          }`}
+        >
+          <Star className="w-4 h-4 shrink-0 text-amber-300 fill-amber-300" />
+          <span className="truncate">⭐ Đánh Giá & Uy Tín</span>
+        </button>
       </div>
 
       {activeTab === 'bookings' ? (
@@ -530,6 +550,8 @@ export const AdminDashboard = () => {
         <AdminUserManagement />
       ) : activeTab === 'categories' ? (
         <AdminCategoriesManagement />
+      ) : activeTab === 'reviews' ? (
+        <AdminReviewsManagement />
       ) : (
         <>
       {/* Notice Banner */}

@@ -9,6 +9,7 @@ const bookingSchema = new mongoose.Schema({
   clientEmail: { type: String, default: '', trim: true },
   category: { type: String, default: 'Chân dung', trim: true },
   bookingDate: { type: String, default: '', trim: true },
+  timeSlot: { type: String, default: '', trim: true },
   location: { type: String, default: '', trim: true },
   budget: { type: String, default: '', trim: true },
   note: { type: String, default: '', trim: true },

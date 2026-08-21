@@ -147,7 +147,23 @@ export const AdminBookingsManagement = () => {
     if (!deleteModal.booking) return;
     try {
       setDeleteModal(prev => ({ ...prev, loading: true }));
-      await photographerApi.deleteBooking(deleteModal.booking._id);
+      const targetId = deleteModal.booking._id;
+      const targetPhone = deleteModal.booking.clientPhone;
+      await photographerApi.deleteBooking(targetId);
+
+      try {
+        const saved = localStorage.getItem('user_my_bookings');
+        if (saved) {
+          const list = JSON.parse(saved);
+          const updated = list.filter(b => 
+            String(b._id) !== String(targetId) && 
+            !b.code?.includes(String(targetId).slice(-6).toUpperCase()) &&
+            !(b.customerPhone && b.customerPhone === targetPhone && b.categoryTitle === deleteModal.booking.category)
+          );
+          localStorage.setItem('user_my_bookings', JSON.stringify(updated));
+        }
+      } catch (_) {}
+
       setNotice({ type: 'success', message: 'Đã xóa đơn booking thành công.' });
       setDeleteModal({ isOpen: false, booking: null, loading: false });
       await fetchData();
@@ -418,6 +434,12 @@ export const AdminBookingsManagement = () => {
                       <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                       <span>Ngày chụp: <strong className="text-white">{b.bookingDate || 'Chưa đặt ngày'}</strong></span>
                     </div>
+                    {(b.timeSlot || (b.note && String(b.note).includes('Khung giờ:'))) && (
+                      <div className="flex items-center space-x-2 text-amber-300">
+                        <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span>Khung giờ: <strong className="text-amber-400 font-bold">{b.timeSlot || (b.note && String(b.note).match(/Khung giờ:\s*([^\]]+)/) ? String(b.note).match(/Khung giờ:\s*([^\]]+)/)[1] : '')}</strong></span>
+                      </div>
+                    )}
                     {b.location && (
                       <div className="flex items-center space-x-2 text-gray-300">
                         <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />

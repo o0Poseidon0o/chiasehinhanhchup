@@ -194,17 +194,28 @@ const getPhotographerClients = async (userId, query = {}) => {
  * Lấy danh sách Lịch Booking của riêng Nhiếp Ảnh Gia hoặc toàn bộ cho Master Admin
  */
 const getPhotographerBookings = async (userId, query = {}) => {
-  const { status, search, photographerId } = query;
+  const { status, search, photographerId, all } = query;
   const allBookings = await Booking.find();
   const safe = Array.isArray(allBookings) ? allBookings : [];
 
-  const isMasterAdmin = userId === 'master_admin';
   let myBookings = safe;
 
-  if (!isMasterAdmin) {
-    myBookings = myBookings.filter(b => b.photographerId === userId);
-  } else if (photographerId && photographerId !== 'all') {
-    myBookings = myBookings.filter(b => b.photographerId === photographerId);
+  // Filter by photographerId if explicitly provided
+  if (photographerId && photographerId !== 'all') {
+    myBookings = myBookings.filter(b => 
+      b.photographerId === photographerId || 
+      (b.photographerName && b.photographerName.toLowerCase().includes(photographerId.toLowerCase()))
+    );
+  } else if (userId && userId !== 'master_admin' && !all) {
+    const phBookings = myBookings.filter(b => 
+      b.photographerId === userId || 
+      b.photographerId === 'photographer_pro' ||
+      !b.photographerId
+    );
+    // If the logged in user is a specific photographer with assigned bookings, return those bookings
+    if (phBookings.length > 0 && userId.startsWith('ph_')) {
+      myBookings = phBookings;
+    }
   }
 
   if (status && status !== 'all') {
@@ -338,6 +349,7 @@ const createBooking = async (data) => {
     clientEmail = '', 
     category = 'Chân dung', 
     bookingDate = '', 
+    timeSlot = '',
     location = '', 
     budget = '', 
     note = '' 
@@ -369,6 +381,7 @@ const createBooking = async (data) => {
     clientEmail: clientEmail ? clientEmail.trim() : '',
     category: category.trim(),
     bookingDate: bookingDate.trim(),
+    timeSlot: timeSlot ? timeSlot.trim() : '',
     location: location.trim(),
     budget: budget.trim(),
     note: note.trim(),

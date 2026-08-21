@@ -277,6 +277,28 @@ export const StudioWorkspace = () => {
     try {
       await photographerApi.updateBookingStatus(bookingId, newStatus);
       setNotice({ type: 'success', message: 'Đã cập nhật trạng thái lịch booking thành công!' });
+
+      try {
+        const saved = localStorage.getItem('user_my_bookings');
+        if (saved) {
+          const list = JSON.parse(saved);
+          const statusTextMap = {
+            confirmed: '✓ Đã Xác Nhận',
+            completed: '📸 Đã Chụp Xong',
+            cancelled: '❌ Đã Hủy',
+            pending: '⏳ Chờ Xác Nhận'
+          };
+          const updated = list.map(b => {
+            const matchCode = b.code && (String(bookingId).includes(b.code) || b.code.includes(String(bookingId).slice(-6).toUpperCase()));
+            if (String(b._id) === String(bookingId) || matchCode) {
+              return { ...b, status: statusTextMap[newStatus] || newStatus };
+            }
+            return b;
+          });
+          localStorage.setItem('user_my_bookings', JSON.stringify(updated));
+        }
+      } catch (_) {}
+
       await fetchData();
     } catch (err) {
       setNotice({ type: 'error', message: err.message || 'Không thể cập nhật lịch.' });
@@ -1061,6 +1083,14 @@ export const StudioWorkspace = () => {
                           <span className="text-white font-semibold">{b.bookingDate}</span>
                         </div>
                       )}
+                      {(b.timeSlot || (b.note && String(b.note).includes('Khung giờ:'))) && (
+                        <div className="flex items-center justify-between text-amber-300">
+                          <span className="text-gray-400">Khung giờ:</span>
+                          <span className="text-amber-400 font-bold">
+                            {b.timeSlot || (b.note && String(b.note).match(/Khung giờ:\s*([^\]]+)/) ? String(b.note).match(/Khung giờ:\s*([^\]]+)/)[1] : '')}
+                          </span>
+                        </div>
+                      )}
                       {b.location && (
                         <div className="flex items-center justify-between text-gray-300">
                           <span className="text-gray-400">Địa điểm:</span>
@@ -1079,6 +1109,51 @@ export const StudioWorkspace = () => {
                         </div>
                       )}
                     </div>
+
+                    {/* Conflict check warning badge */}
+                    {(() => {
+                      if (b.status !== 'pending' && b.status !== 'selecting' && b.status !== '⏳ Chờ xác nhận') return null;
+                      
+                      const parseTimeToMinutes = (tStr) => {
+                        const match = String(tStr || '').match(/(\d{1,2}):(\d{2})/);
+                        return match ? parseInt(match[1], 10) * 60 + parseInt(match[2], 10) : 0;
+                      };
+                      const extractRange = (item) => {
+                        const text = `${item.timeSlot || ''} ${item.note || ''} ${item.conceptNote || ''}`;
+                        const m = text.match(/(\d{1,2}:\d{2})\s*(?:➔|-|to)\s*(\d{1,2}:\d{2})/i);
+                        return m ? { start: m[1], end: m[2] } : { start: '08:00', end: '18:00' };
+                      };
+                      const doOverlap = (s1, e1, s2, e2) => {
+                        const minS1 = parseTimeToMinutes(s1), minE1 = parseTimeToMinutes(e1);
+                        const minS2 = parseTimeToMinutes(s2), minE2 = parseTimeToMinutes(e2);
+                        if (!minS1 || !minE1 || !minS2 || !minE2) return true;
+                        return Math.max(minS1, minS2) < Math.min(minE1, minE2);
+                      };
+
+                      const curRange = extractRange(b);
+                      const conflict = (bookings || []).find(cb => {
+                        if (String(cb._id) === String(b._id)) return false;
+                        const isConfirmed = cb.status === 'confirmed' || cb.status === 'completed' || (cb.status || '').includes('Xác nhận');
+                        if (!isConfirmed) return false;
+                        if (cb.bookingDate !== b.bookingDate) return false;
+                        const cbRange = extractRange(cb);
+                        return doOverlap(curRange.start, curRange.end, cbRange.start, cbRange.end);
+                      });
+
+                      if (!conflict) return null;
+
+                      return (
+                        <div className="p-3 bg-rose-950/70 border border-rose-500/60 rounded-xl space-y-1 text-xs text-rose-200 animate-pulse">
+                          <div className="flex items-center space-x-1.5 font-bold text-rose-300">
+                            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                            <span>⚠️ TRÙNG LỊCH VỚI ĐƠN ĐÃ CHỐT</span>
+                          </div>
+                          <p className="text-[11px] leading-snug">
+                            Khung giờ này ngày <strong className="text-white">{b.bookingDate}</strong> đã được chốt chính thức cho khách <strong className="text-amber-300">{conflict.clientName}</strong> ({conflict.clientPhone}).
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Actions */}

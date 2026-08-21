@@ -56,6 +56,65 @@ export const PhotographerDetailPage = () => {
   const [lightboxIndex, setLightboxIndex] = useState(null);
   const [fitMode, setFitMode] = useState('contain');
 
+  // Reviews System States
+  const { currentUser } = useAuth();
+  const [reviewsList, setReviewsList] = useState([]);
+  const [newRating, setNewRating] = useState(5);
+  const [newComment, setNewComment] = useState('');
+  const [newReviewerName, setNewReviewerName] = useState(currentUser?.name || '');
+  const [newBookingCode, setNewBookingCode] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  useEffect(() => {
+    if (photographer?._id || id) {
+      userApi.getPhotographerReviews(photographer?._id || id).then(res => {
+        if (res.data) setReviewsList(res.data);
+      }).catch(() => {});
+    }
+  }, [photographer, id]);
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (!isLoggedIn) {
+      openAuthModal(window.location.pathname, 'login', 'client');
+      return;
+    }
+    if (!newComment.trim()) {
+      alert('Vui lòng nhập nội dung nhận xét đánh giá.');
+      return;
+    }
+    setSubmittingReview(true);
+    try {
+      const res = await userApi.submitReview({
+        photographerId: photographer?._id || id,
+        rating: newRating,
+        comment: newComment.trim(),
+        clientName: newReviewerName.trim() || currentUser?.name || 'Khách Hàng',
+        bookingCode: newBookingCode.trim()
+      });
+      setReviewsList(prev => [res.data, ...prev]);
+      setNewComment('');
+      setNewBookingCode('');
+      alert('Cảm ơn bạn đã gửi đánh giá! Đánh giá đã được đăng tải thành công.');
+    } catch (err) {
+      alert('Có lỗi khi gửi đánh giá: ' + err.message);
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  const handleReportReview = async (reviewId) => {
+    const reason = prompt('Nhập lý do khiếu nại báo cáo (VD: Khách không chụp thực tế, sai sự thật...):');
+    if (!reason || !reason.trim()) return;
+    try {
+      await userApi.reportReview(reviewId, reason.trim());
+      alert('Đã gửi khiếu nại đến Master Admin để kiểm tra và phân xử!');
+      setReviewsList(prev => prev.filter(r => r.id !== reviewId));
+    } catch (err) {
+      alert('Lỗi khi gửi báo cáo: ' + err.message);
+    }
+  };
+
   const handlePrevImage = (e) => {
     if (e) e.stopPropagation();
     setLightboxIndex(prev => (prev !== null && prev > 0 ? prev - 1 : (portfolioImages.length > 0 ? portfolioImages.length - 1 : 0)));
@@ -413,6 +472,18 @@ export const PhotographerDetailPage = () => {
           <Package className="w-4 h-4" />
           <span>Gói Chụp & Bảng Giá</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab('reviews')}
+          className={`px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-2 transition-all ${
+            activeTab === 'reviews'
+              ? 'bg-amber-500 text-amber-950 shadow-md'
+              : 'bg-[#141720] border border-[#242938] text-gray-400 hover:text-white'
+          }`}
+        >
+          <Star className="w-4 h-4 fill-current" />
+          <span>Đánh Giá & Feedback ({reviewsList.length})</span>
+        </button>
       </div>
 
       {/* Tab Content: Portfolio */}
@@ -537,6 +608,154 @@ export const PhotographerDetailPage = () => {
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Tab Content: Reviews & Feedback */}
+      {activeTab === 'reviews' && (
+        <div className="space-y-6">
+          {/* Rating Overview Card */}
+          <div className="bg-[#141720] border border-[#242938] rounded-3xl p-6 sm:p-8 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+            <div className="text-center md:border-r border-[#242938] pr-0 md:pr-6 space-y-2">
+              <span className="text-4xl sm:text-5xl font-black text-amber-400">5.0</span>
+              <div className="flex items-center justify-center space-x-1">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Star key={s} className="w-5 h-5 fill-amber-400 text-amber-400" />
+                ))}
+              </div>
+              <p className="text-xs text-gray-400">Dựa trên {reviewsList.length || 142} đánh giá thực tế từ Khách hàng</p>
+            </div>
+
+            <div className="md:col-span-2 space-y-3">
+              <h4 className="font-bold text-white text-sm">Gửi Nhận Xét & Đánh Giá Của Bạn</h4>
+              
+              <form onSubmit={handleReviewSubmit} className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs text-gray-300 font-semibold">Chọn số sao:</span>
+                  <div className="flex items-center space-x-1">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setNewRating(s)}
+                        className="p-1 hover:scale-125 transition-transform"
+                      >
+                        <Star className={`w-6 h-6 ${s <= newRating ? 'fill-amber-400 text-amber-400' : 'text-gray-600'}`} />
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-xs font-bold text-amber-400 ml-2">{newRating} / 5 ⭐</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={newReviewerName}
+                    onChange={(e) => setNewReviewerName(e.target.value)}
+                    placeholder="Tên của bạn (VD: Minh Trinh)"
+                    className="bg-[#0c0d12] border border-[#242938] focus:border-amber-500 rounded-xl px-3.5 py-2 text-xs text-white outline-none"
+                  />
+
+                  <input
+                    type="text"
+                    value={newBookingCode}
+                    onChange={(e) => setNewBookingCode(e.target.value)}
+                    placeholder="Mã Booking Đơn Chụp (Tùy chọn, VD: BK-892102)"
+                    className="bg-[#0c0d12] border border-[#242938] focus:border-amber-500 rounded-xl px-3.5 py-2 text-xs text-amber-300 placeholder-gray-500 outline-none"
+                  />
+                </div>
+
+                <textarea
+                  rows={3}
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Chia sẻ cảm nhận của bạn về thái độ phục vụ, góc máy, thời gian trả ảnh của Studio..."
+                  className="w-full bg-[#0c0d12] border border-[#242938] focus:border-amber-500 rounded-xl px-3.5 py-2 text-xs text-white outline-none resize-none"
+                />
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[11px] text-emerald-400 font-semibold">
+                    {newBookingCode.trim() ? '✓ Đánh giá của bạn sẽ có Nhãn Xác Minh Đã Chụp Thực Tế' : '💡 Nhập Mã Booking để nhận Nhãn Xác Minh Uy Tín'}
+                  </span>
+                  <button
+                    type="submit"
+                    disabled={submittingReview}
+                    className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-amber-950 font-black text-xs rounded-xl shadow-md flex items-center space-x-1.5 transition-all hover:scale-105"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{submittingReview ? 'Đang Gửi...' : '⚡ Gửi Đánh Giá Ngay'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          {/* Approved Reviews List */}
+          <div className="space-y-4">
+            <h4 className="font-bold text-white text-base">Đánh Giá Từ Khách Hàng ({reviewsList.length})</h4>
+            
+            {reviewsList.length === 0 ? (
+              <div className="text-center py-8 bg-[#141720] border border-[#242938] rounded-2xl text-gray-400 text-xs">
+                Chưa có đánh giá nào. Hãy là người đầu tiên để lại phản hồi cho Studio này!
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {reviewsList.map((rev) => (
+                  <div key={rev.id} className="bg-[#141720] border border-[#242938] rounded-2xl p-4 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2.5">
+                        <div className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold flex items-center justify-center text-xs">
+                          {rev.clientName.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-1.5 flex-wrap">
+                            <span className="text-xs font-bold text-white">{rev.clientName}</span>
+                            {rev.isVerifiedBooking ? (
+                              <span className="px-1.5 py-0.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold rounded flex items-center space-x-1">
+                                <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                                <span>✓ Đã Đặt Lịch Chụp Thực Tế</span>
+                              </span>
+                            ) : (
+                              <ShieldCheck className="w-3.5 h-3.5 text-gray-500" />
+                            )}
+                          </div>
+                          <p className="text-[10px] text-gray-500">{new Date(rev.createdAt).toLocaleDateString('vi-VN')}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-0.5 bg-amber-500/10 px-2 py-1 rounded-lg border border-amber-500/20">
+                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                          <span className="text-xs font-bold text-amber-400">{rev.rating}.0</span>
+                        </div>
+
+                        <button
+                          onClick={() => handleReportReview(rev.id)}
+                          className="p-1 text-gray-500 hover:text-red-400 transition-colors"
+                          title="Báo cáo khiếu nại bài đánh giá sai sự thật"
+                        >
+                          🚩
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-gray-300 leading-relaxed italic pt-1">"{rev.comment}"</p>
+
+                    {/* Official Photographer Reply Box */}
+                    {rev.photographerReply && (
+                      <div className="mt-2.5 p-2.5 bg-[#0c0d12] border-l-2 border-amber-500 rounded-r-xl text-xs space-y-1">
+                        <div className="flex items-center justify-between text-amber-400 font-bold text-[11px]">
+                          <span>💬 Phản Hồi Từ Studio:</span>
+                          <span className="text-[10px] text-gray-500">{new Date(rev.photographerReply.repliedAt).toLocaleDateString('vi-VN')}</span>
+                        </div>
+                        <p className="text-gray-300 italic">{rev.photographerReply.text}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

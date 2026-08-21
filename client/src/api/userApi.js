@@ -164,6 +164,136 @@ export const userApi = {
     } catch (error) {
       throw new Error(extractErrorMessage(error, 'Không thể xóa người dùng.'));
     }
+  },
+
+  // =========================================================
+  // HỆ THỐNG ĐÁNH GIÁ SAO & UY TÍN NHIẾP ẢNH GIA (REVIEWS & RATING)
+  // =========================================================
+  getStoredReviews() {
+    try {
+      const saved = localStorage.getItem('app_reviews_data');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+    const seed = [
+      {
+        id: 'rev_1',
+        photographerId: 'ph_default_1',
+        clientName: 'Phương Thảo',
+        bookingCode: 'BK-892102',
+        isVerifiedBooking: true,
+        rating: 5,
+        comment: 'Nhiếp ảnh gia siêu nhiệt tình! Hướng dẫn tạo dáng từ A-Z, ảnh màu phim Cinematic mộng mơ xuất sắc. Trả ảnh nhanh đúng cam kết 24h.',
+        createdAt: '2026-08-15T10:30:00Z',
+        status: 'approved',
+        photographerReply: {
+          text: 'Cảm ơn Thảo rất nhiều vì buổi chụp tuyệt vời! Chúc bạn luôn xinh đẹp rạng rỡ nhé!',
+          repliedAt: '2026-08-15T14:20:00Z'
+        }
+      },
+      {
+        id: 'rev_2',
+        photographerId: 'ph_default_1',
+        clientName: 'Anh Tuấn & Mai Trinh',
+        bookingCode: 'BK-552910',
+        isVerifiedBooking: true,
+        rating: 5,
+        comment: 'Bộ ảnh Pre-wedding đẹp vượt kỳ vọng. Thợ ảnh vui tính giúp 2 đứa bớt ngại trước ống kính.',
+        createdAt: '2026-08-10T14:20:00Z',
+        status: 'approved'
+      },
+      {
+        id: 'rev_3',
+        photographerId: 'ph_default_2',
+        clientName: 'Khánh Linh',
+        bookingCode: 'BK-102938',
+        isVerifiedBooking: true,
+        rating: 5,
+        comment: 'Gói chụp Lookbook rất chuyên nghiệp, góc máy hiện đại, bắt kịp trend Korea.',
+        createdAt: '2026-08-12T09:15:00Z',
+        status: 'approved'
+      }
+    ];
+    localStorage.setItem('app_reviews_data', JSON.stringify(seed));
+    return seed;
+  },
+
+  async submitReview(data) {
+    const reviews = this.getStoredReviews();
+    const newReview = {
+      id: `rev_${Date.now()}`,
+      photographerId: String(data.photographerId || ''),
+      clientName: data.clientName || 'Khách Hàng',
+      bookingCode: data.bookingCode ? String(data.bookingCode).trim().toUpperCase() : '',
+      isVerifiedBooking: Boolean(data.bookingCode && data.bookingCode.trim()),
+      rating: Number(data.rating) || 5,
+      comment: data.comment || '',
+      createdAt: new Date().toISOString(),
+      status: 'approved',
+      photographerReply: null,
+      isReported: false,
+      reportReason: ''
+    };
+    const updated = [newReview, ...reviews];
+    localStorage.setItem('app_reviews_data', JSON.stringify(updated));
+    return { success: true, data: newReview };
+  },
+
+  async getPhotographerReviews(photographerId) {
+    const reviews = this.getStoredReviews();
+    const filtered = reviews.filter(r => (String(r.photographerId) === String(photographerId) || !photographerId) && r.status === 'approved');
+    return { success: true, data: filtered };
+  },
+
+  async getAllReviewsAdmin() {
+    const reviews = this.getStoredReviews();
+    return { success: true, data: reviews };
+  },
+
+  async updateReviewStatus(reviewId, status) {
+    const reviews = this.getStoredReviews();
+    let updated;
+    if (status === 'deleted') {
+      updated = reviews.filter(r => r.id !== reviewId);
+    } else {
+      updated = reviews.map(r => r.id === reviewId ? { ...r, status, isReported: status === 'approved' ? false : r.isReported } : r);
+    }
+    localStorage.setItem('app_reviews_data', JSON.stringify(updated));
+    return { success: true, data: updated };
+  },
+
+  async replyReview(reviewId, replyText) {
+    const reviews = this.getStoredReviews();
+    const updated = reviews.map(r => {
+      if (r.id === reviewId) {
+        return {
+          ...r,
+          photographerReply: {
+            text: replyText.trim(),
+            repliedAt: new Date().toISOString()
+          }
+        };
+      }
+      return r;
+    });
+    localStorage.setItem('app_reviews_data', JSON.stringify(updated));
+    return { success: true, data: updated };
+  },
+
+  async reportReview(reviewId, reason) {
+    const reviews = this.getStoredReviews();
+    const updated = reviews.map(r => {
+      if (r.id === reviewId) {
+        return {
+          ...r,
+          isReported: true,
+          reportReason: reason || 'Báo cáo sai sự thật / khiếu nại oan sai',
+          status: 'disputed'
+        };
+      }
+      return r;
+    });
+    localStorage.setItem('app_reviews_data', JSON.stringify(updated));
+    return { success: true, data: updated };
   }
 };
 

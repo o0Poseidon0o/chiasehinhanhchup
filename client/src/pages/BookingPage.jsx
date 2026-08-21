@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   Calendar, Camera, CheckCircle2, User, Phone, Mail, MapPin, 
   Sparkles, ShieldCheck, ArrowRight, ArrowLeft, Clock, QrCode, Copy, Check, Lock,
-  Users, Shirt, Scissors, Zap, BookOpen, Layers
+  Users, Shirt, Scissors, Zap, BookOpen, Layers, AlertTriangle
 } from 'lucide-react';
 import { userApi } from '../api/userApi';
 import { categoryApi } from '../api/categoryApi';
@@ -20,6 +20,41 @@ const TIME_SLOTS = [
   'Buổi Sáng (08:00 - 11:30)',
   'Buổi Chiều (14:00 - 17:30)',
   'Buổi Tối / Hoàng Hôn (17:30 - 20:30)'
+];
+
+const VISUAL_TIME_CARDS = [
+  { 
+    id: 'morning', 
+    title: 'Buổi Sáng', 
+    time: '08:00 - 11:30', 
+    icon: '🌅', 
+    tag: 'Nắng sớm tự nhiên', 
+    desc: 'Trong trẻo, tươi sáng, thích hợp Outdoor & Gia đình' 
+  },
+  { 
+    id: 'afternoon', 
+    title: 'Buổi Trưa - Chiều', 
+    time: '13:30 - 16:30', 
+    icon: '☀️', 
+    tag: 'Ánh sáng rực rỡ', 
+    desc: 'Đầy đủ ánh sáng, tối ưu cho Studio & Lookbook' 
+  },
+  { 
+    id: 'golden_hour', 
+    title: 'Giờ Vàng Hoàng Hôn', 
+    time: '16:30 - 18:30', 
+    icon: '🌇', 
+    tag: 'Khung giờ vàng (Best)', 
+    desc: 'Nắng vàng ấm áp, lãng mạn cho Pre-wedding' 
+  },
+  { 
+    id: 'night', 
+    title: 'Buổi Tối & Flash', 
+    time: '18:30 - 21:00', 
+    icon: '🌙', 
+    tag: 'Đèn LED & Đêm', 
+    desc: 'Đèn thành phố, Street Style & Concept mộng mơ' 
+  }
 ];
 
 const ADDONS = [
@@ -49,11 +84,37 @@ export const BookingPage = () => {
   const [contextType, setContextType] = useState('outdoor');
   const [bookingDate, setBookingDate] = useState('');
   const [timeSlot, setTimeSlot] = useState(TIME_SLOTS[0]);
+  
+  // Visual Time Slot States
+  const [timeMode, setTimeMode] = useState('preset'); // 'preset' | 'range' | 'custom'
+  const [selectedTimeCard, setSelectedTimeCard] = useState('golden_hour');
+  const [startTime, setStartTime] = useState('16:30');
+  const [endTime, setEndTime] = useState('18:30');
+  const [isCustomTime, setIsCustomTime] = useState(false);
+  const [customTimeSlot, setCustomTimeSlot] = useState('');
+
   const [peopleCount, setPeopleCount] = useState('1 - 2 người');
   const [cityLocation, setCityLocation] = useState('Hà Nội');
   const [detailedLocation, setDetailedLocation] = useState('');
   const [selectedAddons, setSelectedAddons] = useState([]);
   const [conceptNote, setConceptNote] = useState('');
+
+  // Conflict Detection States
+  const [existingBookings, setExistingBookings] = useState([]);
+  const [bookingConflict, setBookingConflict] = useState(null);
+
+  const calculateDuration = (start, end) => {
+    if (!start || !end) return '';
+    const [h1, m1] = start.split(':').map(Number);
+    const [h2, m2] = end.split(':').map(Number);
+    let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+    if (diff <= 0) diff += 24 * 60;
+    const hours = Math.floor(diff / 60);
+    const mins = diff % 60;
+    if (hours > 0 && mins > 0) return `${hours} tiếng ${mins} phút`;
+    if (hours > 0) return `${hours} tiếng`;
+    return `${mins} phút`;
+  };
   
   // Customer Contact State (Tự động điền từ currentUser nếu đã đăng nhập)
   const [customerName, setCustomerName] = useState(currentUser?.name || '');
@@ -68,6 +129,91 @@ export const BookingPage = () => {
       if (currentUser.email && !customerEmail) setCustomerEmail(currentUser.email);
     }
   }, [currentUser]);
+
+  // Time range overlap helper functions
+  const parseTimeToMinutes = (timeStr) => {
+    if (!timeStr) return 0;
+    const match = String(timeStr).match(/(\d{1,2}):(\d{2})/);
+    if (!match) return 0;
+    return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+  };
+
+  const extractTimeRangeFromBooking = (b) => {
+    if (!b) return { start: '08:00', end: '18:00' };
+    let start = '08:00', end = '18:00';
+    const text = `${b.timeSlot || ''} ${b.note || ''} ${b.conceptNote || ''}`;
+    const rangeMatch = text.match(/(\d{1,2}:\d{2})\s*(?:➔|-|to)\s*(\d{1,2}:\d{2})/i);
+    if (rangeMatch) {
+      start = rangeMatch[1];
+      end = rangeMatch[2];
+    } else if (text.includes('Sáng')) {
+      start = '08:00'; end = '11:30';
+    } else if (text.includes('Chiều')) {
+      start = '13:30'; end = '16:30';
+    } else if (text.includes('Tối') || text.includes('Hoàng Hôn')) {
+      start = '16:30'; end = '20:30';
+    }
+    return { start, end };
+  };
+
+  const doTimeRangesOverlap = (start1, end1, start2, end2) => {
+    const s1 = parseTimeToMinutes(start1);
+    const e1 = parseTimeToMinutes(end1);
+    const s2 = parseTimeToMinutes(start2);
+    const e2 = parseTimeToMinutes(end2);
+    if (s1 === 0 || e1 === 0 || s2 === 0 || e2 === 0) return true;
+    return Math.max(s1, s2) < Math.min(e1, e2);
+  };
+
+  // Fetch real-time existing bookings from server to populate existingBookings for conflict checking
+  useEffect(() => {
+    let isMounted = true;
+    photographerApi.getBookings({ all: 'true' })
+      .then(res => {
+        if (isMounted) {
+          setExistingBookings(res.data || []);
+        }
+      })
+      .catch(() => {});
+
+    return () => { isMounted = false; };
+  }, [step, bookingDate]);
+
+  // Check double-booking conflict with accurate time overlap detection
+  useEffect(() => {
+    if (selectedPhotographer?._id && bookingDate) {
+      const activeStart = startTime || '16:30';
+      const activeEnd = endTime || '18:30';
+
+      const conflict = (existingBookings || []).find(b => {
+        if (!b) return false;
+        const bPhId = b.photographerId ? String(b.photographerId) : '';
+        const targetPhId = selectedPhotographer?._id ? String(selectedPhotographer._id) : (selectedPhotographer?.id ? String(selectedPhotographer.id) : '');
+        
+        const isPhMatch = (bPhId && targetPhId && bPhId === targetPhId) || 
+                          (b.photographerName && selectedPhotographer?.name && b.photographerName === selectedPhotographer.name);
+                          
+        const isDateMatch = b.bookingDate === bookingDate;
+        const isActive = b.status !== 'cancelled' && b.status !== '❌ Đã Hủy';
+        if (!isPhMatch || !isDateMatch || !isActive) return false;
+
+        const bRange = extractTimeRangeFromBooking(b);
+        return doTimeRangesOverlap(activeStart, activeEnd, bRange.start, bRange.end);
+      });
+
+      if (conflict) {
+        const isConfirmed = conflict.status === 'confirmed' || 
+                            conflict.status === 'completed' || 
+                            (conflict.status || '').includes('Xác nhận') || 
+                            (conflict.status || '').includes('Xác Nhận');
+        setBookingConflict({ ...conflict, isConfirmed });
+      } else {
+        setBookingConflict(null);
+      }
+    } else {
+      setBookingConflict(null);
+    }
+  }, [selectedPhotographer, bookingDate, startTime, endTime, existingBookings]);
 
   // Receipt State
   const [bookingReceipt, setBookingReceipt] = useState(null);
@@ -126,10 +272,12 @@ export const BookingPage = () => {
     setSubmitting(true);
 
     try {
+      const effectiveTimeSlot = `${startTime} ➔ ${endTime} (⏱️ Dự kiến ${calculateDuration(startTime, endTime) || '2 tiếng'})`;
+
       const addonLabels = ADDONS.filter(a => selectedAddons.includes(a.id)).map(a => a.label);
       const noteParts = [
         `[Bối cảnh: ${CONTEXT_TYPES.find(c => c.id === contextType)?.label || contextType}]`,
-        `[Khung giờ: ${timeSlot}]`,
+        `[Khung giờ: ${effectiveTimeSlot}]`,
         `[Số người: ${peopleCount}]`
       ];
       if (addonLabels.length > 0) {
@@ -139,6 +287,29 @@ export const BookingPage = () => {
         noteParts.push(`[Ghi chú: ${conceptNote.trim()}]`);
       }
 
+      // Real-time pre-submit conflict check against database
+      try {
+        const freshRes = await photographerApi.getBookings();
+        const freshBookings = freshRes.data || [];
+        const freshConflict = freshBookings.find(b => {
+          const isPhMatch = String(b.photographerId) === String(selectedPhotographer?._id) || b.photographerName === selectedPhotographer?.name;
+          const isDateMatch = b.bookingDate === bookingDate;
+          const isConfirmed = b.status === 'confirmed' || b.status === 'completed' || (b.status || '').includes('Xác nhận');
+          if (!isPhMatch || !isDateMatch || !isConfirmed) return false;
+
+          const bRange = extractTimeRangeFromBooking(b);
+          return doTimeRangesOverlap(startTime, endTime, bRange.start, bRange.end);
+        });
+
+        if (freshConflict) {
+          setSubmitting(false);
+          setBookingConflict({ ...freshConflict, isConfirmed: true });
+          setStep(2);
+          alert(`🛑 Studio "${selectedPhotographer?.name || 'Đã Chọn'}" ĐÃ CHỐT LỊCH CHÍNH THỨC VỚI KHÁCH KHÁC vào khung giờ ${startTime} ➔ ${endTime} ngày ${bookingDate}.\n\nHệ thống đã chuyển về Bước 2. Vui lòng chọn ngày/giờ khác hoặc chọn Nhiếp ảnh gia khác!`);
+          return;
+        }
+      } catch (_) {}
+
       const payload = {
         photographerId: selectedPhotographer?._id || '',
         photographerName: selectedPhotographer?.name || 'Hệ thống Studio tự đề xuất',
@@ -147,6 +318,7 @@ export const BookingPage = () => {
         clientEmail: customerEmail ? customerEmail.trim() : '',
         category: selectedCategory || 'Chụp Cá Nhân / Chân Dung',
         bookingDate: bookingDate || new Date().toISOString().split('T')[0],
+        timeSlot: effectiveTimeSlot,
         location: `${cityLocation}${detailedLocation ? ` - ${detailedLocation}` : ''}`,
         budget: addonLabels.length > 0 ? `Gói cơ bản + ${addonLabels.length} dịch vụ thêm` : 'Gói tiêu chuẩn',
         note: noteParts.join(' ')
@@ -156,12 +328,14 @@ export const BookingPage = () => {
       const createdBooking = res.data || {};
       const bookingCode = `BK-${(createdBooking._id || '').slice(-6).toUpperCase() || Math.floor(100000 + Math.random() * 900000)}`;
 
-      setBookingReceipt({
+      const receiptData = {
         code: bookingCode,
+        photographerId: selectedPhotographer?._id || 'ph_default_1',
         photographerName: selectedPhotographer?.name || 'Hệ thống tự đề xuất Studio phù hợp',
         categoryTitle: selectedCategory || 'Chụp Cá Nhân / Chân Dung',
         contextLabel: CONTEXT_TYPES.find(c => c.id === contextType)?.label || 'Ngoại cảnh',
         date: bookingDate || new Date().toISOString().split('T')[0],
+        bookingDate: bookingDate || new Date().toISOString().split('T')[0],
         timeSlot,
         peopleCount,
         cityLocation,
@@ -169,8 +343,18 @@ export const BookingPage = () => {
         addonLabels,
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
-        depositAmount: '500.000đ'
-      });
+        customerEmail: customerEmail ? customerEmail.trim() : '',
+        status: '⏳ Chờ Xác Nhận',
+        depositAmount: '500.000đ',
+        createdAt: new Date().toISOString()
+      };
+
+      setBookingReceipt(receiptData);
+
+      try {
+        const existing = JSON.parse(localStorage.getItem('user_my_bookings') || '[]');
+        localStorage.setItem('user_my_bookings', JSON.stringify([receiptData, ...existing]));
+      } catch (_) {}
     } catch (err) {
       alert(err.message || 'Có lỗi xảy ra khi gửi yêu cầu đặt lịch. Vui lòng thử lại.');
     } finally {
@@ -188,13 +372,13 @@ export const BookingPage = () => {
   if (loading) {
     return (
       <div className="text-center py-32 space-y-4 animate-fade-in">
-        <div className="w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="text-xs text-gray-400">Đang chuẩn bị trang Đặt Lịch Chụp Chi Tiết...</p>
+        <Clock className="w-10 h-10 animate-spin text-amber-400 mx-auto" />
+        <p className="text-xs text-gray-400">Đang tải danh sách Studio & Thể loại chụp...</p>
       </div>
     );
   }
 
-  // Yêu cầu đăng nhập tài khoản Khách Hàng mới được Đặt Lịch Chụp
+  // Khách hàng bắt buộc phải đăng nhập mới được Booking
   if (!isLoggedIn) {
     return (
       <div className="max-w-2xl mx-auto my-8 bg-[#141720] border border-amber-500/40 rounded-3xl p-8 sm:p-12 text-center space-y-6 shadow-2xl animate-fade-in relative overflow-hidden">
@@ -244,8 +428,8 @@ export const BookingPage = () => {
           <Sparkles className="w-4 h-4" />
           <span>Đặt Lịch Chụp Ảnh Chi Tiết Chuẩn Potonow</span>
         </div>
-        <h1 className="text-2xl sm:text-4xl font-black text-white">
-          Đặt Lịch Chụp Nhanh & Nhận Mã Chọn Ảnh Tự Động
+        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+          Lên Kế Hoạch & Đặt Lịch Chụp
         </h1>
         <p className="text-xs sm:text-sm text-gray-400 max-w-xl mx-auto">
           Tự do tùy chỉnh gói chụp, chọn bối cảnh, dịch vụ đi kèm và thời gian chụp linh hoạt. Studio sẽ liên hệ xác nhận chi tiết ngay sau khi hoàn tất.
@@ -360,18 +544,23 @@ export const BookingPage = () => {
             </div>
           </div>
 
-          <div className="flex items-center justify-center space-x-3">
+          {/* Action buttons including ⭐ Review Now button */}
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => {
+                const phId = bookingReceipt.photographerId || 'ph_default_1';
+                navigate(`/photographers/${phId}?tab=reviews&bookingCode=${bookingReceipt.code}`);
+              }}
+              className="px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-amber-950 font-black rounded-2xl text-xs sm:text-sm shadow-lg shadow-amber-500/20 flex items-center space-x-1.5 transition-all hover:scale-105"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>⭐ Đánh Giá Studio Với Mã Booking Này</span>
+            </button>
             <button
               onClick={() => navigate('/')}
               className="px-6 py-3 bg-[#0c0d12] hover:bg-[#1c2230] border border-[#242938] text-white font-bold rounded-2xl text-xs sm:text-sm"
             >
               Về Trang Chủ
-            </button>
-            <button
-              onClick={() => navigate('/photographers')}
-              className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold rounded-2xl text-xs sm:text-sm shadow-lg shadow-amber-500/20"
-            >
-              Xem Thêm Nhiếp Ảnh Gia
             </button>
           </div>
         </div>
@@ -544,30 +733,119 @@ export const BookingPage = () => {
                 </div>
               </div>
 
+              {/* Double Booking Conflict Warning Card */}
+              {bookingConflict && (
+                <div className={`p-4 rounded-2xl space-y-3 animate-fade-in border ${
+                  bookingConflict.isConfirmed
+                    ? 'bg-rose-950/60 border-rose-500/80 text-rose-200 ring-2 ring-rose-500/40'
+                    : 'bg-amber-500/10 border-amber-500/40 text-amber-300'
+                }`}>
+                  <div className="flex items-start space-x-3 text-xs sm:text-sm">
+                    <AlertTriangle className={`w-5 h-5 shrink-0 mt-0.5 ${bookingConflict.isConfirmed ? 'text-rose-400' : 'text-amber-400'}`} />
+                    <div>
+                      <p className="font-extrabold text-sm">
+                        {bookingConflict.isConfirmed
+                          ? `🛑 Studio "${selectedPhotographer?.name || 'Đã Chọn'}" ĐÃ CHỐT LỊCH CHÍNH THỨC VỚI KHÁCH KHÁC!`
+                          : `⚠️ Studio "${selectedPhotographer?.name || 'Đã Chọn'}" Đang Có Đơn Chờ Duyệt Khung Giờ Này`}
+                      </p>
+                      <p className="text-xs mt-1 leading-relaxed">
+                        {bookingConflict.isConfirmed ? (
+                          <>
+                            Studio đã xác nhận đơn chụp vào ngày <strong className="text-rose-300 font-bold">{bookingDate}</strong> (khung giờ <strong className="text-white">{startTime} ➔ {endTime}</strong>).
+                            <br /><span className="text-rose-300 font-bold">Hệ thống đã khóa khung giờ này. Vui lòng đổi giờ/ngày hoặc chọn Nhiếp ảnh gia khả dụng khác bên dưới để tiếp tục:</span>
+                          </>
+                        ) : (
+                          <>
+                            Studio hiện có đơn chờ xác nhận vào ngày <strong className="text-amber-300">{bookingDate}</strong>. Bạn vẫn có thể gửi đơn hoặc chọn Studio khả dụng khác bên dưới:
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Alternative Photographers Quick Switch */}
+                  <div className={`space-y-1.5 pt-2 border-t ${bookingConflict.isConfirmed ? 'border-rose-500/30' : 'border-amber-500/20'}`}>
+                    <span className="text-[11px] font-bold text-gray-300 block">⚡ Gợi ý chọn nhanh Nhiếp ảnh gia khác đang rảnh lịch:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {photographers.filter(p => String(p._id) !== String(selectedPhotographer?._id)).slice(0, 4).map(altP => (
+                        <button
+                          key={altP._id}
+                          type="button"
+                          onClick={() => setSelectedPhotographer(altP)}
+                          className="px-3 py-1.5 bg-[#141720] hover:bg-emerald-500/20 border border-[#242938] hover:border-emerald-500 text-white hover:text-emerald-300 text-xs font-bold rounded-xl transition-all flex items-center space-x-1.5 shadow"
+                        >
+                          <Camera className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>{altP.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Date & Time Slot */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-300 mb-1">Ngày Chụp Dự Kiến *</label>
-                  <input
-                    type="date"
-                    value={bookingDate}
-                    onChange={(e) => setBookingDate(e.target.value)}
-                    className="w-full bg-[#0c0d12] border border-[#242938] focus:border-amber-500 rounded-xl px-4 py-3 text-xs sm:text-sm text-white outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      type="date"
+                      min={new Date().toISOString().split('T')[0]}
+                      value={bookingDate}
+                      onClick={(e) => {
+                        try { if (e.target.showPicker) e.target.showPicker(); } catch (_) {}
+                      }}
+                      onChange={(e) => setBookingDate(e.target.value)}
+                      className="w-full bg-[#0c0d12] border border-[#242938] focus:border-amber-500 rounded-xl px-4 py-3 text-xs sm:text-sm text-white outline-none cursor-pointer"
+                    />
+                    <Calendar className="absolute right-3.5 top-3.5 w-4 h-4 text-amber-400 pointer-events-none" />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-gray-300 mb-1">Khung Giờ Chụp Mong Muốn *</label>
-                  <select
-                    value={timeSlot}
-                    onChange={(e) => setTimeSlot(e.target.value)}
-                    className="w-full bg-[#0c0d12] border border-[#242938] focus:border-amber-500 rounded-xl px-4 py-3 text-xs sm:text-sm text-white outline-none cursor-pointer"
-                  >
-                    {TIME_SLOTS.map((slot, i) => (
-                      <option key={i} value={slot} className="bg-[#141720] text-white">{slot}</option>
-                    ))}
-                  </select>
+              {/* Clean Visual Dual Clock Time Picker (Start Time - End Time) */}
+              <div className="space-y-3 pt-2">
+                <label className="block text-xs font-semibold text-gray-300">
+                  2. Lựa Chọn Khung Giờ Chụp Ảnh (Từ... Đến...) *
+                </label>
+                
+                <div className="bg-[#0c0d12] border border-[#242938] rounded-2xl p-4 sm:p-5 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-300 mb-1">
+                        🕒 Giờ Bắt Đầu Chụp *
+                      </label>
+                      <input
+                        type="time"
+                        value={startTime}
+                        onClick={(e) => { try { if (e.target.showPicker) e.target.showPicker(); } catch (_) {} }}
+                        onChange={(e) => setStartTime(e.target.value)}
+                        className="w-full bg-[#141720] border border-[#242938] focus:border-amber-500 rounded-xl px-4 py-3 text-sm text-white font-mono outline-none cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-300 mb-1">
+                        🏁 Giờ Kết Thúc Chụp *
+                      </label>
+                      <input
+                        type="time"
+                        value={endTime}
+                        onClick={(e) => { try { if (e.target.showPicker) e.target.showPicker(); } catch (_) {} }}
+                        onChange={(e) => setEndTime(e.target.value)}
+                        className="w-full bg-[#141720] border border-[#242938] focus:border-amber-500 rounded-xl px-4 py-3 text-sm text-white font-mono outline-none cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Timeline summary indicator */}
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between text-xs text-amber-300">
+                    <span className="font-bold">⏱️ Khung giờ đã chọn: {startTime} ➔ {endTime}</span>
+                    <span className="px-2.5 py-1 bg-amber-500 text-amber-950 font-black rounded-lg text-[11px]">
+                      Thời lượng: {calculateDuration(startTime, endTime) || '2 tiếng'}
+                    </span>
+                  </div>
                 </div>
+              </div>
               </div>
 
               {/* People count */}
@@ -593,10 +871,21 @@ export const BookingPage = () => {
                   <span>Quay Lại</span>
                 </button>
                 <button
-                  onClick={() => setStep(3)}
-                  className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold rounded-2xl text-xs sm:text-sm flex items-center space-x-2 shadow-lg shadow-amber-500/20"
+                  disabled={Boolean(bookingConflict?.isConfirmed)}
+                  onClick={() => {
+                    if (bookingConflict?.isConfirmed) {
+                      alert('Khung giờ này Studio đã chốt chính thức với khách khác. Vui lòng đổi giờ/ngày hoặc chọn Nhiếp ảnh gia khác!');
+                      return;
+                    }
+                    setStep(3);
+                  }}
+                  className={`px-6 py-3 font-bold rounded-2xl text-xs sm:text-sm flex items-center space-x-2 transition-all ${
+                    bookingConflict?.isConfirmed
+                      ? 'bg-rose-950/80 text-rose-300 border border-rose-500/50 opacity-60 cursor-not-allowed'
+                      : 'bg-amber-500 hover:bg-amber-400 text-amber-950 shadow-lg shadow-amber-500/20'
+                  }`}
                 >
-                  <span>Tiếp Tục: Chọn Dịch Vụ Đi Kèm</span>
+                  <span>{bookingConflict?.isConfirmed ? '🛑 Khung Giờ Đã Kín (Không Thể Đặt)' : 'Tiếp Tục: Chọn Dịch Vụ Đi Kèm'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>

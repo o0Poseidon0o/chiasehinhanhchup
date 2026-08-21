@@ -55,6 +55,7 @@ class LocalBooking {
     this.clientEmail = data.clientEmail || '';
     this.category = data.category || 'Chân dung';
     this.bookingDate = data.bookingDate || '';
+    this.timeSlot = data.timeSlot || '';
     this.location = data.location || '';
     this.budget = data.budget || '';
     this.note = data.note || '';
@@ -75,6 +76,7 @@ class LocalBooking {
       clientEmail: this.clientEmail,
       category: this.category,
       bookingDate: this.bookingDate,
+      timeSlot: this.timeSlot,
       location: this.location,
       budget: this.budget,
       note: this.note,

@@ -11,15 +11,18 @@ import {
   Menu,
   X,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  Calendar
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { MyBookingsModal } from '../booking/MyBookingsModal';
 
 export const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isLoggedIn, isAdmin, isPhotographer, currentUser, logout, openAuthModal } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [myBookingsOpen, setMyBookingsOpen] = useState(false);
 
   const isHome = location.pathname === '/';
   const isWorkspace = location.pathname === '/app' || location.pathname === '/create' || location.pathname === '/workspace';
@@ -97,6 +100,13 @@ export const Navbar = () => {
             Đặt Lịch Chụp
           </Link>
           <button
+            onClick={() => setMyBookingsOpen(true)}
+            className="px-3 py-2 rounded-xl text-amber-300 font-bold hover:bg-white/5 transition-colors cursor-pointer flex items-center space-x-1"
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Đơn Của Tôi</span>
+          </button>
+          <button
             onClick={() => handleNavClick('categories-section')}
             className="px-3 py-2 rounded-xl hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
           >
@@ -170,6 +180,15 @@ export const Navbar = () => {
           {/* Auth State Button */}
           {isLoggedIn ? (
             <div className="flex items-center space-x-2 shrink-0">
+              <button
+                onClick={() => setMyBookingsOpen(true)}
+                className="hidden md:flex items-center space-x-1 px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold rounded-xl transition-all"
+                title="Xem danh sách đơn booking của tôi"
+              >
+                <Calendar className="w-3.5 h-3.5 text-amber-400" />
+                <span>Đơn Của Tôi</span>
+              </button>
+
               <div className="hidden lg:flex flex-col items-end leading-tight">
                 <span className="text-xs font-bold text-white max-w-[110px] truncate">{currentUser?.name || 'Tài khoản'}</span>
                 <span className={`text-[10px] font-extrabold uppercase ${currentUser?.role === 'admin'
@@ -242,6 +261,16 @@ export const Navbar = () => {
             Đặt Lịch Chụp
           </Link>
           <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              setMyBookingsOpen(true);
+            }}
+            className="w-full text-left py-2 px-3 rounded-lg text-sm font-bold text-amber-300 hover:bg-white/5 flex items-center space-x-2"
+          >
+            <Calendar className="w-4 h-4 text-amber-400" />
+            <span>📅 Đơn Đặt Lịch Của Tôi</span>
+          </button>
+          <button
             onClick={() => handleNavClick('categories-section')}
             className="w-full text-left py-2 px-3 rounded-lg text-sm font-medium text-gray-200 hover:bg-white/5"
           >
@@ -278,6 +307,12 @@ export const Navbar = () => {
           </div>
         </div>
       )}
+
+      {/* Modal Lịch Sử Đặt Lịch Của Tôi */}
+      <MyBookingsModal
+        isOpen={myBookingsOpen}
+        onClose={() => setMyBookingsOpen(false)}
+      />
     </header>
   );
 };
