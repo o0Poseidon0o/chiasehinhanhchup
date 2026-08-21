@@ -536,45 +536,46 @@ export const PhotographerDetailPage = () => {
       {/* Lightbox Modal Xem Ảnh Khổ Lớn - Fullscreen Fit Single Screen (Render via Portal vào document.body) */}
       {lightboxIndex !== null && activeGallery[lightboxIndex] && createPortal(
         <div
-          className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-between h-screen w-screen overflow-hidden p-3 sm:p-4 select-none animate-fade-in"
+          className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[9999] bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-between w-full h-full max-w-full min-h-[100dvh] max-h-[100dvh] overflow-hidden p-1.5 sm:p-4 select-none animate-fade-in"
           onClick={() => setLightboxIndex(null)}
         >
           {/* Top Bar: Title & Actions (Relative Flex Child) */}
           <div 
-            className="w-full max-w-7xl flex items-center justify-between shrink-0 z-20 pt-1 px-2"
+            className="w-full max-w-7xl flex items-center justify-between shrink-0 z-20 pt-1 px-1 sm:px-2 gap-2"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Title Badge */}
-            <div className="flex items-center space-x-3 bg-[#141720]/90 backdrop-blur-xl px-4 py-2 rounded-2xl border border-[#242938] shadow-2xl max-w-[65vw] sm:max-w-md">
-              <span className="px-2.5 py-1 bg-amber-500/20 text-amber-300 font-mono text-xs font-black rounded-lg border border-amber-500/30 shrink-0">
+            <div className="flex items-center space-x-2 bg-[#141720]/90 backdrop-blur-xl px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-2xl border border-[#242938] shadow-2xl min-w-0 max-w-[50vw] sm:max-w-md">
+              <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 bg-amber-500/20 text-amber-300 font-mono text-[10px] sm:text-xs font-black rounded-lg border border-amber-500/30 shrink-0">
                 {lightboxIndex + 1} / {activeGallery.length}
               </span>
-              <h3 className="text-xs sm:text-sm font-bold text-white truncate">
+              <h3 className="text-[11px] sm:text-sm font-bold text-white truncate">
                 {activeGallery[lightboxIndex]?.title || 'Tác phẩm nghệ thuật'}
               </h3>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
               <button
                 type="button"
                 onClick={() => {
                   setLightboxIndex(null);
                   navigate(`/bookings?phUserId=${photographer._id}`);
                 }}
-                className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-amber-950 font-black rounded-2xl text-xs flex items-center space-x-1.5 shadow-xl transition-all hover:scale-105"
+                className="px-2.5 py-1.5 sm:px-3.5 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-amber-950 font-black rounded-xl sm:rounded-2xl text-[11px] sm:text-xs flex items-center space-x-1 sm:space-x-1.5 shadow-xl transition-all hover:scale-105"
               >
                 <Calendar className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span className="hidden sm:inline">⚡ Đặt Lịch Chụp</span>
+                <span className="sm:hidden">Đặt Lịch</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setLightboxIndex(null)}
-                className="p-2.5 sm:px-4 sm:py-2 bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white border border-red-500/30 rounded-2xl text-xs font-bold transition-all shadow-xl flex items-center space-x-1.5"
-                title="Tắt xem ảnh (Phím ESC)"
+                className="p-1.5 sm:px-4 sm:py-2 bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white border border-red-500/30 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-bold transition-all shadow-xl flex items-center space-x-1"
+                title="Tắt xem ảnh"
               >
-                <X className="w-5 h-5 stroke-[2.5]" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
                 <span className="hidden sm:inline font-bold">Đóng [ESC]</span>
               </button>
             </div>
@@ -584,15 +585,15 @@ export const PhotographerDetailPage = () => {
           <button
             type="button"
             onClick={handlePrevImage}
-            className="fixed left-3 sm:left-6 top-1/2 -translate-y-1/2 z-30 p-3.5 sm:p-4 bg-black/70 hover:bg-amber-500 text-white hover:text-amber-950 rounded-full border border-white/20 backdrop-blur-xl transition-all hover:scale-110 active:scale-95 shadow-2xl"
+            className="fixed left-2 sm:left-6 top-1/2 -translate-y-1/2 z-30 p-2.5 sm:p-4 bg-black/70 hover:bg-amber-500 text-white hover:text-amber-950 rounded-full border border-white/20 backdrop-blur-xl transition-all hover:scale-110 active:scale-95 shadow-2xl"
             title="Ảnh Trước (Phím ⬅️)"
           >
-            <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8 stroke-[2.5]" />
+            <ChevronLeft className="w-5 h-5 sm:w-8 sm:h-8 stroke-[2.5]" />
           </button>
 
           {/* Center Main Display Area (Flex 1, constrained max-height to fit in single viewport) */}
           <div
-            className="flex-1 w-full flex items-center justify-center overflow-hidden my-2 px-12 sm:px-24 relative z-10 cursor-pointer"
+            className="flex-1 w-full flex items-center justify-center overflow-hidden my-1 px-8 sm:px-24 relative z-10 cursor-pointer"
             onClick={() => setLightboxIndex(null)}
           >
             <img
@@ -602,7 +603,7 @@ export const PhotographerDetailPage = () => {
                 e.stopPropagation();
                 handleNextImage(e);
               }}
-              className="max-h-[calc(100vh-170px)] max-w-full object-contain rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.9)] border border-[#242938] transition-all duration-300 transform hover:scale-[1.005]"
+              className="max-h-[calc(100dvh-160px)] max-w-full object-contain rounded-xl sm:rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.9)] border border-[#242938] transition-all duration-300 transform hover:scale-[1.005]"
               onError={(e) => {
                 const FALLBACK_GALLERY = [
                   'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800',
@@ -618,10 +619,10 @@ export const PhotographerDetailPage = () => {
           <button
             type="button"
             onClick={handleNextImage}
-            className="fixed right-3 sm:right-6 top-1/2 -translate-y-1/2 z-30 p-3.5 sm:p-4 bg-black/70 hover:bg-amber-500 text-white hover:text-amber-950 rounded-full border border-white/20 backdrop-blur-xl transition-all hover:scale-110 active:scale-95 shadow-2xl"
+            className="fixed right-2 sm:right-6 top-1/2 -translate-y-1/2 z-30 p-2.5 sm:p-4 bg-black/70 hover:bg-amber-500 text-white hover:text-amber-950 rounded-full border border-white/20 backdrop-blur-xl transition-all hover:scale-110 active:scale-95 shadow-2xl"
             title="Ảnh Sau (Phím ➡️)"
           >
-            <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8 stroke-[2.5]" />
+            <ChevronRight className="w-5 h-5 sm:w-8 sm:h-8 stroke-[2.5]" />
           </button>
 
           {/* Bottom Thumbnail Strip Carousel (Relative Flex Child) */}
@@ -629,13 +630,13 @@ export const PhotographerDetailPage = () => {
             className="w-full shrink-0 flex items-center justify-center z-20 pb-1"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="max-w-[90vw] sm:max-w-4xl bg-[#141720]/90 backdrop-blur-xl p-2 px-3 rounded-2xl border border-[#242938] shadow-2xl flex items-center space-x-2 overflow-x-auto no-scrollbar">
+            <div className="max-w-[95vw] sm:max-w-4xl bg-[#141720]/90 backdrop-blur-xl p-1 sm:p-1.5 px-2 sm:px-3 rounded-xl sm:rounded-2xl border border-[#242938] shadow-2xl flex items-center space-x-1.5 sm:space-x-2 overflow-x-auto no-scrollbar">
               {activeGallery.map((thumb, tIdx) => (
                 <button
                   key={tIdx}
                   type="button"
                   onClick={() => setLightboxIndex(tIdx)}
-                  className={`relative w-11 h-11 sm:w-13 sm:h-13 rounded-xl overflow-hidden shrink-0 transition-all border-2 ${
+                  className={`relative w-9 h-9 sm:w-13 sm:h-13 rounded-lg sm:rounded-xl overflow-hidden shrink-0 transition-all border-2 ${
                     lightboxIndex === tIdx
                       ? 'border-amber-400 ring-2 ring-amber-400/50 scale-105 opacity-100'
                       : 'border-transparent opacity-50 hover:opacity-100 hover:scale-105'
