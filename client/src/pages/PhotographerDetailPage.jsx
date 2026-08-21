@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Star, MapPin, Award, ShieldCheck, Phone, Mail, Calendar, 
-  Share2, ArrowLeft, CheckCircle2, Camera, Layers, ExternalLink, Sparkles, Clock, Package
+  Share2, ArrowLeft, CheckCircle2, Camera, Layers, ExternalLink, Sparkles, Clock, Package,
+  ChevronLeft, ChevronRight, X
 } from 'lucide-react';
 import { userApi } from '../api/userApi';
 import { albumApi } from '../api/albumApi';
@@ -49,8 +50,28 @@ export const PhotographerDetailPage = () => {
 
   const [portfolioImages, setPortfolioImages] = useState([]);
   const [loadingDrive, setLoadingDrive] = useState(false);
-  const [fitMode, setFitMode] = useState('contain'); // 'contain' (vừa khung trọn vẹn) hoặc 'cover' (lấp đầy)
-  const [lightboxImage, setLightboxImage] = useState(null);
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+
+  const handlePrevImage = (e) => {
+    if (e) e.stopPropagation();
+    setLightboxIndex(prev => (prev !== null && prev > 0 ? prev - 1 : (portfolioImages.length > 0 ? portfolioImages.length - 1 : 0)));
+  };
+
+  const handleNextImage = (e) => {
+    if (e) e.stopPropagation();
+    setLightboxIndex(prev => (prev !== null && prev < portfolioImages.length - 1 ? prev + 1 : 0));
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (lightboxIndex === null) return;
+      if (e.key === 'ArrowLeft') handlePrevImage();
+      if (e.key === 'ArrowRight') handleNextImage();
+      if (e.key === 'Escape') setLightboxIndex(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxIndex, portfolioImages.length]);
 
   useEffect(() => {
     let isMounted = true;
@@ -396,7 +417,7 @@ export const PhotographerDetailPage = () => {
               ).map((item, pIdx) => (
                 <div
                   key={pIdx}
-                  onClick={() => setLightboxImage(item)}
+                  onClick={() => setLightboxIndex(pIdx)}
                   className="group relative h-80 rounded-3xl overflow-hidden bg-[#0c0d12] border border-[#242938] shadow-xl cursor-pointer flex items-center justify-center p-2"
                 >
                   <img
@@ -474,34 +495,111 @@ export const PhotographerDetailPage = () => {
         </div>
       )}
 
-      {/* Lightbox Modal Xem Ảnh Trọn Vẹn Khổ Lớn */}
-      {lightboxImage && (
+      {/* Lightbox Modal Xem Ảnh Trọn Vẹn Khổ Lớn với Header Nổi & Nút Đặt Lịch */}
+      {lightboxIndex !== null && (portfolioImages[lightboxIndex] || (
+        [
+          { url: 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800&auto=format&fit=crop', title: 'Pre-Wedding Nghệ Thuật' },
+          { url: 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?q=80&w=800&auto=format&fit=crop', title: 'Chân Dung Cinematic' },
+          { url: 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=800&auto=format&fit=crop', title: 'Mood Film Outdoor' },
+          { url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=800&auto=format&fit=crop', title: 'Editorial Lookbook' },
+          { url: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=800&auto=format&fit=crop', title: 'Street Style Cặp Đôi' },
+          { url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=800&auto=format&fit=crop', title: 'Studio Hàn Quốc' }
+        ][lightboxIndex]
+      )) && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setLightboxImage(null)}
+          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col items-center justify-between p-3 sm:p-6 animate-fade-in select-none"
+          onClick={() => setLightboxIndex(null)}
         >
+          {/* Top Sticky Header: Title, Actions & Close */}
           <div
-            className="relative max-w-5xl max-h-[90vh] flex flex-col items-center"
+            className="w-full max-w-5xl flex items-center justify-between bg-[#141720]/90 backdrop-blur-md p-3 px-4 rounded-2xl border border-[#242938] z-20 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center space-x-3 min-w-0 pr-2">
+              <span className="px-2.5 py-1 bg-amber-500/20 text-amber-300 font-mono text-xs font-black rounded-lg border border-amber-500/30 shrink-0">
+                {lightboxIndex + 1} / {(portfolioImages.length > 0 ? portfolioImages.length : 6)}
+              </span>
+              <h3 className="text-xs sm:text-sm font-bold text-white truncate">
+                {(portfolioImages[lightboxIndex] || {})?.title || 'Bộ Tác Phẩm Nghệ Thuật'}
+              </h3>
+            </div>
+
+            <div className="flex items-center space-x-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setLightboxIndex(null);
+                  navigate(`/bookings?phUserId=${photographer._id}`);
+                }}
+                className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-amber-950 font-black rounded-xl text-xs flex items-center space-x-1.5 shadow-lg transition-all hover:scale-105"
+              >
+                <Calendar className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span className="hidden sm:inline">⚡ Đặt Lịch Chụp Ngay</span>
+                <span className="sm:hidden">⚡ Đặt Lịch</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setLightboxIndex(null)}
+                className="px-3 py-1.5 bg-[#0c0d12] hover:bg-[#1c2230] border border-[#242938] text-gray-300 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
+              >
+                <X className="w-4 h-4 text-amber-400" />
+                <span className="hidden sm:inline">Đóng</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Center Image Container with Left / Right Navigation Buttons */}
+          <div
+            className="relative flex-1 w-full max-w-5xl flex items-center justify-center my-3 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
-              onClick={() => setLightboxImage(null)}
-              className="absolute -top-12 right-0 text-white hover:text-amber-400 font-black text-sm bg-black/60 border border-white/20 rounded-full px-3 py-1 transition-all"
+              onClick={handlePrevImage}
+              className="absolute left-2 z-30 p-3 bg-black/60 hover:bg-black/90 text-white hover:text-amber-400 rounded-full border border-white/10 backdrop-blur-md transition-all hover:scale-110 shadow-xl"
+              title="Ảnh Trước (Phím ⬅️)"
             >
-              ✕ Đóng
+              <ChevronLeft className="w-6 h-6" />
             </button>
+
             <img
-              src={lightboxImage.url}
-              alt={lightboxImage.title || 'Xem ảnh full'}
-              className="max-h-[80vh] max-w-full object-contain rounded-2xl shadow-2xl border border-[#242938]"
-              onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=1200&auto=format&fit=crop'; }}
+              src={(portfolioImages[lightboxIndex] || {
+                url: [
+                  'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800&auto=format&fit=crop',
+                  'https://images.unsplash.com/photo-1537633552985-df8429e8048b?q=80&w=800&auto=format&fit=crop',
+                  'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=800&auto=format&fit=crop',
+                  'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=800&auto=format&fit=crop',
+                  'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=800&auto=format&fit=crop',
+                  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=800&auto=format&fit=crop'
+                ][lightboxIndex % 6]
+              }).url}
+              alt="Xem ảnh full"
+              className="max-h-[78vh] max-w-full object-contain rounded-2xl shadow-2xl border border-[#242938]"
+              onError={(e) => {
+                const FALLBACK_GALLERY = [
+                  'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800',
+                  'https://images.unsplash.com/photo-1537633552985-df8429e8048b?q=80&w=800',
+                  'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=800'
+                ];
+                e.target.src = FALLBACK_GALLERY[lightboxIndex % FALLBACK_GALLERY.length];
+              }}
             />
-            {lightboxImage.title && (
-              <p className="mt-3 text-xs sm:text-sm font-bold text-amber-400 bg-black/70 px-4 py-1.5 rounded-full border border-amber-500/30">
-                {lightboxImage.title}
-              </p>
-            )}
+
+            <button
+              type="button"
+              onClick={handleNextImage}
+              className="absolute right-2 z-30 p-3 bg-black/60 hover:bg-black/90 text-white hover:text-amber-400 rounded-full border border-white/10 backdrop-blur-md transition-all hover:scale-110 shadow-xl"
+              title="Ảnh Sau (Phím ➡️)"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Bottom Bar: Instructions / Info */}
+          <div className="w-full max-w-5xl flex items-center justify-between text-[11px] text-gray-400 px-2 py-1">
+            <span className="hidden sm:inline">💡 Bấm phím mũi tên ⬅️ ➡️ trên bàn phím để chuyển ảnh nhanh</span>
+            <span className="text-amber-400 font-semibold">Tác phẩm từ {photographer?.name}</span>
           </div>
         </div>
       )}
