@@ -142,6 +142,14 @@ export const StudioWorkspace = () => {
     name: currentUser?.name || '',
     phone: currentUser?.phone || '',
     studioInfo: {
+      avatar: currentUser?.studioInfo?.avatar || '',
+      avatarPosition: currentUser?.studioInfo?.avatarPosition || 'center',
+      avatarPositionY: currentUser?.studioInfo?.avatarPositionY ?? 50,
+      coverImage: currentUser?.studioInfo?.coverImage || '',
+      coverPosition: currentUser?.studioInfo?.coverPosition || 'center',
+      coverPositionY: currentUser?.studioInfo?.coverPositionY ?? 50,
+      coverFit: currentUser?.studioInfo?.coverFit || 'cover',
+      startingPrice: currentUser?.studioInfo?.startingPrice || '',
       portfolioUrl: currentUser?.studioInfo?.portfolioUrl || '',
       experience: currentUser?.studioInfo?.experience || '',
       equipment: currentUser?.studioInfo?.equipment || '',
@@ -151,6 +159,34 @@ export const StudioWorkspace = () => {
     }
   });
   const [profileLoading, setProfileLoading] = useState(false);
+  const [testDriveStatus, setTestDriveStatus] = useState(null);
+  const [isDraggingBanner, setIsDraggingBanner] = useState(false);
+  const [isDraggingAvatar, setIsDraggingAvatar] = useState(false);
+
+  useEffect(() => {
+    if (currentUser) {
+      setProfileForm({
+        name: currentUser.name || '',
+        phone: currentUser.phone || '',
+        studioInfo: {
+          avatar: currentUser.studioInfo?.avatar || '',
+          avatarPosition: currentUser.studioInfo?.avatarPosition || 'center',
+          avatarPositionY: currentUser.studioInfo?.avatarPositionY ?? 50,
+          coverImage: currentUser.studioInfo?.coverImage || '',
+          coverPosition: currentUser.studioInfo?.coverPosition || 'center',
+          coverPositionY: currentUser.studioInfo?.coverPositionY ?? 50,
+          coverFit: currentUser.studioInfo?.coverFit || 'cover',
+          startingPrice: currentUser.studioInfo?.startingPrice || '',
+          portfolioUrl: currentUser.studioInfo?.portfolioUrl || '',
+          experience: currentUser.studioInfo?.experience || '',
+          equipment: currentUser.studioInfo?.equipment || '',
+          styles: currentUser.studioInfo?.styles || '',
+          location: currentUser.studioInfo?.location || '',
+          bio: currentUser.studioInfo?.bio || ''
+        }
+      });
+    }
+  }, [currentUser]);
 
   // Load all photographer data
   const fetchData = useCallback(async () => {
@@ -292,8 +328,11 @@ export const StudioWorkspace = () => {
     }
     setProfileLoading(true);
     try {
-      await userApi.updateUser(currentUser._id, profileForm);
-      setNotice({ type: 'success', message: 'Đã lưu cập nhật thông tin Studio thành công!' });
+      const res = await userApi.updateProfile(currentUser._id, profileForm);
+      if (res.user) {
+        sessionStorage.setItem('user', JSON.stringify(res.user));
+      }
+      setNotice({ type: 'success', message: 'Đã lưu cập nhật hồ sơ Studio & Avatar thành công!' });
     } catch (err) {
       setNotice({ type: 'error', message: err.message || 'Không thể lưu thông tin.' });
     } finally {
@@ -1101,6 +1140,289 @@ export const StudioWorkspace = () => {
           </div>
 
           <form onSubmit={handleProfileSubmit} className="space-y-4">
+            {/* Avatar, Ảnh Bìa & Giá Khởi Điểm */}
+            <div className="space-y-3">
+              <label className="block text-xs font-semibold text-gray-300">Ảnh Đại Diện (Avatar), Ảnh Bìa (Banner Studio) & Giá Khởi Điểm</label>
+              
+              {/* Row 1: Avatar & Starting Price */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#0c0d12] p-4 rounded-2xl border border-[#242938]">
+                {/* Avatar Uploader & Drag Alignment */}
+                <div className="space-y-2">
+                  <span className="text-[11px] font-semibold text-amber-400 block">1. Ảnh Đại Diện (Avatar)</span>
+                  <div className="flex items-center space-x-3">
+                    <div
+                      className="w-16 h-16 rounded-2xl bg-[#1c2230] border-2 border-dashed border-amber-500/40 overflow-hidden shrink-0 flex items-center justify-center relative cursor-grab active:cursor-grabbing select-none group"
+                      onMouseDown={(e) => {
+                        if (!profileForm.studioInfo.avatar) return;
+                        setIsDraggingAvatar(true);
+                        const startY = e.clientY;
+                        const initialPos = profileForm.studioInfo.avatarPositionY ?? 50;
+                        const handleMouseMove = (moveEvent) => {
+                          const deltaY = moveEvent.clientY - startY;
+                          let newPos = Math.round(initialPos + deltaY * 1.2);
+                          if (newPos < 0) newPos = 0;
+                          if (newPos > 100) newPos = 100;
+                          setProfileForm(prev => ({
+                            ...prev,
+                            studioInfo: { ...prev.studioInfo, avatarPositionY: newPos }
+                          }));
+                        };
+                        const handleMouseUp = () => {
+                          setIsDraggingAvatar(false);
+                          window.removeEventListener('mousemove', handleMouseMove);
+                          window.removeEventListener('mouseup', handleMouseUp);
+                        };
+                        window.addEventListener('mousemove', handleMouseMove);
+                        window.addEventListener('mouseup', handleMouseUp);
+                      }}
+                    >
+                      {profileForm.studioInfo.avatar ? (
+                        <img
+                          src={profileForm.studioInfo.avatar}
+                          alt="Avatar"
+                          className="w-full h-full object-cover pointer-events-none"
+                          style={{ objectPosition: `50% ${profileForm.studioInfo.avatarPositionY ?? 50}%` }}
+                          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'; }}
+                        />
+                      ) : (
+                        <Camera className="w-6 h-6 text-amber-400/60" />
+                      )}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                        <span className="text-[9px] font-bold text-amber-300">✋ Kéo ảnh</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="flex items-center space-x-2">
+                        <label className="cursor-pointer inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold transition-all">
+                          <Camera className="w-3.5 h-3.5" />
+                          <span>Tải ảnh từ máy</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                if (file.size > 3 * 1024 * 1024) {
+                                  alert('Dung lượng ảnh tối đa 3MB.');
+                                  return;
+                                }
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  setProfileForm({
+                                    ...profileForm,
+                                    studioInfo: { ...profileForm.studioInfo, avatar: reader.result }
+                                  });
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+
+                      {/* Slider Căn vị trí Avatar */}
+                      <div className="flex items-center space-x-2 pt-0.5">
+                        <span className="text-[10px] text-gray-400 font-medium shrink-0">Căn vị trí:</span>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={profileForm.studioInfo.avatarPositionY ?? 50}
+                          onChange={(e) => setProfileForm({
+                            ...profileForm,
+                            studioInfo: { ...profileForm.studioInfo, avatarPositionY: parseInt(e.target.value) }
+                          })}
+                          className="w-full h-1.5 bg-[#141720] rounded-lg appearance-none cursor-pointer accent-amber-400"
+                        />
+                        <span className="text-[10px] font-mono text-amber-400 font-bold shrink-0">{profileForm.studioInfo.avatarPositionY ?? 50}%</span>
+                      </div>
+
+                      <input
+                        type="url"
+                        value={profileForm.studioInfo.avatar || ''}
+                        onChange={(e) => setProfileForm({
+                          ...profileForm,
+                          studioInfo: { ...profileForm.studioInfo, avatar: e.target.value }
+                        })}
+                        placeholder="Hoặc dán URL ảnh Avatar..."
+                        className="w-full bg-[#141720] border border-[#242938] rounded-xl px-2.5 py-1 text-[11px] text-white outline-none truncate"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Starting Price */}
+                <div className="space-y-2">
+                  <span className="text-[11px] font-semibold text-amber-400 block">2. Giá Khởi Điểm Tham Khảo</span>
+                  <input
+                    type="text"
+                    value={profileForm.studioInfo.startingPrice || ''}
+                    onChange={(e) => setProfileForm({
+                      ...profileForm,
+                      studioInfo: { ...profileForm.studioInfo, startingPrice: e.target.value }
+                    })}
+                    placeholder="VD: 1.500.000đ"
+                    className="w-full bg-[#141720] border border-[#242938] focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-white outline-none"
+                  />
+                  <p className="text-[10px] text-gray-400">Hiển thị cho khách hàng xem ở trang tìm kiếm Nhiếp ảnh gia.</p>
+                </div>
+              </div>
+
+              {/* Row 2: Banner / Cover Image Uploader & Interactive Drag Reposition */}
+              <div className="bg-[#0c0d12] p-4 rounded-2xl border border-[#242938] space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-amber-400 block">3. Ảnh Bìa Studio (Banner Header Trang Cá Nhân)</span>
+                  <span className="text-[10px] text-amber-300/90 font-medium">✋ Kéo giữ chuột vào ảnh để di chuyển vị trí</span>
+                </div>
+
+                {/* Banner Drag & Reposition Preview */}
+                <div
+                  className="h-36 w-full rounded-2xl overflow-hidden bg-[#1c2230] border-2 border-dashed border-amber-500/40 relative cursor-grab active:cursor-grabbing select-none group"
+                  onMouseDown={(e) => {
+                    if (!profileForm.studioInfo.coverImage) return;
+                    setIsDraggingBanner(true);
+                    const startY = e.clientY;
+                    const initialPos = profileForm.studioInfo.coverPositionY ?? 50;
+                    const handleMouseMove = (moveEvent) => {
+                      const deltaY = moveEvent.clientY - startY;
+                      let newPos = Math.round(initialPos + deltaY * 0.4);
+                      if (newPos < 0) newPos = 0;
+                      if (newPos > 100) newPos = 100;
+                      setProfileForm(prev => ({
+                        ...prev,
+                        studioInfo: { ...prev.studioInfo, coverPositionY: newPos }
+                      }));
+                    };
+                    const handleMouseUp = () => {
+                      setIsDraggingBanner(false);
+                      window.removeEventListener('mousemove', handleMouseMove);
+                      window.removeEventListener('mouseup', handleMouseUp);
+                    };
+                    window.addEventListener('mousemove', handleMouseMove);
+                    window.addEventListener('mouseup', handleMouseUp);
+                  }}
+                >
+                  {profileForm.studioInfo.coverImage ? (
+                    <img
+                      src={profileForm.studioInfo.coverImage}
+                      alt="Banner Header"
+                      className={`w-full h-full pointer-events-none ${
+                        profileForm.studioInfo.coverFit === 'contain' ? 'object-contain' : 'object-cover'
+                      }`}
+                      style={{ objectPosition: `50% ${profileForm.studioInfo.coverPositionY ?? 50}%` }}
+                      onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1200'; }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 text-xs">
+                      <Camera className="w-8 h-8 text-amber-400/50 mb-1" />
+                      <span>Chưa chọn ảnh bìa (Hệ thống sẽ tự lấy ảnh từ Google Drive)</span>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                    <span className="text-xs font-bold text-amber-300 bg-black/75 px-3 py-1.5 rounded-xl border border-amber-500/30">
+                      {isDraggingBanner ? '✊ Đang di chuyển góc ảnh...' : '✋ Nhấn & Kéo chuột lên/xuống để di chuyển góc ảnh bìa'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Range Slider for Banner */}
+                <div className="flex items-center space-x-3 pt-1">
+                  <span className="text-[10px] font-bold text-gray-400 shrink-0">⬆️ Căn Đỉnh</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={profileForm.studioInfo.coverPositionY ?? 50}
+                    onChange={(e) => setProfileForm({
+                      ...profileForm,
+                      studioInfo: { ...profileForm.studioInfo, coverPositionY: parseInt(e.target.value) }
+                    })}
+                    className="w-full h-1.5 bg-[#141720] rounded-lg appearance-none cursor-pointer accent-amber-400"
+                  />
+                  <span className="text-[10px] font-bold text-gray-400 shrink-0">⬇️ Căn Đáy</span>
+                  <span className="text-[11px] font-mono font-bold text-amber-400 shrink-0 w-8 text-right">
+                    {profileForm.studioInfo.coverPositionY ?? 50}%
+                  </span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-3 pt-1">
+                  <label className="cursor-pointer shrink-0 w-full sm:w-auto inline-flex items-center justify-center space-x-1.5 px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold transition-all">
+                    <Camera className="w-4 h-4" />
+                    <span>Tải Ảnh Bìa Từ Máy</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 5 * 1024 * 1024) {
+                            alert('Dung lượng ảnh tối đa 5MB.');
+                            return;
+                          }
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setProfileForm({
+                              ...profileForm,
+                              studioInfo: { ...profileForm.studioInfo, coverImage: reader.result }
+                            });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+
+                  <input
+                    type="url"
+                    value={profileForm.studioInfo.coverImage || ''}
+                    onChange={(e) => setProfileForm({
+                      ...profileForm,
+                      studioInfo: { ...profileForm.studioInfo, coverImage: e.target.value }
+                    })}
+                    placeholder="Hoặc dán đường link URL ảnh bìa (VD: https://...)"
+                    className="w-full bg-[#141720] border border-[#242938] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                  />
+                </div>
+
+                {/* Căn Chỉnh Vị Trí & Khung Ảnh Bìa */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#242938]/60">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-gray-400 mb-1">Căn Vị Trí Cắt Ảnh Banner:</label>
+                    <select
+                      value={profileForm.studioInfo.coverPosition || 'center'}
+                      onChange={(e) => setProfileForm({
+                        ...profileForm,
+                        studioInfo: { ...profileForm.studioInfo, coverPosition: e.target.value }
+                      })}
+                      className="w-full bg-[#141720] border border-[#242938] text-amber-300 text-xs font-semibold rounded-xl px-3 py-1.5 outline-none cursor-pointer"
+                    >
+                      <option value="center">🎯 Căn Giữa (Center)</option>
+                      <option value="top">⬆️ Căn Đỉnh Trên (Top - Ưu tiên khuôn mặt)</option>
+                      <option value="bottom">⬇️ Căn Đáy Dưới (Bottom - Ưu tiên chân dung)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-gray-400 mb-1">Chế Độ Khung Banner:</label>
+                    <select
+                      value={profileForm.studioInfo.coverFit || 'cover'}
+                      onChange={(e) => setProfileForm({
+                        ...profileForm,
+                        studioInfo: { ...profileForm.studioInfo, coverFit: e.target.value }
+                      })}
+                      className="w-full bg-[#141720] border border-[#242938] text-amber-300 text-xs font-semibold rounded-xl px-3 py-1.5 outline-none cursor-pointer"
+                    >
+                      <option value="cover">✂️ Lấp Đầy Khung (Cover - Tràn viền)</option>
+                      <option value="contain">🖼️ Trọn Vẹn Gốc (Contain - Giữ tỷ lệ ảnh)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div>
               <label className="block text-xs font-semibold text-gray-300 mb-1">Tên Studio / Nhiếp Ảnh Gia</label>
               <input
@@ -1149,17 +1471,57 @@ export const StudioWorkspace = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Link Portfolio / Instagram / Facebook tác phẩm</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-gray-300">Link Google Drive Thư Mục Tác Phẩm</label>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const url = profileForm.studioInfo.portfolioUrl;
+                    if (!url || !url.includes('drive.google.com')) {
+                      setTestDriveStatus({ type: 'error', message: 'Vui lòng dán đường link thư mục Google Drive.' });
+                      return;
+                    }
+                    setTestDriveStatus({ type: 'loading', message: 'Đang kiểm tra quyền truy cập Google Drive...' });
+                    try {
+                      const res = await albumApi.parseDriveFolder(url);
+                      if (res.images && res.images.length > 0) {
+                        setTestDriveStatus({ type: 'success', message: `✅ Quét thành công ${res.images.length} bức ảnh nghệ thuật từ thư mục Google Drive của bạn!` });
+                      } else {
+                        setTestDriveStatus({ type: 'warning', message: '⚠️ Thư mục Google Drive đang ở chế độ Riêng tư (Private) hoặc chưa có ảnh. Vui lòng vào Google Drive -> Chia sẻ -> Đổi quyền thành "Bất kỳ ai có liên kết đều có thể xem".' });
+                      }
+                    } catch (err) {
+                      setTestDriveStatus({ type: 'error', message: '⚠️ Thư mục Google Drive đang ở chế độ Riêng tư (Private). Vui lòng vào Google Drive -> Chia sẻ -> Đổi quyền thành "Bất kỳ ai có liên kết đều có thể xem".' });
+                    }
+                  }}
+                  className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[11px] font-bold rounded-lg transition-all flex items-center space-x-1"
+                >
+                  <Sparkles className="w-3 h-3 text-amber-400" />
+                  <span>Kiểm Tra Link Drive</span>
+                </button>
+              </div>
               <input
                 type="url"
                 value={profileForm.studioInfo.portfolioUrl}
-                onChange={(e) => setProfileForm({
-                  ...profileForm,
-                  studioInfo: { ...profileForm.studioInfo, portfolioUrl: e.target.value }
-                })}
-                placeholder="https://..."
+                onChange={(e) => {
+                  setTestDriveStatus(null);
+                  setProfileForm({
+                    ...profileForm,
+                    studioInfo: { ...profileForm.studioInfo, portfolioUrl: e.target.value }
+                  });
+                }}
+                placeholder="https://drive.google.com/drive/folders/..."
                 className="w-full bg-[#0c0d12] border border-[#242938] focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none"
               />
+              {testDriveStatus && (
+                <div className={`mt-2 p-3 rounded-xl text-xs flex items-start space-x-2 ${
+                  testDriveStatus.type === 'success' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300' :
+                  testDriveStatus.type === 'warning' ? 'bg-amber-500/10 border border-amber-500/30 text-amber-300' :
+                  testDriveStatus.type === 'loading' ? 'bg-blue-500/10 border border-blue-500/30 text-blue-300' :
+                  'bg-rose-500/10 border border-rose-500/30 text-rose-300'
+                }`}>
+                  <span>{testDriveStatus.message}</span>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

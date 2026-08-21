@@ -1,4 +1,5 @@
 const albumService = require('../services/albumService');
+const { extractFolderId, getMockImages, fetchImagesFromFolder } = require('../services/googleDriveService');
 const { asyncHandler } = require('../middlewares/errorHandler');
 
 /**
@@ -231,10 +232,77 @@ const verifyAdminPassword = asyncHandler(async (req, res) => {
   res.status(200).json(result);
 });
 
+/**
+ * @desc    Lấy danh sách các album công khai (Public cho trang Photographer Detail)
+ * @route   GET /api/albums/public
+ * @access  Public
+ */
+const getPublicAlbums = asyncHandler(async (req, res) => {
+  const { photographerId } = req.query;
+  const albums = await albumService.getAllAlbums();
+  const filtered = photographerId 
+    ? albums.filter(a => String(a.photographerId) === String(photographerId))
+    : albums;
+  
+  res.status(200).json({
+    success: true,
+    data: filtered.map(a => ({
+      _id: a._id,
+      title: a.title,
+      coverImage: a.coverImage,
+      photographerId: a.photographerId,
+      photographerName: a.photographerName,
+      images: (a.images || []).map(img => ({
+        fileId: img.fileId,
+        url: img.embedUrl || img.thumbnailUrl,
+        thumbnail: img.thumbnailUrl
+      }))
+    }))
+  });
+});
+
+/**
+ * @desc    Quét danh sách ảnh từ link Google Drive bất kỳ (Public cho Photographer Portfolio)
+ * @route   POST /api/albums/parse-drive
+ * @access  Public
+ */
+const parseDriveUrl = asyncHandler(async (req, res) => {
+  const { url } = req.body;
+  if (!url) {
+    return res.status(400).json({ success: false, message: 'Vui lòng cung cấp link Google Drive.' });
+  }
+
+  const folderId = extractFolderId(url);
+  if (!folderId) {
+    return res.status(400).json({ success: false, message: 'Link Google Drive không đúng định dạng.' });
+  }
+
+  let images = [];
+  try {
+    images = await fetchImagesFromFolder(folderId);
+  } catch (err) {
+    images = [];
+  }
+
+  res.status(200).json({
+    success: true,
+    folderId,
+    count: images.length,
+    images: images.map(img => ({
+      fileId: img.fileId,
+      fileName: img.fileName,
+      url: img.embedUrl || img.thumbnailUrl,
+      thumbnail: img.thumbnailUrl
+    }))
+  });
+});
+
 module.exports = {
   createAlbum,
   getAlbums,
   getAlbum,
+  getPublicAlbums,
+  parseDriveUrl,
   verifyPasscode,
   submitSelection,
   getManageAlbum,

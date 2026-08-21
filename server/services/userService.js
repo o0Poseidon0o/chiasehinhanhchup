@@ -73,6 +73,10 @@ const registerUser = async (data) => {
     role: role === 'photographer' ? 'photographer' : 'client',
     status: userStatus,
     studioInfo: {
+      avatar: studioInfo.avatar ? studioInfo.avatar.trim() : '',
+      startingPrice: studioInfo.startingPrice ? studioInfo.startingPrice.trim() : '',
+      badge: studioInfo.badge ? studioInfo.badge.trim() : 'Verified Pro',
+      coverImage: studioInfo.coverImage ? studioInfo.coverImage.trim() : '',
       portfolioUrl: studioInfo.portfolioUrl ? studioInfo.portfolioUrl.trim() : '',
       experience: studioInfo.experience ? studioInfo.experience.trim() : '',
       equipment: studioInfo.equipment ? studioInfo.equipment.trim() : '',
@@ -288,6 +292,25 @@ const updateUser = async (id, data) => {
   const updateData = { ...data };
   if (updateData.password) {
     updateData.password = hashPassword(updateData.password);
+  }
+
+  // Deep merge studioInfo với dữ liệu hiện tại để không bao giờ bị mất avatar/coverImage khi sửa 1 trong 2
+  const existingUser = await User.findById(id);
+  if (existingUser && updateData.studioInfo) {
+    const mergedStudioInfo = {
+      ...(existingUser.studioInfo || {}),
+      ...updateData.studioInfo
+    };
+
+    // Giữ lại avatar/coverImage cũ nếu data mới gửi sang là chuỗi rỗng
+    if (!updateData.studioInfo.avatar && existingUser.studioInfo?.avatar) {
+      mergedStudioInfo.avatar = existingUser.studioInfo.avatar;
+    }
+    if (!updateData.studioInfo.coverImage && existingUser.studioInfo?.coverImage) {
+      mergedStudioInfo.coverImage = existingUser.studioInfo.coverImage;
+    }
+
+    updateData.studioInfo = mergedStudioInfo;
   }
 
   const updated = await User.findByIdAndUpdate(id, updateData, { new: true });

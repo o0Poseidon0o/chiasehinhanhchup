@@ -52,6 +52,7 @@ export const AuthModal = () => {
     password: '',
     role: 'photographer',
     studioInfo: {
+      avatar: '',
       portfolioUrl: '',
       experience: '2-3 năm',
       equipment: '',
@@ -422,6 +423,69 @@ export const AuthModal = () => {
                     <div className="flex items-center space-x-1.5 text-xs font-bold text-amber-400 uppercase">
                       <Award className="w-4 h-4" />
                       <span>Hồ sơ năng lực (Để Admin kiểm duyệt)</span>
+                    </div>
+
+                    {/* Ảnh đại diện Avatar Studio / Photographer */}
+                    <div className="space-y-1">
+                      <label className="block text-[11px] font-semibold text-gray-300">
+                        Ảnh Đại Diện / Logo Studio <span className="text-amber-400 font-normal">(Up file hoặc dán URL)</span>
+                      </label>
+                      <div className="flex items-center space-x-3 bg-[#141720] p-2.5 rounded-xl border border-[#2b3245]">
+                        <div className="relative w-11 h-11 rounded-xl bg-[#1c2230] border border-amber-500/40 overflow-hidden shrink-0 flex items-center justify-center">
+                          {registerData.studioInfo.avatar ? (
+                            <img
+                              src={registerData.studioInfo.avatar}
+                              alt="Avatar Preview"
+                              className="w-full h-full object-cover"
+                              onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'; }}
+                            />
+                          ) : (
+                            <Camera className="w-5 h-5 text-amber-400/70" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 space-y-1.5 min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <label className="cursor-pointer px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[11px] font-bold transition-all flex items-center space-x-1.5 shrink-0">
+                              <Camera className="w-3.5 h-3.5" />
+                              <span>Tải ảnh từ máy</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    if (file.size > 3 * 1024 * 1024) {
+                                      alert('Dung lượng ảnh tối đa 3MB.');
+                                      return;
+                                    }
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                      setRegisterData({
+                                        ...registerData,
+                                        studioInfo: { ...registerData.studioInfo, avatar: reader.result }
+                                      });
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                              />
+                            </label>
+                            <span className="text-[10px] text-gray-400">hoặc dán URL</span>
+                          </div>
+                          <input
+                            type="url"
+                            value={registerData.studioInfo.avatar || ''}
+                            onChange={(e) => setRegisterData({
+                              ...registerData,
+                              studioInfo: { ...registerData.studioInfo, avatar: e.target.value }
+                            })}
+                            placeholder="https://example.com/avatar.jpg"
+                            className="w-full bg-[#0c0d12] border border-[#2b3245] focus:border-amber-500 rounded-lg px-2.5 py-1 text-[11px] text-white placeholder-gray-500 outline-none truncate"
+                          />
+                        </div>
+                      </div>
                     </div>
 
                     {/* Link Portfolio */}

@@ -127,7 +127,7 @@ export const userApi = {
   },
 
   /**
-   * Cập nhật thông tin User
+   * Cập nhật thông tin User (Admin)
    */
   async updateUser(id, data) {
     try {
@@ -137,6 +137,18 @@ export const userApi = {
       return response.data;
     } catch (error) {
       throw new Error(extractErrorMessage(error, 'Không thể cập nhật người dùng.'));
+    }
+  },
+
+  /**
+   * Nhiếp ảnh gia / Người dùng tự cập nhật Profile cá nhân
+   */
+  async updateProfile(id, data) {
+    try {
+      const response = await api.put(`/profile/${id}`, data);
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không thể lưu thông tin hồ sơ.'));
     }
   },
 

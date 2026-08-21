@@ -81,67 +81,123 @@ const getMockImages = () => {
 };
 
 /**
- * Lấy danh sách ảnh từ thư mục Google Drive thông qua REST API v3
- * @param {string} folderId 
- * @returns {Promise<Array<Object>>}
+ * Scrape danh sách ảnh trực tiếp từ trang HTML công khai của Google Drive Folder
+ * (Hoạt động không cần GOOGLE_API_KEY)
+ */
+const scrapePublicDriveFolder = async (folderId) => {
+  try {
+    const url = `https://drive.google.com/drive/folders/${folderId}?hl=en`;
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9'
+      },
+      timeout: 15000
+    });
+
+    const html = response.data || '';
+    const foundMap = new Map();
+
+    // Regex 1: Trích xuất File ID và Filename từ JS data payload
+    const fileRegex = /\["([a-zA-Z0-9_-]{25,50})",\["([^"]+)"/g;
+    let match;
+    while ((match = fileRegex.exec(html)) !== null) {
+      const id = match[1];
+      const name = match[2];
+      if (id && id !== folderId && name && (name.match(/\.(jpg|jpeg|png|webp|heic|gif)/i) || !name.includes('.'))) {
+        foundMap.set(id, name);
+      }
+    }
+
+    // Regex 2: Fallback tìm tất cả Drive File ID 33 ký tự
+    if (foundMap.size === 0) {
+      const idMatches = html.match(/["']([a-zA-Z0-9_-]{33})["']/g);
+      if (idMatches) {
+        idMatches.forEach(rawId => {
+          const cleanId = rawId.replace(/["']/g, '');
+          if (cleanId !== folderId && cleanId.length === 33) {
+            foundMap.set(cleanId, 'Drive Photo');
+          }
+        });
+      }
+    }
+
+    const results = [];
+    foundMap.forEach((name, fileId) => {
+      const proxyUrl = `/api/albums/proxy-image/${fileId}`;
+      results.push({
+        fileId: fileId,
+        fileName: name,
+        thumbnailUrl: proxyUrl,
+        embedUrl: proxyUrl
+      });
+    });
+
+    return results;
+  } catch (err) {
+    console.error('Scrape public drive folder error:', err.message);
+    return [];
+  }
+};
+
+/**
+ * Lấy danh sách ảnh từ thư mục Google Drive thông qua REST API v3 hoặc Scraper
  */
 const fetchImagesFromFolder = async (folderId) => {
   const apiKey = process.env.GOOGLE_API_KEY;
-  if (!apiKey) {
-    throw new Error('Google API Key chưa được cấu hình trong file .env hoặc Vercel Environment Variables');
-  }
-
-  const endpoint = 'https://www.googleapis.com/drive/v3/files';
-  let allFiles = [];
-  let pageToken = null;
   
-  try {
-    do {
-      const response = await axios.get(endpoint, {
-        params: {
-          q: `'${folderId}' in parents and (mimeType contains 'image/' or mimeType contains 'photo' or mimeType = 'application/vnd.google-apps.photo') and trashed = false`,
-          key: apiKey,
-          fields: 'nextPageToken, files(id, name, mimeType, thumbnailLink, webViewLink, size)',
-          pageSize: 1000,
-          pageToken: pageToken || undefined,
-          orderBy: 'name'
-        },
-        timeout: 15000
-      });
-
-      if (response.data && response.data.files) {
-        allFiles = allFiles.concat(response.data.files);
-      }
-      pageToken = response.data?.nextPageToken;
-    } while (pageToken);
-
-    // Map lại thông tin ảnh với link thumbnail chuẩn và có signed token từ Google Drive API
-    return allFiles.map(file => {
-      const fileId = file.id;
-      const thumb = file.thumbnailLink 
-        ? file.thumbnailLink.replace(/=s\d+/, '=s600') 
-        : `https://drive.google.com/thumbnail?id=${fileId}&sz=w600`;
-      const embed = file.thumbnailLink 
-        ? file.thumbnailLink.replace(/=s\d+/, '=s1600') 
-        : `https://drive.google.com/thumbnail?id=${fileId}&sz=w1600`;
-
-      return {
-        fileId: fileId,
-        fileName: file.name,
-        thumbnailUrl: thumb,
-        embedUrl: embed
-      };
-    });
-  } catch (error) {
-    const googleMsg = error.response?.data?.error?.message;
-    console.error('Google Drive API Error:', googleMsg || error.message);
+  // 1. Thử dùng Google Drive API Key nếu có
+  if (apiKey) {
+    const endpoint = 'https://www.googleapis.com/drive/v3/files';
+    let allFiles = [];
+    let pageToken = null;
     
-    throw new Error(
-      googleMsg 
-        ? `Lỗi từ Google Drive: ${googleMsg}` 
-        : 'Không thể truy cập thư mục Google Drive. Vui lòng đảm bảo thư mục đã bật quyền xem công khai ("Bất kỳ ai có liên kết đều có thể xem").'
-    );
+    try {
+      do {
+        const response = await axios.get(endpoint, {
+          params: {
+            q: `'${folderId}' in parents and (mimeType contains 'image/' or mimeType contains 'photo' or mimeType = 'application/vnd.google-apps.photo') and trashed = false`,
+            key: apiKey,
+            fields: 'nextPageToken, files(id, name, mimeType, thumbnailLink, webViewLink, size)',
+            pageSize: 1000,
+            pageToken: pageToken || undefined,
+            orderBy: 'name'
+          },
+          timeout: 15000
+        });
+
+        if (response.data && response.data.files) {
+          allFiles = allFiles.concat(response.data.files);
+        }
+        pageToken = response.data?.nextPageToken;
+      } while (pageToken);
+
+      if (allFiles.length > 0) {
+        return allFiles.map(file => {
+          const fileId = file.id;
+          const proxyUrl = `/api/albums/proxy-image/${fileId}`;
+
+          return {
+            fileId: fileId,
+            fileName: file.name,
+            thumbnailUrl: proxyUrl,
+            embedUrl: proxyUrl
+          };
+        });
+      }
+    } catch (error) {
+      console.error('Google Drive API Key Error, falling back to public scraper:', error.message);
+    }
   }
+
+  // 2. Thử dùng Scraper đọc trang công khai của Google Drive Folder
+  const scrapedImages = await scrapePublicDriveFolder(folderId);
+  if (scrapedImages.length > 0) {
+    return scrapedImages;
+  }
+
+  // 3. Trả về mảng rỗng nếu thư mục riêng tư hoặc chưa có ảnh
+  return [];
 };
 
 module.exports = {

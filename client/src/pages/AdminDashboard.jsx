@@ -359,54 +359,98 @@ export const AdminDashboard = () => {
     );
   }
 
+  const getTabHeader = () => {
+    switch (activeTab) {
+      case 'bookings':
+        return {
+          icon: <Calendar className="w-5 h-5 text-gold-400" />,
+          title: 'Quản Lý Lịch Booking & Tư Vấn',
+          subtitle: 'Theo dõi đơn đặt lịch chụp từ khách hàng, duyệt lịch, phân bổ Studio & quản lý tiến độ.'
+        };
+      case 'photographers':
+        return {
+          icon: <Camera className="w-5 h-5 text-gold-400" />,
+          title: 'Quản Lý Nhiếp Ảnh Gia & Duyệt Hồ Sơ',
+          subtitle: 'Duyệt hồ sơ đăng ký nhiếp ảnh gia mới, theo dõi danh sách studio chuyên nghiệp.'
+        };
+      case 'users':
+        return {
+          icon: <Users className="w-5 h-5 text-gold-400" />,
+          title: 'Quản Lý Khách Hàng & Phân Quyền',
+          subtitle: 'Quản lý tài khoản hệ thống, cấp quyền Master Admin, Studio hoặc Khách hàng.'
+        };
+      case 'categories':
+        return {
+          icon: <Sparkles className="w-5 h-5 text-amber-300" />,
+          title: 'Quản Lý Thể Loại & Giao Diện CMS',
+          subtitle: 'Tùy chỉnh danh mục thể loại dịch vụ chụp ảnh và nội dung giao diện landing page.'
+        };
+      case 'albums':
+      default:
+        return {
+          icon: <FolderKanban className="w-5 h-5 text-gold-400" />,
+          title: 'Quản Lý Album & Dọn Dẹp',
+          subtitle: 'Xem toàn bộ link album khách hàng, theo dõi trạng thái chọn ảnh, cập nhật từ Drive.'
+        };
+    }
+  };
+
+  const currentHeader = getTabHeader();
+
   return (
-    <div className="space-y-8 animate-fadeIn pb-16">
-      {/* Header Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[#221f1c] pb-6 gap-4">
+    <div className="space-y-6 animate-fadeIn pb-16">
+      {/* Dynamic Header Bar per Active Tab */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[#221f1c] pb-5 gap-4">
         <div className="space-y-1">
           <div className="flex items-center space-x-2">
             <div className="p-2 rounded-xl bg-gold-500/10 border border-gold-500/20 text-gold-400">
-              <FolderKanban className="w-5 h-5" />
+              {currentHeader.icon}
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gold-100 tracking-tight">
-              Quản Lý Album & Dọn Dẹp
+              {currentHeader.title}
             </h1>
           </div>
-          <p className="text-sm text-[#a2998a] max-w-xl">
-            Xem toàn bộ link album khách hàng, theo dõi trạng thái chọn ảnh, cập nhật ảnh mới từ Drive và chủ động xóa các album cũ để giải phóng bộ nhớ.
+          <p className="text-sm text-[#a2998a] max-w-2xl leading-relaxed">
+            {currentHeader.subtitle}
           </p>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Nút Đồng bộ toàn bộ Album */}
-          <button
-            onClick={handleSyncAll}
-            disabled={syncingAll || loading || albums.length === 0}
-            className="flex items-center space-x-2 px-4 py-3 rounded-2xl bg-[#1d1a17] hover:bg-[#282420] border border-gold-500/30 hover:border-gold-500/60 text-gold-300 font-semibold text-xs sm:text-sm transition-all disabled:opacity-50 shadow-md hover:scale-[1.02]"
-            title="Tự động quét và cập nhật ảnh mới từ Google Drive cho tất cả các album"
-          >
-            <FolderSync className={`w-4 h-4 text-gold-400 ${syncingAll ? 'animate-spin' : ''}`} />
-            <span>{syncingAll ? 'Đang đồng bộ...' : 'Đồng bộ tất cả'}</span>
-          </button>
+        <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+          {/* Nút Đồng bộ toàn bộ Album (Chỉ hiện khi chọn tab Albums) */}
+          {activeTab === 'albums' && (
+            <>
+              <button
+                onClick={handleSyncAll}
+                disabled={syncingAll || loading || albums.length === 0}
+                className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-[#1d1a17] hover:bg-[#282420] border border-gold-500/30 hover:border-gold-500/60 text-gold-300 font-semibold text-xs sm:text-sm transition-all disabled:opacity-50 shadow-md hover:scale-[1.01]"
+                title="Tự động quét và cập nhật ảnh mới từ Google Drive cho tất cả các album"
+              >
+                <FolderSync className={`w-4 h-4 text-gold-400 ${syncingAll ? 'animate-spin' : ''}`} />
+                <span>{syncingAll ? 'Đang đồng bộ...' : 'Đồng bộ tất cả'}</span>
+              </button>
+
+              <Link
+                to="/"
+                className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-gold-950 font-bold text-xs sm:text-sm shadow-lg shadow-gold-500/10 transition-all hover:scale-[1.01]"
+              >
+                <Plus className="w-4 h-4 stroke-[2.5]" />
+                <span>Tạo Album Mới</span>
+              </Link>
+            </>
+          )}
 
           <button
             onClick={fetchAlbums}
             disabled={loading || syncingAll}
-            className="p-3 rounded-2xl bg-[#1d1a17] hover:bg-[#282420] border border-[#2f2923] text-[#cfc5b4] transition-all hover:text-gold-300 disabled:opacity-50"
-            title="Làm mới danh sách"
+            className="p-2.5 rounded-xl bg-[#1d1a17] hover:bg-[#282420] border border-[#2f2923] text-[#cfc5b4] transition-all hover:text-gold-300 disabled:opacity-50"
+            title="Làm mới dữ liệu"
           >
-            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin text-gold-400' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-gold-400' : ''}`} />
           </button>
-          <Link
-            to="/"
-            className="flex items-center space-x-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-gold-950 font-bold text-sm shadow-lg shadow-gold-500/10 transition-all hover:scale-[1.02]"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Tạo Album Mới</span>
-          </Link>
+
           <button
             onClick={handleAdminLogout}
-            className="flex items-center space-x-1.5 px-4 py-3 rounded-2xl bg-[#1d1a17] hover:bg-red-950/40 border border-red-500/20 hover:border-red-500/50 text-red-300 text-xs sm:text-sm font-medium transition-all"
+            className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-[#1d1a17] hover:bg-red-950/40 border border-red-500/20 hover:border-red-500/50 text-red-300 text-xs sm:text-sm font-medium transition-all"
             title="Đăng xuất khỏi trang Admin"
           >
             <LogOut className="w-4 h-4" />
@@ -415,66 +459,66 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Tab Navigation: Albums vs Photographers vs Bookings vs Users vs Categories */}
-      <div className="flex items-center space-x-2 bg-[#141720] p-1.5 rounded-2xl border border-[#242938] overflow-x-auto w-fit">
+      {/* Tab Navigation: Sleek 5-column Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 p-2 bg-[#12100e] rounded-2xl border border-[#2b2722] shadow-inner">
         <button
           onClick={() => setActiveTab('albums')}
-          className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+          className={`flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
             activeTab === 'albums'
-              ? 'bg-amber-500 text-amber-950 shadow-md shadow-amber-500/20'
-              : 'text-gray-400 hover:text-white'
+              ? 'bg-gradient-to-r from-gold-500 to-amber-500 text-gold-950 shadow-md shadow-gold-500/20 scale-[1.01]'
+              : 'text-[#a2998a] hover:text-white hover:bg-[#1a1714]'
           }`}
         >
-          <FolderKanban className="w-4 h-4" />
-          <span>📁 Kho Quản Lý Album ({albums.length})</span>
+          <FolderKanban className="w-4 h-4 shrink-0" />
+          <span className="truncate">Kho Album ({albums.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('bookings')}
-          className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+          className={`flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
             activeTab === 'bookings'
-              ? 'bg-amber-500 text-amber-950 shadow-md shadow-amber-500/20'
-              : 'text-gray-400 hover:text-white'
+              ? 'bg-gradient-to-r from-gold-500 to-amber-500 text-gold-950 shadow-md shadow-gold-500/20 scale-[1.01]'
+              : 'text-[#a2998a] hover:text-white hover:bg-[#1a1714]'
           }`}
         >
-          <Calendar className="w-4 h-4" />
-          <span>📅 Quản Lý Lịch Booking & Tư Vấn</span>
+          <Calendar className="w-4 h-4 shrink-0" />
+          <span className="truncate">Lịch Booking</span>
         </button>
 
         <button
           onClick={() => setActiveTab('photographers')}
-          className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+          className={`flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
             activeTab === 'photographers'
-              ? 'bg-amber-500 text-amber-950 shadow-md shadow-amber-500/20'
-              : 'text-gray-400 hover:text-white'
+              ? 'bg-gradient-to-r from-gold-500 to-amber-500 text-gold-950 shadow-md shadow-gold-500/20 scale-[1.01]'
+              : 'text-[#a2998a] hover:text-white hover:bg-[#1a1714]'
           }`}
         >
-          <Camera className="w-4 h-4" />
-          <span>📷 Quản Lý Nhiếp Ảnh Gia & Duyệt Hồ Sơ</span>
+          <Camera className="w-4 h-4 shrink-0" />
+          <span className="truncate">Nhiếp Ảnh Gia</span>
         </button>
 
         <button
           onClick={() => setActiveTab('users')}
-          className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+          className={`flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
             activeTab === 'users'
-              ? 'bg-amber-500 text-amber-950 shadow-md shadow-amber-500/20'
-              : 'text-gray-400 hover:text-white'
+              ? 'bg-gradient-to-r from-gold-500 to-amber-500 text-gold-950 shadow-md shadow-gold-500/20 scale-[1.01]'
+              : 'text-[#a2998a] hover:text-white hover:bg-[#1a1714]'
           }`}
         >
-          <Users className="w-4 h-4" />
-          <span>👥 Quản Lý Khách Hàng & Phân Quyền</span>
+          <Users className="w-4 h-4 shrink-0" />
+          <span className="truncate">Khách Hàng & User</span>
         </button>
 
         <button
           onClick={() => setActiveTab('categories')}
-          className={`flex items-center space-x-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+          className={`flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
             activeTab === 'categories'
-              ? 'bg-amber-500 text-amber-950 shadow-md shadow-amber-500/20'
-              : 'text-gray-400 hover:text-white'
+              ? 'bg-gradient-to-r from-gold-500 to-amber-500 text-gold-950 shadow-md shadow-gold-500/20 scale-[1.01]'
+              : 'text-[#a2998a] hover:text-white hover:bg-[#1a1714]'
           }`}
         >
-          <Sparkles className="w-4 h-4 text-amber-300" />
-          <span>🎨 Quản Lý Thể Loại & Giao Diện CMS</span>
+          <Sparkles className="w-4 h-4 shrink-0 text-amber-300" />
+          <span className="truncate">Thể Loại & CMS</span>
         </button>
       </div>
 
@@ -929,7 +973,7 @@ export const AdminDashboard = () => {
           </div>
         </div>
       )}
-      </>
+        </>
       )}
     </div>
   );

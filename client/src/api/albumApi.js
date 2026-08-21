@@ -45,6 +45,32 @@ export const albumApi = {
   },
 
   /**
+   * Lấy danh sách các Album công khai (Dành cho trang cá nhân Nhiếp ảnh gia, không cần pass Admin)
+   */
+  async getPublicAlbums(photographerId = '') {
+    try {
+      const response = await api.get('/public', {
+        params: photographerId ? { photographerId } : {}
+      });
+      return response.data;
+    } catch (error) {
+      return { success: true, data: [] };
+    }
+  },
+
+  /**
+   * Quét và trích xuất danh sách ảnh từ link Google Drive bất kỳ
+   */
+  async parseDriveFolder(url) {
+    try {
+      const response = await api.post('/parse-drive', { url });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không thể quét ảnh từ Google Drive.'));
+    }
+  },
+
+  /**
    * Lấy danh sách tất cả các Album (Admin Dashboard)
    */
   async getAll(search = '') {

@@ -146,13 +146,24 @@ class LocalUser {
     const index = users.findIndex(u => u && u._id && u._id.toString() === id.toString());
     if (index === -1) return null;
 
+    const existingStudio = users[index].studioInfo || {};
+    const newStudio = updateData.studioInfo || {};
+    const mergedStudio = {
+      ...existingStudio,
+      ...newStudio
+    };
+
+    if (!newStudio.avatar && existingStudio.avatar) {
+      mergedStudio.avatar = existingStudio.avatar;
+    }
+    if (!newStudio.coverImage && existingStudio.coverImage) {
+      mergedStudio.coverImage = existingStudio.coverImage;
+    }
+
     users[index] = {
       ...users[index],
       ...updateData,
-      studioInfo: {
-        ...(users[index].studioInfo || {}),
-        ...(updateData.studioInfo || {})
-      }
+      studioInfo: mergedStudio
     };
 
     writeDb(users);

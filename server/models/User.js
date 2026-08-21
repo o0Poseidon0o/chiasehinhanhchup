@@ -17,6 +17,15 @@ const userSchema = new mongoose.Schema({
     default: 'active' 
   },
   studioInfo: {
+    avatar: { type: String, default: '', trim: true },
+    avatarPosition: { type: String, default: 'center', trim: true },
+    avatarPositionY: { type: Number, default: 50 },
+    startingPrice: { type: String, default: '', trim: true },
+    badge: { type: String, default: '', trim: true },
+    coverImage: { type: String, default: '', trim: true },
+    coverPosition: { type: String, default: 'center', trim: true },
+    coverPositionY: { type: Number, default: 50 },
+    coverFit: { type: String, default: 'cover', trim: true },
     portfolioUrl: { type: String, default: '', trim: true },
     experience: { type: String, default: '', trim: true },
     equipment: { type: String, default: '', trim: true },

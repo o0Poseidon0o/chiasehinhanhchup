@@ -5,6 +5,7 @@ import {
   ShieldCheck, Sparkles, ChevronRight, Award, UserPlus
 } from 'lucide-react';
 import { userApi } from '../../api/userApi';
+import { albumApi } from '../../api/albumApi';
 import { useAuth } from '../../context/AuthContext';
 
 const DEFAULT_PHOTOGRAPHERS = [
@@ -79,30 +80,84 @@ export const PhotographersSection = () => {
   const [photographersList, setPhotographersList] = useState(DEFAULT_PHOTOGRAPHERS);
 
   useEffect(() => {
-    userApi.getActivePhotographers().then(res => {
-      const realList = res.data || [];
+    let isMounted = true;
+
+    Promise.all([
+      userApi.getActivePhotographers(),
+      albumApi.getPublicAlbums().catch(() => ({ data: [] }))
+    ]).then(async ([usersRes, albumsRes]) => {
+      if (!isMounted) return;
+      const realList = usersRes.data || [];
+      const publicAlbums = albumsRes.data || [];
+
       if (realList.length > 0) {
-        const formattedReal = realList.map((p, idx) => ({
-          _id: p._id,
-          name: p.name,
-          role: 'Verified Pro Photographer',
-          avatar: p.studioInfo?.avatar || DEFAULT_PHOTOGRAPHERS[idx % DEFAULT_PHOTOGRAPHERS.length].avatar,
-          coverImage: DEFAULT_PHOTOGRAPHERS[idx % DEFAULT_PHOTOGRAPHERS.length].coverImage,
-          studioInfo: {
-            location: p.studioInfo?.location || 'Việt Nam',
-            experience: p.studioInfo?.experience || 'Chuyên nghiệp',
-            styles: Array.isArray(p.studioInfo?.styles) ? p.studioInfo.styles : ['Chân Dung', 'Tự Nhiên']
-          },
-          rating: 5.0,
-          reviewsCount: 18 + idx * 6,
-          startingPrice: p.studioInfo?.startingPrice || 'Từ 1.000.000đ',
-          badge: 'Verified Pro',
-          portfolio: DEFAULT_PHOTOGRAPHERS[idx % DEFAULT_PHOTOGRAPHERS.length].portfolio
+        const formattedReal = await Promise.all(realList.map(async (p, idx) => {
+          const phAlbums = publicAlbums.filter(a => String(a.photographerId) === String(p._id) || a.photographerName === p.name);
+          let extractedImgs = [];
+
+          phAlbums.forEach(a => {
+            if (Array.isArray(a.images) && a.images.length > 0) {
+              a.images.forEach(img => {
+                const u = img.url || img.thumbnail;
+                if (u && !extractedImgs.includes(u)) extractedImgs.push(u);
+              });
+            }
+          });
+
+          if (extractedImgs.length < 3 && p.studioInfo?.portfolioUrl && p.studioInfo.portfolioUrl.includes('drive.google.com')) {
+            try {
+              const driveRes = await albumApi.parseDriveFolder(p.studioInfo.portfolioUrl);
+              if (driveRes.images && Array.isArray(driveRes.images)) {
+                driveRes.images.forEach(img => {
+                  const u = img.url || img.thumbnail;
+                  if (u && !extractedImgs.includes(u)) extractedImgs.push(u);
+                });
+              }
+            } catch (dErr) {
+              console.log('Parse drive notice:', dErr.message);
+            }
+          }
+
+          const fallbackPortfolio = DEFAULT_PHOTOGRAPHERS[idx % DEFAULT_PHOTOGRAPHERS.length].portfolio;
+          const finalPortfolio = extractedImgs.length >= 3 
+            ? extractedImgs.slice(0, 3) 
+            : extractedImgs.length > 0 
+              ? [...extractedImgs, ...fallbackPortfolio.slice(extractedImgs.length)] 
+              : fallbackPortfolio;
+
+          const coverPhoto = p.studioInfo?.coverImage 
+            || (extractedImgs.length > 0 ? extractedImgs[0] : DEFAULT_PHOTOGRAPHERS[idx % DEFAULT_PHOTOGRAPHERS.length].coverImage);
+
+          return {
+            _id: p._id,
+            name: p.name,
+            role: 'Verified Pro Photographer',
+            avatar: p.studioInfo?.avatar || DEFAULT_PHOTOGRAPHERS[idx % DEFAULT_PHOTOGRAPHERS.length].avatar,
+            coverImage: coverPhoto,
+            studioInfo: {
+              location: p.studioInfo?.location || 'Việt Nam',
+              experience: p.studioInfo?.experience || 'Chuyên nghiệp',
+              styles: Array.isArray(p.studioInfo?.styles)
+                ? p.studioInfo.styles
+                : (typeof p.studioInfo?.styles === 'string' ? p.studioInfo.styles.split(',').map(s => s.trim()) : ['Chân Dung', 'Tự Nhiên'])
+            },
+            rating: 5.0,
+            reviewsCount: 18 + idx * 6,
+            startingPrice: p.studioInfo?.startingPrice || 'Từ 1.000.000đ',
+            badge: p.studioInfo?.badge || 'Verified Pro',
+            portfolio: finalPortfolio
+          };
         }));
 
-        setPhotographersList([...formattedReal, ...DEFAULT_PHOTOGRAPHERS.slice(formattedReal.length)]);
+        if (isMounted) {
+          setPhotographersList(formattedReal);
+        }
       }
-    }).catch(() => {});
+    }).catch(err => {
+      console.error('Fetch homepage photographers error:', err);
+    });
+
+    return () => { isMounted = false; };
   }, []);
 
   return (
@@ -223,8 +278,20 @@ export const PhotographersSection = () => {
                     {p.portfolio && (
                       <div className="grid grid-cols-3 gap-2 pt-2">
                         {p.portfolio.map((imgUrl, iIdx) => (
-                          <div key={iIdx} className="h-16 rounded-xl overflow-hidden bg-black/40">
-                            <img src={imgUrl} alt="portfolio" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                          <div key={iIdx} className="h-16 rounded-xl overflow-hidden bg-[#0c0d12] border border-[#242938]">
+                            <img
+                              src={imgUrl}
+                              alt="portfolio"
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                              onError={(e) => {
+                                const FALLBACKS = [
+                                  'https://images.unsplash.com/photo-1519741497674-611481863552?w=400&q=80',
+                                  'https://images.unsplash.com/photo-1537633552985-df8429e8048b?w=400&q=80',
+                                  'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=400&q=80'
+                                ];
+                                e.target.src = FALLBACKS[iIdx % FALLBACKS.length];
+                              }}
+                            />
                           </div>
                         ))}
                       </div>

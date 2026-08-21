@@ -133,27 +133,27 @@ export const Navbar = () => {
 
           {/* Nếu là Master Admin: Hiển thị cả 2 nút (👑 Master Admin + Studio Workspace) */}
           {isLoggedIn && isAdmin && (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1.5 shrink-0">
               <button
                 onClick={handleAdminClick}
-                className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${isAdminPage
-                  ? 'bg-amber-500 text-amber-950 font-bold shadow-md'
+                className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 shrink-0 ${isAdminPage
+                  ? 'bg-amber-500 text-amber-950 shadow-md'
                   : 'bg-[#141720] hover:bg-[#1c2230] border border-amber-500/50 text-amber-400 hover:text-white'
                   }`}
               >
-                <FolderKanban className="w-4 h-4 text-amber-400" />
-                <span>👑 Master Admin</span>
+                <FolderKanban className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="whitespace-nowrap">👑 Master Admin</span>
               </button>
 
               <button
                 onClick={handleStudioWorkspaceClick}
-                className={`hidden md:flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${isWorkspace
+                className={`hidden xl:flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${isWorkspace
                   ? 'bg-amber-500 text-amber-950 font-bold'
                   : 'bg-[#141720] hover:bg-[#1c2230] border border-[#2b3245] text-gray-300 hover:text-white'
                   }`}
               >
-                <PlusCircle className="w-4 h-4 text-amber-400" />
-                <span>Studio Workspace</span>
+                <PlusCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="whitespace-nowrap">Studio Workspace</span>
               </button>
             </div>
           )}
@@ -162,9 +162,9 @@ export const Navbar = () => {
           {!isLoggedIn && (
             <button
               onClick={handleStudioWorkspaceClick}
-              className="hidden sm:flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#141720] hover:bg-[#1c2230] border border-[#2b3245] hover:border-amber-500/50 text-white transition-all shadow-md"
+              className="hidden sm:flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-[#141720] hover:bg-[#1c2230] border border-[#2b3245] hover:border-amber-500/50 text-white transition-all shadow-md shrink-0"
             >
-              <PlusCircle className="w-4 h-4 text-amber-400" />
+              <PlusCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <span>Studio Workspace</span>
               <Lock className="w-3 h-3 text-amber-400/80 ml-0.5" />
             </button>
@@ -172,22 +172,22 @@ export const Navbar = () => {
 
           {/* Auth State Button */}
           {isLoggedIn ? (
-            <div className="flex items-center space-x-2 pl-1">
-              <div className="hidden sm:flex flex-col items-end leading-tight">
-                <span className="text-xs font-bold text-white max-w-[130px] truncate">{currentUser?.name || 'Tài khoản'}</span>
+            <div className="flex items-center space-x-2 shrink-0">
+              <div className="hidden lg:flex flex-col items-end leading-tight">
+                <span className="text-xs font-bold text-white max-w-[110px] truncate">{currentUser?.name || 'Tài khoản'}</span>
                 <span className={`text-[10px] font-extrabold uppercase ${currentUser?.role === 'admin'
                   ? 'text-amber-400'
                   : currentUser?.role === 'photographer'
                     ? 'text-purple-400'
                     : 'text-blue-400'
                   }`}>
-                  {currentUser?.role === 'admin' ? 'Master Admin' : currentUser?.role === 'photographer' ? 'Photographer Pro' : 'Khách Hàng'}
+                  {currentUser?.role === 'admin' ? 'Master Admin' : currentUser?.role === 'photographer' ? 'Photographer' : 'Khách Hàng'}
                 </span>
               </div>
               <button
                 onClick={logout}
                 title="Đăng xuất"
-                className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 transition-colors"
+                className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 transition-colors shrink-0"
               >
                 <LogOut className="w-4 h-4" />
               </button>
