@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, User, Phone, FileText, Loader2, CheckCircle2, MessageSquare } from 'lucide-react';
 
 export const SubmitModal = ({
@@ -37,9 +38,15 @@ export const SubmitModal = ({
     });
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-[#141210] border border-[#2b2722] rounded-2xl w-full max-w-md p-6 shadow-2xl relative overflow-hidden space-y-5">
+  const content = (
+    <div 
+      className="fixed inset-0 bg-black/85 backdrop-blur-md z-[99999] flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-[#141210] border border-[#2b2722] rounded-2xl w-full max-w-md max-h-[92dvh] overflow-y-auto p-4 sm:p-6 shadow-2xl relative space-y-4 sm:space-y-5"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-gold-600 via-gold-400 to-gold-600" />
 
         {/* Header */}
@@ -76,6 +83,30 @@ export const SubmitModal = ({
               <CheckCircle2 className="w-4 h-4 text-gold-400 shrink-0 mt-0.5" />
               <div className="leading-relaxed">
                 Studio đã nhập sẵn thông tin của bạn. Vui lòng xác nhận và bấm <strong>GỬI LỰA CHỌN</strong>.
+              </div>
+            </div>
+          )}
+
+          {/* Thumbnail preview các ảnh đã chọn */}
+          {selectedImages.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="text-[11px] font-semibold text-[#a2998a] flex items-center justify-between">
+                <span>Ảnh đã chọn ({selectedImages.length}):</span>
+                <span className="text-[10px] text-gold-400">Cuộn ngang để xem tất cả</span>
+              </div>
+              <div className="flex items-center space-x-2 overflow-x-auto p-2 bg-[#0d0c0a] border border-[#221f1c] rounded-xl no-scrollbar">
+                {selectedImages.map((img, idx) => (
+                  <div key={img.fileId || idx} className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-gold-500/40">
+                    <img
+                      src={img.thumbnailUrl || img.embedUrl}
+                      alt={img.fileName || `Photo ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    {img.comment && (
+                      <div className="absolute bottom-0.5 right-0.5 w-2 h-2 bg-amber-400 rounded-full shadow" title="Có ghi chú" />
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -191,6 +222,8 @@ export const SubmitModal = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(content, document.body) : content;
 };
 
 export default SubmitModal;

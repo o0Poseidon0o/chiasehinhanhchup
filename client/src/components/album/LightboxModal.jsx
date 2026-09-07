@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronLeft, ChevronRight, Heart, MessageSquare, Download, Check, Edit2, Trash2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Heart, MessageSquare, Download, Check, Edit2, Trash2, Send } from 'lucide-react';
 
 export const LightboxModal = ({
   images = [],
@@ -8,12 +8,14 @@ export const LightboxModal = ({
   onClose,
   onNavigate,
   selectedPhotos = [],
+  maxSelect = 0,
   comments = {},
   allowComment = true,
   allowDownload = true,
   isClosed = false,
   onToggleSelect,
   onCommentChange,
+  onOpenSubmitModal,
 }) => {
   if (currentIndex < 0 || currentIndex >= images.length) return null;
 
@@ -111,31 +113,57 @@ export const LightboxModal = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Left File Info */}
-        <div className="flex items-center space-x-2 bg-[#141720]/90 backdrop-blur-xl px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-2xl border border-[#242938] shadow-2xl min-w-0 max-w-[45vw] sm:max-w-md">
-          <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 bg-amber-500/20 text-amber-300 font-mono text-[10px] sm:text-xs font-black rounded-lg border border-amber-500/30 shrink-0">
+        <div className="flex items-center space-x-1.5 sm:space-x-2 bg-[#141720]/90 backdrop-blur-xl px-2 py-1 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl border border-[#242938] shadow-2xl shrink-0 max-w-[110px] sm:max-w-md">
+          <span className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 bg-amber-500/20 text-amber-300 font-mono text-[10px] sm:text-xs font-black rounded-lg border border-amber-500/30 shrink-0">
             {currentIndex + 1} / {images.length}
           </span>
-          <p className="text-[11px] sm:text-sm font-bold text-white truncate">
+          <p className="text-[11px] sm:text-sm font-bold text-white truncate hidden sm:block">
             {currentImage.fileName || `Ảnh #${currentIndex + 1}`}
           </p>
         </div>
 
         {/* Right Action Buttons */}
-        <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+        <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
+          {/* Huy hiệu đếm số ảnh đã chọn */}
+          {selectedPhotos.length > 0 && (
+            <div className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 bg-amber-500/15 border border-amber-500/30 rounded-xl text-xs font-bold text-amber-300">
+              <Heart className="w-3.5 h-3.5 fill-current text-amber-400" />
+              <span>
+                Đã chọn: <strong className="text-white">{selectedPhotos.length}</strong>
+                {maxSelect > 0 ? `/${maxSelect}` : ''}
+              </span>
+            </div>
+          )}
+
+          {/* Nút gửi lựa chọn ngay từ Lightbox */}
+          {!isClosed && onOpenSubmitModal && (
+            <button
+              type="button"
+              disabled={selectedPhotos.length === 0}
+              onClick={() => onOpenSubmitModal()}
+              className="px-2 py-1 sm:px-3.5 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-amber-950 font-black text-[10px] sm:text-xs rounded-xl sm:rounded-2xl shadow-lg hover:shadow-amber-500/20 active:scale-95 transition-all flex items-center space-x-1 sm:space-x-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Gửi ngay danh sách ảnh đã chọn cho Studio"
+            >
+              <Send className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5]" />
+              <span className="hidden sm:inline">Gửi Lựa Chọn ({selectedPhotos.length})</span>
+              <span className="sm:hidden">Gửi ({selectedPhotos.length})</span>
+            </button>
+          )}
+
           {/* Nút chọn ảnh ngay trong lightbox */}
           <button
             disabled={isClosed}
             type="button"
             onClick={() => onToggleSelect && onToggleSelect(currentImage)}
-            className={`px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-black flex items-center space-x-1 sm:space-x-1.5 shadow-xl transition-all hover:scale-105 ${
+            className={`px-2 py-1 sm:px-3.5 sm:py-2 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-black flex items-center space-x-1 sm:space-x-1.5 shadow-xl transition-all hover:scale-105 ${
               isSelected
                 ? 'bg-amber-500 text-amber-950 shadow-amber-500/20'
                 : 'bg-white/10 hover:bg-white/20 text-white border border-white/15'
             }`}
           >
-            <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isSelected ? 'fill-current' : ''}`} />
+            <Heart className={`w-3 h-3 sm:w-4 sm:h-4 ${isSelected ? 'fill-current' : ''}`} />
             <span className="hidden sm:inline">{isSelected ? 'Đã Chọn' : 'Chọn Ảnh Này'}</span>
-            <span className="sm:hidden">{isSelected ? 'Đã Chọn' : 'Chọn'}</span>
+            <span className="sm:hidden">{isSelected ? 'Đã chọn' : 'Chọn'}</span>
           </button>
 
           {/* Nút tải ảnh */}
@@ -144,7 +172,7 @@ export const LightboxModal = ({
               href={`https://docs.google.com/uc?export=download&id=${currentImage.fileId}`}
               target="_blank"
               rel="noreferrer"
-              className="p-1.5 sm:p-2 bg-white/10 hover:bg-white/20 border border-white/15 rounded-xl sm:rounded-2xl transition-all text-white shadow-xl"
+              className="p-1 sm:p-2 bg-white/10 hover:bg-white/20 border border-white/15 rounded-xl sm:rounded-2xl transition-all text-white shadow-xl"
               title="Tải ảnh gốc về máy"
             >
               <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -155,10 +183,10 @@ export const LightboxModal = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 sm:px-4 sm:py-2 bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white border border-red-500/30 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-bold transition-all shadow-xl flex items-center space-x-1"
+            className="p-1 sm:px-4 sm:py-2 bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white border border-red-500/30 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-bold transition-all shadow-xl flex items-center space-x-1"
             title="Tắt xem ảnh"
           >
-            <X className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+            <X className="w-3.5 h-3.5 sm:w-5 sm:h-5 stroke-[2.5]" />
             <span className="hidden sm:inline font-bold">Đóng [ESC]</span>
           </button>
         </div>

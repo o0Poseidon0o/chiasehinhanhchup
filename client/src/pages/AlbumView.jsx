@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowRight, Info, AlertCircle, RefreshCw, Image as ImageIcon } from 'lucide-react';
+import { ArrowRight, Info, AlertCircle, RefreshCw, Image as ImageIcon, Heart, Send, CheckCircle2 } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { StatusBadge } from '../components/common/StatusBadge';
@@ -28,6 +28,7 @@ export const AlbumView = () => {
   // State chọn ảnh và ghi chú
   const [selectedPhotos, setSelectedPhotos] = useState([]);
   const [comments, setComments] = useState({});
+  const [filterMode, setFilterMode] = useState('all'); // 'all' | 'selected'
 
   // State modal & lightbox
   const [lightboxIndex, setLightboxIndex] = useState(-1);
@@ -267,8 +268,19 @@ export const AlbumView = () => {
   const isClosed = album.status === 'locked' || album.status === 'submitted';
   const totalCount = album.images?.length || 0;
 
+  const displayedImages = filterMode === 'selected'
+    ? (album.images || []).filter((image) => selectedPhotos.some((p) => p.fileId === image.fileId))
+    : (album.images || []);
+
+  const handleOpenLightbox = (fileId) => {
+    const idx = album.images?.findIndex((img) => img.fileId === fileId);
+    if (idx !== undefined && idx !== -1) {
+      setLightboxIndex(idx);
+    }
+  };
+
   return (
-    <div className="space-y-6 pb-28 animate-fade-in">
+    <div className="space-y-6 pb-28">
       {/* Album Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#221f1c] pb-6 gap-4">
         <div>
@@ -297,6 +309,19 @@ export const AlbumView = () => {
         </div>
 
         <div className="flex items-center space-x-2.5 shrink-0 flex-wrap gap-y-2">
+          {/* Nút gửi lựa chọn nhanh trên Header */}
+          {!isClosed && selectedPhotos.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowSubmitModal(true)}
+              className="bg-gradient-to-r from-gold-500 via-amber-400 to-gold-500 hover:from-amber-400 hover:to-gold-300 text-gold-950 font-black px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs flex items-center space-x-1.5 shadow-lg shadow-gold-500/25 active:scale-95 transition-all hover:brightness-105"
+              title="Gửi ngay danh sách ảnh đã chọn cho Studio"
+            >
+              <Send className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Gửi Lựa Chọn ({selectedPhotos.length})</span>
+            </button>
+          )}
+
           {/* Nút Làm mới cập nhật ảnh */}
           <button
             onClick={handleRefreshDrive}
@@ -329,27 +354,97 @@ export const AlbumView = () => {
         </div>
       )}
 
-      {/* Grid danh sách hình ảnh */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-        {album.images?.map((image, index) => {
-          const isSelected = selectedPhotos.some((p) => p.fileId === image.fileId);
-          return (
-            <PhotoCard
-              key={image.fileId}
-              image={image}
-              index={index}
-              isSelected={isSelected}
-              isClosed={isClosed}
-              comment={comments[image.fileId]}
-              allowComment={album.allowComment}
-              allowDownload={album.allowDownload}
-              onToggleSelect={handleToggleSelect}
-              onCommentChange={handleCommentChange}
-              onOpenLightbox={setLightboxIndex}
-            />
-          );
-        })}
+      {/* Thanh bộ lọc xem ảnh: Tất cả vs Đã chọn */}
+      <div className="flex items-center justify-between gap-3 flex-wrap bg-[#12100e] border border-[#242938] p-2 sm:p-2.5 rounded-2xl shadow-sm">
+        <div className="flex items-center space-x-1.5 sm:space-x-2">
+          <button
+            type="button"
+            onClick={() => setFilterMode('all')}
+            className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
+              filterMode === 'all'
+                ? 'bg-amber-500 text-amber-950 shadow-md font-black'
+                : 'text-[#a2998a] hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <ImageIcon className="w-3.5 h-3.5" />
+            <span>Tất cả ảnh ({totalCount})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterMode('selected')}
+            className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
+              filterMode === 'selected'
+                ? 'bg-amber-500 text-amber-950 shadow-md font-black'
+                : 'text-[#a2998a] hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Heart className={`w-3.5 h-3.5 ${selectedPhotos.length > 0 ? 'fill-current text-amber-950' : ''}`} />
+            <span>Đã chọn ({selectedPhotos.length}{album.maxSelect > 0 ? `/${album.maxSelect}` : ''})</span>
+          </button>
+        </div>
+
+        {/* Thông báo trạng thái hoặc nút bỏ chọn */}
+        {selectedPhotos.length > 0 && !isClosed && (
+          <div className="flex items-center space-x-3 text-xs text-[#a2998a] ml-auto">
+            {album.maxSelect > 0 && selectedPhotos.length >= album.maxSelect && (
+              <span className="text-amber-400 font-semibold hidden md:inline">
+                ✨ Đã chọn đủ {album.maxSelect} ảnh theo yêu cầu!
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={handleClearAll}
+              className="text-[#8e8576] hover:text-rose-400 text-xs transition-colors hover:underline px-2 py-1"
+            >
+              Bỏ chọn tất cả
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Grid danh sách hình ảnh */}
+      {displayedImages.length === 0 ? (
+        <div className="bg-[#12100e] border border-[#242938] rounded-2xl p-10 sm:p-14 text-center space-y-4 max-w-lg mx-auto shadow-lg animate-fade-in">
+          <div className="w-14 h-14 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-2xl flex items-center justify-center mx-auto">
+            <Heart className="w-7 h-7" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-base font-bold text-white">Bạn chưa chọn bức ảnh nào</h3>
+            <p className="text-xs text-[#a2998a] leading-relaxed">
+              Bấm nút <strong>"Chọn"</strong> hoặc biểu tượng trái tim trên các bức ảnh bạn ưng ý nhất để thêm vào danh sách.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFilterMode('all')}
+            className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-5 py-2.5 rounded-xl text-xs font-bold transition-all"
+          >
+            Quay lại xem tất cả ảnh
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+          {displayedImages.map((image, index) => {
+            const isSelected = selectedPhotos.some((p) => p.fileId === image.fileId);
+            return (
+              <PhotoCard
+                key={image.fileId}
+                image={image}
+                index={index}
+                isSelected={isSelected}
+                isClosed={isClosed}
+                comment={comments[image.fileId]}
+                allowComment={album.allowComment}
+                allowDownload={album.allowDownload}
+                onToggleSelect={handleToggleSelect}
+                onCommentChange={handleCommentChange}
+                onOpenLightbox={() => handleOpenLightbox(image.fileId)}
+              />
+            );
+          })}
+        </div>
+      )}
 
       {/* Sticky Bar thanh tác vụ chọn ảnh ở cạnh dưới màn hình */}
       {!isClosed && (
@@ -360,6 +455,9 @@ export const AlbumView = () => {
           isClosed={isClosed}
           onOpenSubmitModal={() => setShowSubmitModal(true)}
           onSubmit={() => setShowSubmitModal(true)}
+          filterMode={filterMode}
+          onToggleFilter={() => setFilterMode((prev) => (prev === 'all' ? 'selected' : 'all'))}
+          isSubmitModalOpen={showSubmitModal}
         />
       )}
 
@@ -371,12 +469,17 @@ export const AlbumView = () => {
           onClose={() => setLightboxIndex(-1)}
           onNavigate={setLightboxIndex}
           selectedPhotos={selectedPhotos}
+          maxSelect={album.maxSelect}
           onToggleSelect={handleToggleSelect}
           comments={comments}
           onCommentChange={handleCommentChange}
           allowComment={album.allowComment}
           allowDownload={album.allowDownload}
           isClosed={isClosed}
+          onOpenSubmitModal={() => {
+            setLightboxIndex(-1);
+            setShowSubmitModal(true);
+          }}
         />
       )}
 
