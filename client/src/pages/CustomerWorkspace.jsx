@@ -173,6 +173,13 @@ export const CustomerWorkspace = () => {
       finalBookings.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       setBookings(finalBookings);
 
+      // Cập nhật lại localStorage với dữ liệu chuẩn hóa từ server (loại bỏ thời gian cũ sai lệch)
+      try {
+        if (finalBookings.length > 0) {
+          localStorage.setItem('user_my_bookings', JSON.stringify(finalBookings));
+        }
+      } catch (_) {}
+
       // 2. Tải danh sách Album của khách
       try {
         const albumRes = await albumApi.getClientAlbums({
@@ -734,8 +741,11 @@ export const CustomerWorkspace = () => {
                       <div className="flex items-center justify-between text-gray-200">
                         <span className="text-gray-400 font-medium">Ngày & Khung Giờ:</span>
                         <span className="text-gray-200 flex items-center space-x-1">
-                          <Clock className="w-3.5 h-3.5 text-gray-400" />
-                          <span>{b.bookingDate || b.date} {b.timeSlot ? `(${b.timeSlot})` : ''}</span>
+                          <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                          <span>
+                            <strong className="text-white">{b.bookingDate || b.date}</strong>
+                            {b.timeSlot && <span className="text-amber-300 ml-1.5 font-medium">• {b.timeSlot}</span>}
+                          </span>
                         </span>
                       </div>
 

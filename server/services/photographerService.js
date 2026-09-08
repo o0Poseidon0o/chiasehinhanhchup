@@ -288,6 +288,7 @@ const updateBooking = async (bookingId, userId, updateData = {}) => {
   if (updateData.clientEmail !== undefined) booking.clientEmail = updateData.clientEmail.trim();
   if (updateData.category !== undefined) booking.category = updateData.category.trim();
   if (updateData.bookingDate !== undefined) booking.bookingDate = updateData.bookingDate.trim();
+  if (updateData.timeSlot !== undefined) booking.timeSlot = updateData.timeSlot.trim();
   if (updateData.location !== undefined) booking.location = updateData.location.trim();
   if (updateData.budget !== undefined) booking.budget = updateData.budget.trim();
   if (updateData.note !== undefined) booking.note = updateData.note.trim();

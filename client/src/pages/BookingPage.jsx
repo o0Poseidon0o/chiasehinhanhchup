@@ -93,26 +93,14 @@ export const BookingPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [contextType, setContextType] = useState('outdoor');
   const [bookingDate, setBookingDate] = useState('');
-  const [timeSlot, setTimeSlot] = useState(TIME_SLOTS[0]);
-  
+
   // Visual Time Slot States
   const [timeMode, setTimeMode] = useState('preset'); // 'preset' | 'range' | 'custom'
-  const [selectedTimeCard, setSelectedTimeCard] = useState('golden_hour');
-  const [startTime, setStartTime] = useState('16:30');
-  const [endTime, setEndTime] = useState('18:30');
+  const [selectedTimeCard, setSelectedTimeCard] = useState('afternoon');
+  const [startTime, setStartTime] = useState('14:00');
+  const [endTime, setEndTime] = useState('17:00');
   const [isCustomTime, setIsCustomTime] = useState(false);
   const [customTimeSlot, setCustomTimeSlot] = useState('');
-
-  const [peopleCount, setPeopleCount] = useState('1 - 2 người');
-  const [cityLocation, setCityLocation] = useState('Hà Nội');
-  const [detailedLocation, setDetailedLocation] = useState('');
-  const [selectedAddons, setSelectedAddons] = useState([]);
-  const [availableAddons, setAvailableAddons] = useState(FALLBACK_ADDONS);
-  const [conceptNote, setConceptNote] = useState('');
-
-  // Conflict Detection States
-  const [existingBookings, setExistingBookings] = useState([]);
-  const [bookingConflict, setBookingConflict] = useState(null);
 
   const calculateDuration = (start, end) => {
     if (!start || !end) return '';
@@ -126,7 +114,27 @@ export const BookingPage = () => {
     if (hours > 0) return `${hours} tiếng`;
     return `${mins} phút`;
   };
-  
+
+  // Đồng bộ timeSlot chính xác tuyệt đối theo startTime và endTime
+  const [timeSlot, setTimeSlot] = useState('14:00 ➔ 17:00 (⏱️ Dự kiến 3 tiếng)');
+  useEffect(() => {
+    if (startTime && endTime) {
+      const dur = calculateDuration(startTime, endTime);
+      setTimeSlot(`${startTime} ➔ ${endTime}${dur ? ` (⏱️ Dự kiến ${dur})` : ''}`);
+    }
+  }, [startTime, endTime]);
+
+  const [peopleCount, setPeopleCount] = useState('1 - 2 người');
+  const [cityLocation, setCityLocation] = useState('Hà Nội');
+  const [detailedLocation, setDetailedLocation] = useState('');
+  const [selectedAddons, setSelectedAddons] = useState([]);
+  const [availableAddons, setAvailableAddons] = useState(FALLBACK_ADDONS);
+  const [conceptNote, setConceptNote] = useState('');
+
+  // Conflict Detection States
+  const [existingBookings, setExistingBookings] = useState([]);
+  const [bookingConflict, setBookingConflict] = useState(null);
+
   // Customer Contact State (Tự động điền từ currentUser nếu đã đăng nhập)
   const [customerName, setCustomerName] = useState(currentUser?.name || '');
   const [customerPhone, setCustomerPhone] = useState(currentUser?.phone || '');
@@ -135,9 +143,9 @@ export const BookingPage = () => {
   // Đồng bộ khi currentUser thay đổi
   useEffect(() => {
     if (currentUser) {
-      if (currentUser.name && !customerName) setCustomerName(currentUser.name);
-      if (currentUser.phone && !customerPhone) setCustomerPhone(currentUser.phone);
-      if (currentUser.email && !customerEmail) setCustomerEmail(currentUser.email);
+      if (currentUser.name) setCustomerName(currentUser.name);
+      if (currentUser.phone) setCustomerPhone(currentUser.phone);
+      if (currentUser.email) setCustomerEmail(currentUser.email);
     }
   }, [currentUser]);
 
@@ -369,7 +377,7 @@ export const BookingPage = () => {
         contextLabel: CONTEXT_TYPES.find(c => c.id === contextType)?.label || 'Ngoại cảnh',
         date: bookingDate || new Date().toISOString().split('T')[0],
         bookingDate: bookingDate || new Date().toISOString().split('T')[0],
-        timeSlot,
+        timeSlot: effectiveTimeSlot,
         peopleCount,
         cityLocation,
         detailedLocation: detailedLocation || 'Studio hoặc ngoại cảnh tùy chọn',
@@ -518,7 +526,7 @@ export const BookingPage = () => {
               </p>
               <p className="flex justify-between">
                 <span className="text-gray-400">Thời gian chụp:</span>
-                <strong className="text-amber-300">{bookingReceipt.date} ({bookingReceipt.timeSlot})</strong>
+                <strong className="text-amber-300">{bookingReceipt.date} • {bookingReceipt.timeSlot}</strong>
               </p>
               <p className="flex justify-between">
                 <span className="text-gray-400">Khu vực / Địa điểm:</span>
@@ -844,30 +852,59 @@ export const BookingPage = () => {
                 </div>
               )}
 
-              {/* Date & Time Slot */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-300 mb-1">Ngày Chụp Dự Kiến *</label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      min={new Date().toISOString().split('T')[0]}
-                      value={bookingDate}
-                      onClick={(e) => {
-                        try { if (e.target.showPicker) e.target.showPicker(); } catch (_) {}
-                      }}
-                      onChange={(e) => setBookingDate(e.target.value)}
-                      className="w-full bg-[#0c0d12] border border-[#242938] focus:border-amber-500 rounded-xl px-4 py-3 text-xs sm:text-sm text-white outline-none cursor-pointer"
-                    />
-                    <Calendar className="absolute right-3.5 top-3.5 w-4 h-4 text-amber-400 pointer-events-none" />
-                  </div>
+              {/* Date Selection */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Ngày Chụp Dự Kiến *</label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    min={new Date().toISOString().split('T')[0]}
+                    value={bookingDate}
+                    onClick={(e) => {
+                      try { if (e.target.showPicker) e.target.showPicker(); } catch (_) {}
+                    }}
+                    onChange={(e) => setBookingDate(e.target.value)}
+                    className="w-full bg-[#0c0d12] border border-[#242938] focus:border-amber-500 rounded-xl px-4 py-3 text-xs sm:text-sm text-white outline-none cursor-pointer"
+                  />
+                  <Calendar className="absolute right-3.5 top-3.5 w-4 h-4 text-amber-400 pointer-events-none" />
                 </div>
+              </div>
 
-              {/* Clean Visual Dual Clock Time Picker (Start Time - End Time) */}
+              {/* Clean Visual Dual Clock Time Picker with Quick Presets */}
               <div className="space-y-3 pt-2">
                 <label className="block text-xs font-semibold text-gray-300">
                   2. Lựa Chọn Khung Giờ Chụp Ảnh (Từ... Đến...) *
                 </label>
+
+                {/* Quick Presets */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {VISUAL_TIME_CARDS.map(card => {
+                    const [s, e] = card.time.split(' - ');
+                    const isSelected = startTime === s && endTime === e;
+                    return (
+                      <button
+                        key={card.id}
+                        type="button"
+                        onClick={() => {
+                          setStartTime(s);
+                          setEndTime(e);
+                          setSelectedTimeCard(card.id);
+                        }}
+                        className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-amber-500/15 border-amber-500 text-amber-300 shadow-md shadow-amber-500/10'
+                            : 'bg-[#0c0d12] border-[#242938] hover:border-amber-500/50 text-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-1.5 mb-1">
+                          <span>{card.icon}</span>
+                          <span className="font-bold text-xs truncate">{card.title}</span>
+                        </div>
+                        <span className="text-[11px] font-mono text-gray-400 font-semibold">{card.time}</span>
+                      </button>
+                    );
+                  })}
+                </div>
                 
                 <div className="bg-[#0c0d12] border border-[#242938] rounded-2xl p-4 sm:p-5 space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -906,7 +943,6 @@ export const BookingPage = () => {
                     </span>
                   </div>
                 </div>
-              </div>
               </div>
 
               {/* People count */}
@@ -1050,39 +1086,109 @@ export const BookingPage = () => {
                 <p className="text-xs text-gray-400">Studio sẽ nhắn tin/gọi điện xác nhận ngay sau khi nhận đơn</p>
               </div>
 
+              {/* Logged in badge banner */}
+              {isLoggedIn && currentUser && (
+                <div className="p-3.5 bg-[#141824] border border-amber-500/30 rounded-2xl flex items-center justify-between text-xs text-amber-300 shadow-lg shadow-black/20">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="p-1.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400 shrink-0">
+                      <Lock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-white text-xs">
+                        Đang đặt lịch với tài khoản: <span className="text-amber-400">{currentUser.name || currentUser.username}</span>
+                      </p>
+                      <p className="text-[11px] text-gray-400">
+                        Thông tin khách hàng được tự động lấy từ hồ sơ và khóa bảo vệ để đảm bảo liên kết album chính xác.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 bg-amber-500/20 text-amber-300 text-[10px] font-black rounded-lg border border-amber-500/30 shrink-0 hidden sm:inline-block">
+                    Đã Khóa Bảo Vệ
+                  </span>
+                </div>
+              )}
+
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 mb-1">Họ và Tên Khách Hàng *</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-gray-300 flex items-center space-x-1.5">
+                      <User className="w-3.5 h-3.5 text-gray-400" />
+                      <span>Họ và Tên Khách Hàng *</span>
+                    </label>
+                    {Boolean(isLoggedIn && currentUser?.name) && (
+                      <span className="text-[10px] text-amber-400 font-semibold flex items-center space-x-1">
+                        <Lock className="w-3 h-3" />
+                        <span>Khóa theo tài khoản</span>
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
                     required
+                    readOnly={Boolean(isLoggedIn && currentUser?.name)}
                     value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
+                    onChange={(e) => !Boolean(isLoggedIn && currentUser?.name) && setCustomerName(e.target.value)}
                     placeholder="VD: Nguyễn Văn A"
-                    className="w-full bg-[#0c0d12] border border-[#242938] focus:border-amber-500 rounded-xl px-4 py-3 text-xs sm:text-sm text-white outline-none"
+                    className={`w-full border rounded-xl px-4 py-3 text-xs sm:text-sm outline-none transition-all ${
+                      Boolean(isLoggedIn && currentUser?.name)
+                        ? 'bg-[#121520]/80 border-[#242938] text-gray-300 cursor-not-allowed select-none font-medium'
+                        : 'bg-[#0c0d12] border-[#242938] focus:border-amber-500 text-white'
+                    }`}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 mb-1">Số Điện Thoại / Zalo Liên Hệ *</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-gray-300 flex items-center space-x-1.5">
+                      <Phone className="w-3.5 h-3.5 text-gray-400" />
+                      <span>Số Điện Thoại / Zalo Liên Hệ *</span>
+                    </label>
+                    {Boolean(isLoggedIn && currentUser?.phone) && (
+                      <span className="text-[10px] text-amber-400 font-semibold flex items-center space-x-1">
+                        <Lock className="w-3 h-3" />
+                        <span>Khóa theo tài khoản</span>
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="tel"
                     required
+                    readOnly={Boolean(isLoggedIn && currentUser?.phone)}
                     value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    onChange={(e) => !Boolean(isLoggedIn && currentUser?.phone) && setCustomerPhone(e.target.value)}
                     placeholder="VD: 0912345678"
-                    className="w-full bg-[#0c0d12] border border-[#242938] focus:border-amber-500 rounded-xl px-4 py-3 text-xs sm:text-sm text-white outline-none"
+                    className={`w-full border rounded-xl px-4 py-3 text-xs sm:text-sm outline-none transition-all ${
+                      Boolean(isLoggedIn && currentUser?.phone)
+                        ? 'bg-[#121520]/80 border-[#242938] text-gray-300 cursor-not-allowed select-none font-medium font-mono'
+                        : 'bg-[#0c0d12] border-[#242938] focus:border-amber-500 text-white'
+                    }`}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 mb-1">Email Nhận Mã Booking & Link Chọn Ảnh (Tùy chọn)</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-gray-300 flex items-center space-x-1.5">
+                      <Mail className="w-3.5 h-3.5 text-gray-400" />
+                      <span>Email Nhận Mã Booking & Link Chọn Ảnh (Tùy chọn)</span>
+                    </label>
+                    {Boolean(isLoggedIn && currentUser?.email) && (
+                      <span className="text-[10px] text-amber-400 font-semibold flex items-center space-x-1">
+                        <Lock className="w-3 h-3" />
+                        <span>Khóa theo tài khoản</span>
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="email"
+                    readOnly={Boolean(isLoggedIn && currentUser?.email)}
                     value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    onChange={(e) => !Boolean(isLoggedIn && currentUser?.email) && setCustomerEmail(e.target.value)}
                     placeholder="VD: khachhang@gmail.com"
-                    className="w-full bg-[#0c0d12] border border-[#242938] focus:border-amber-500 rounded-xl px-4 py-3 text-xs sm:text-sm text-white outline-none"
+                    className={`w-full border rounded-xl px-4 py-3 text-xs sm:text-sm outline-none transition-all ${
+                      Boolean(isLoggedIn && currentUser?.email)
+                        ? 'bg-[#121520]/80 border-[#242938] text-gray-300 cursor-not-allowed select-none font-medium font-mono'
+                        : 'bg-[#0c0d12] border-[#242938] focus:border-amber-500 text-white'
+                    }`}
                   />
                 </div>
               </div>
@@ -1104,7 +1210,7 @@ export const BookingPage = () => {
                 </p>
                 <p className="flex justify-between">
                   <span className="text-gray-400">Thời gian & Địa điểm:</span>
-                  <strong className="text-amber-300">{bookingDate || 'Chưa chọn'} ({timeSlot}) - {cityLocation}</strong>
+                  <strong className="text-amber-300">{bookingDate || 'Chưa chọn'} • {timeSlot || `${startTime} ➔ ${endTime}`} - {cityLocation}</strong>
                 </p>
               </div>
 

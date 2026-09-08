@@ -223,7 +223,7 @@ export const MyBookingsModal = ({ isOpen, onClose }) => {
 
                     <div className="flex items-center space-x-2">
                       <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span>Ngày chụp: <strong className="text-white">{b.bookingDate || 'Chưa xếp'}</strong></span>
+                      <span>Ngày chụp: <strong className="text-white">{b.bookingDate || 'Chưa xếp'}{b.timeSlot ? ` • ${b.timeSlot}` : ''}</strong></span>
                     </div>
 
                     <div className="flex items-center space-x-2">

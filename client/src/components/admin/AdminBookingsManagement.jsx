@@ -112,6 +112,7 @@ export const AdminBookingsManagement = () => {
       photographerName: booking.photographerName || '',
       category: booking.category || 'Chân dung',
       bookingDate: booking.bookingDate || '',
+      timeSlot: booking.timeSlot || '',
       location: booking.location || '',
       budget: booking.budget || '',
       note: booking.note || '',
@@ -644,13 +645,24 @@ export const AdminBookingsManagement = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-gray-300 font-semibold mb-1">Ngày Chụp Dự Kiến</label>
                   <input
                     type="date"
                     value={editFormData.bookingDate}
                     onChange={(e) => setEditFormData({ ...editFormData, bookingDate: e.target.value })}
+                    className="w-full bg-[#100e0c] border border-[#2b2722] rounded-xl px-3 py-2 text-white outline-none focus:border-gold-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-300 font-semibold mb-1">Khung Giờ Chụp</label>
+                  <input
+                    type="text"
+                    value={editFormData.timeSlot}
+                    onChange={(e) => setEditFormData({ ...editFormData, timeSlot: e.target.value })}
+                    placeholder="VD: 14:00 ➔ 17:00 (⏱️ 3 tiếng)"
                     className="w-full bg-[#100e0c] border border-[#2b2722] rounded-xl px-3 py-2 text-white outline-none focus:border-gold-500"
                   />
                 </div>
