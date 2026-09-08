@@ -188,7 +188,7 @@ export const AuthModal = () => {
 
             <div className="p-4 bg-[#0c0d12] border border-[#242938] rounded-2xl text-xs text-gray-400 text-left space-y-1">
               <div>• Email tài khoản: <strong className="text-white">{pendingNotice.email}</strong></div>
-              <div>• Hotline hỗ trợ duyệt nhanh: <strong className="text-amber-400">1900 6868</strong></div>
+              <div>• Hotline hỗ trợ duyệt nhanh: <strong className="text-amber-400">0777908179</strong></div>
             </div>
 
             <button

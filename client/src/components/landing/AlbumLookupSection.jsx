@@ -272,7 +272,7 @@ export const AlbumLookupSection = () => {
             )}
 
             <div className="flex items-center justify-between text-[11px] text-gray-400 pt-2 border-t border-[#242938]">
-              <span>Hotline hỗ trợ: <strong className="text-amber-400">1900 6868</strong></span>
+              <span>Hotline hỗ trợ: <strong className="text-amber-400">0777908179</strong></span>
               <span>Thời gian làm việc: 08:00 - 22:00</span>
             </div>
           </div>

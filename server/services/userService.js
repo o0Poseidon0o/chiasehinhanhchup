@@ -164,7 +164,7 @@ const loginUser = async ({ emailOrPhone, password }) => {
 
   // Kiểm tra trạng thái tài khoản
   if (user.status === 'pending') {
-    const err = new Error('Hồ sơ Nhiếp ảnh gia của bạn đang chờ Ban Quản Trị phê duyệt. Vui lòng liên hệ Admin qua hotline 1900 6868 nếu bạn cần hỗ trợ gấp.');
+    const err = new Error('Hồ sơ Nhiếp ảnh gia của bạn đang chờ Ban Quản Trị phê duyệt. Vui lòng liên hệ Admin qua hotline 0777908179 nếu bạn cần hỗ trợ gấp.');
     err.statusCode = 403;
     throw err;
   }
