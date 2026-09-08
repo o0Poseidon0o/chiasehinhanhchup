@@ -13,6 +13,9 @@ const bookingSchema = new mongoose.Schema({
   location: { type: String, default: '', trim: true },
   budget: { type: String, default: '', trim: true },
   note: { type: String, default: '', trim: true },
+  addons: { type: Array, default: [] },
+  estimatedTotal: { type: Number, default: 0 },
+  depositAmount: { type: Number, default: 500000 },
   status: { 
     type: String, 
     enum: ['pending', 'confirmed', 'completed', 'cancelled'], 

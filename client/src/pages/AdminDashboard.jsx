@@ -43,6 +43,7 @@ import { AdminPhotographersHub } from '../components/admin/AdminPhotographersHub
 import { AdminCategoriesManagement } from '../components/admin/AdminCategoriesManagement';
 import { AdminBookingsManagement } from '../components/admin/AdminBookingsManagement';
 import { AdminReviewsManagement } from '../components/admin/AdminReviewsManagement';
+import { AdminAddonsManagement } from '../components/admin/AdminAddonsManagement';
 
 export const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('albums'); // 'albums' | 'photographers' | 'bookings' | 'users' | 'categories'
@@ -387,6 +388,12 @@ export const AdminDashboard = () => {
           title: 'Quản Lý Thể Loại & Giao Diện CMS',
           subtitle: 'Tùy chỉnh danh mục thể loại dịch vụ chụp ảnh và nội dung giao diện landing page.'
         };
+      case 'addons':
+        return {
+          icon: <Tag className="w-5 h-5 text-gold-400" />,
+          title: 'Quản Lý Bảng Giá & Dịch Vụ Bổ Sung (Add-ons)',
+          subtitle: 'Tùy chỉnh giá tiền, bật/tắt dịch vụ đi kèm (Makeup, Trang phục, In ấn...) và cập nhật tính giá tự động.'
+        };
       case 'reviews':
         return {
           icon: <Star className="w-5 h-5 text-gold-400 fill-gold-400" />,
@@ -467,8 +474,8 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Tab Navigation: Sleek 5-column Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 p-2 bg-[#12100e] rounded-2xl border border-[#2b2722] shadow-inner">
+      {/* Tab Navigation: Sleek Responsive Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2 p-2 bg-[#12100e] rounded-2xl border border-[#2b2722] shadow-inner">
         <button
           onClick={() => setActiveTab('albums')}
           className={`flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
@@ -530,6 +537,18 @@ export const AdminDashboard = () => {
         </button>
 
         <button
+          onClick={() => setActiveTab('addons')}
+          className={`flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
+            activeTab === 'addons'
+              ? 'bg-gradient-to-r from-gold-500 to-amber-500 text-gold-950 shadow-md shadow-gold-500/20 scale-[1.01]'
+              : 'text-[#a2998a] hover:text-white hover:bg-[#1a1714]'
+          }`}
+        >
+          <Tag className="w-4 h-4 shrink-0 text-amber-300" />
+          <span className="truncate">Bảng Giá & Add-ons</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('reviews')}
           className={`flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
             activeTab === 'reviews'
@@ -550,6 +569,8 @@ export const AdminDashboard = () => {
         <AdminUserManagement />
       ) : activeTab === 'categories' ? (
         <AdminCategoriesManagement />
+      ) : activeTab === 'addons' ? (
+        <AdminAddonsManagement />
       ) : activeTab === 'reviews' ? (
         <AdminReviewsManagement />
       ) : (

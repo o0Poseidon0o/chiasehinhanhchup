@@ -59,6 +59,9 @@ class LocalBooking {
     this.location = data.location || '';
     this.budget = data.budget || '';
     this.note = data.note || '';
+    this.addons = Array.isArray(data.addons) ? data.addons : [];
+    this.estimatedTotal = Number(data.estimatedTotal) || 0;
+    this.depositAmount = Number(data.depositAmount) || 500000;
     this.status = data.status || 'pending'; // 'pending' | 'confirmed' | 'completed' | 'cancelled'
     this.createdAt = data.createdAt ? new Date(data.createdAt) : new Date();
   }
@@ -80,6 +83,9 @@ class LocalBooking {
       location: this.location,
       budget: this.budget,
       note: this.note,
+      addons: this.addons,
+      estimatedTotal: this.estimatedTotal,
+      depositAmount: this.depositAmount,
       status: this.status,
       createdAt: this.createdAt
     };

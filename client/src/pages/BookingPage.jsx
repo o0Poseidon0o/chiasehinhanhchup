@@ -3,13 +3,29 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   Calendar, Camera, CheckCircle2, User, Phone, Mail, MapPin, 
   Sparkles, ShieldCheck, ArrowRight, ArrowLeft, Clock, QrCode, Copy, Check, Lock,
-  Users, Shirt, Scissors, Zap, BookOpen, Layers, AlertTriangle
+  Users, Shirt, Scissors, Zap, BookOpen, Layers, AlertTriangle,
+  Crown, Gift, Heart, Palette, Calculator
 } from 'lucide-react';
 import { userApi } from '../api/userApi';
 import { categoryApi } from '../api/categoryApi';
 import { photographerApi } from '../api/photographerApi';
+import { addonApi, FALLBACK_ADDONS } from '../api/addonApi';
+import { BookingPriceEstimator, extractNumericPrice } from '../components/booking/BookingPriceEstimator';
 import { useAuth } from '../context/AuthContext';
 import { formatAvatarUrl, handleImageError } from '../utils/imageHelper';
+
+const ICON_MAP = {
+  Scissors,
+  Shirt,
+  Zap,
+  BookOpen,
+  Camera,
+  Crown,
+  Gift,
+  Heart,
+  Palette,
+  Sparkles
+};
 
 const CONTEXT_TYPES = [
   { id: 'outdoor', label: 'Ngoại cảnh (Outdoor)', desc: 'Công viên, Phố cổ, Khung cảnh tự nhiên' },
@@ -58,13 +74,6 @@ const VISUAL_TIME_CARDS = [
   }
 ];
 
-const ADDONS = [
-  { id: 'makeup', label: 'Makeup & Làm Tóc Chuyên Nghiệp', price: '+ 350.000đ', icon: Scissors },
-  { id: 'costume', label: 'Cho Thuê Trang Phục / Áo Dài / Concept', price: '+ 250.000đ', icon: Shirt },
-  { id: 'fast_delivery', label: 'Giao Ảnh Hậu Kỳ Nhanh Trong 24h', price: '+ 200.000đ', icon: Zap },
-  { id: 'photobook', label: 'In Photobook / Ảnh Ép Gỗ Cao Cấp', price: '+ 450.000đ', icon: BookOpen }
-];
-
 export const BookingPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -98,6 +107,7 @@ export const BookingPage = () => {
   const [cityLocation, setCityLocation] = useState('Hà Nội');
   const [detailedLocation, setDetailedLocation] = useState('');
   const [selectedAddons, setSelectedAddons] = useState([]);
+  const [availableAddons, setAvailableAddons] = useState(FALLBACK_ADDONS);
   const [conceptNote, setConceptNote] = useState('');
 
   // Conflict Detection States
@@ -226,14 +236,17 @@ export const BookingPage = () => {
     
     Promise.all([
       userApi.getActivePhotographers().catch(() => ({ data: [] })),
-      categoryApi.getAll().catch(() => ({ data: [] }))
-    ]).then(([phRes, catRes]) => {
+      categoryApi.getAll().catch(() => ({ data: [] })),
+      addonApi.getActive().catch(() => ({ data: FALLBACK_ADDONS }))
+    ]).then(([phRes, catRes, addonRes]) => {
       if (!isMounted) return;
       const phList = phRes.data || [];
       const catList = catRes.data || [];
+      const addonList = (addonRes.data && addonRes.data.length > 0) ? addonRes.data : FALLBACK_ADDONS;
       
       setPhotographers(phList);
       setCategories(catList);
+      setAvailableAddons(addonList);
 
       if (preFilledPhId) {
         const found = phList.find(p => String(p._id) === String(preFilledPhId) || String(p.id) === String(preFilledPhId));
@@ -275,7 +288,16 @@ export const BookingPage = () => {
     try {
       const effectiveTimeSlot = `${startTime} ➔ ${endTime} (⏱️ Dự kiến ${calculateDuration(startTime, endTime) || '2 tiếng'})`;
 
-      const addonLabels = ADDONS.filter(a => selectedAddons.includes(a.id)).map(a => a.label);
+      const activeSelectedAddonObjects = availableAddons.filter(a => selectedAddons.includes(a._id) || selectedAddons.includes(a.id));
+      const addonLabels = activeSelectedAddonObjects.map(a => a.name || a.label);
+      const totalAddonsPrice = activeSelectedAddonObjects.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+      const matchedCat = categories.find(c => c.title === selectedCategory) || categories[0];
+      const basePrice = matchedCat ? extractNumericPrice(matchedCat.price, 1200000) : 1200000;
+      const calculatedTotal = basePrice + totalAddonsPrice;
+      const calculatedDeposit = calculatedTotal >= 3000000 
+        ? Math.round((calculatedTotal * 0.2) / 50000) * 50000 
+        : 500000;
+
       const noteParts = [
         `[Bối cảnh: ${CONTEXT_TYPES.find(c => c.id === contextType)?.label || contextType}]`,
         `[Khung giờ: ${effectiveTimeSlot}]`,
@@ -284,6 +306,7 @@ export const BookingPage = () => {
       if (addonLabels.length > 0) {
         noteParts.push(`[Dịch vụ thêm: ${addonLabels.join(', ')}]`);
       }
+      noteParts.push(`[Tạm tính tổng: ${calculatedTotal.toLocaleString('vi-VN')}đ]`);
       if (conceptNote.trim()) {
         noteParts.push(`[Ghi chú: ${conceptNote.trim()}]`);
       }
@@ -321,7 +344,15 @@ export const BookingPage = () => {
         bookingDate: bookingDate || new Date().toISOString().split('T')[0],
         timeSlot: effectiveTimeSlot,
         location: `${cityLocation}${detailedLocation ? ` - ${detailedLocation}` : ''}`,
-        budget: addonLabels.length > 0 ? `Gói cơ bản + ${addonLabels.length} dịch vụ thêm` : 'Gói tiêu chuẩn',
+        budget: `${calculatedTotal.toLocaleString('vi-VN')}đ (Tạm tính)`,
+        addons: activeSelectedAddonObjects.map(a => ({
+          id: a._id || a.id,
+          name: a.name || a.label,
+          price: Number(a.price) || 0,
+          unit: a.unit || 'gói'
+        })),
+        estimatedTotal: calculatedTotal,
+        depositAmount: calculatedDeposit,
         note: noteParts.join(' ')
       };
 
@@ -343,11 +374,14 @@ export const BookingPage = () => {
         cityLocation,
         detailedLocation: detailedLocation || 'Studio hoặc ngoại cảnh tùy chọn',
         addonLabels,
+        addons: activeSelectedAddonObjects,
+        estimatedTotal: calculatedTotal,
+        depositAmount: `${calculatedDeposit.toLocaleString('vi-VN')}đ`,
+        remainingAmount: `${Math.max(0, calculatedTotal - calculatedDeposit).toLocaleString('vi-VN')}đ`,
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         customerEmail: customerEmail ? customerEmail.trim() : '',
         status: '⏳ Chờ Xác Nhận',
-        depositAmount: '500.000đ',
         createdAt: new Date().toISOString()
       };
 
@@ -422,7 +456,7 @@ export const BookingPage = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-16 animate-fade-in">
+    <div className="max-w-6xl mx-auto space-y-8 pb-16 animate-fade-in">
       {/* Top Header Banner */}
       <div className="bg-gradient-to-br from-[#141720] via-[#10131c] to-[#0c0d12] border border-[#242938] rounded-3xl p-8 sm:p-10 text-center space-y-3 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -438,37 +472,10 @@ export const BookingPage = () => {
         </p>
       </div>
 
-      {/* Stepper Header (4 Steps) */}
-      {!bookingReceipt && (
-        <div className="grid grid-cols-4 gap-2 bg-[#141720] border border-[#242938] p-3 rounded-2xl">
-          {[
-            { num: 1, title: 'Studio & Thể Loại' },
-            { num: 2, title: 'Bối Cảnh & Thời Gian' },
-            { num: 3, title: 'Dịch Vụ Đi Kèm' },
-            { num: 4, title: 'Xác Nhận Đặt Lịch' }
-          ].map((s) => (
-            <button
-              key={s.num}
-              onClick={() => setStep(s.num)}
-              className={`p-3 rounded-xl text-left transition-all ${
-                step === s.num
-                  ? 'bg-amber-500 text-amber-950 shadow-md font-bold'
-                  : step > s.num
-                  ? 'bg-amber-500/10 text-amber-300 font-semibold'
-                  : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              <p className="text-[10px] uppercase font-black tracking-wider">Bước {s.num}</p>
-              <p className="text-xs sm:text-sm truncate">{s.title}</p>
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Booking Form / Receipt Content */}
       {bookingReceipt ? (
         /* RECEIPT CARD AFTER SUCCESS */
-        <div className="bg-[#141720] border border-amber-500/40 rounded-3xl p-8 shadow-2xl space-y-8 animate-fade-in text-center">
+        <div className="max-w-2xl mx-auto bg-[#141720] border border-amber-500/40 rounded-3xl p-8 shadow-2xl space-y-8 animate-fade-in text-center">
           <div className="w-16 h-16 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/10">
             <CheckCircle2 className="w-8 h-8" />
           </div>
@@ -530,11 +537,32 @@ export const BookingPage = () => {
                   </div>
                 </div>
               )}
+
+              {bookingReceipt.estimatedTotal > 0 && (
+                <div className="pt-2.5 border-t border-[#242938] space-y-1.5">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-gray-400">Tổng chi phí tạm tính:</span>
+                    <strong className="text-amber-300 font-black text-sm">
+                      {bookingReceipt.estimatedTotal.toLocaleString('vi-VN')}đ
+                    </strong>
+                  </div>
+                  <div className="flex justify-between text-[11px] text-gray-400">
+                    <span>Tiền cọc giữ lịch:</span>
+                    <strong className="text-amber-400 font-semibold">{bookingReceipt.depositAmount}</strong>
+                  </div>
+                  {bookingReceipt.remainingAmount && (
+                    <div className="flex justify-between text-[11px] text-gray-400">
+                      <span>Còn lại thanh toán khi chụp:</span>
+                      <strong className="text-white font-semibold">{bookingReceipt.remainingAmount}</strong>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* QR Deposit Section */}
             <div className="pt-3 border-t border-[#242938] text-center space-y-2">
-              <p className="text-[11px] text-amber-400 font-bold">Quét QR Đặt Cọc 500k Giữ Lịch (Tùy chọn)</p>
+              <p className="text-[11px] text-amber-400 font-bold">Quét QR Đặt Cọc Giữ Lịch (Tùy chọn)</p>
               <div className="w-32 h-32 bg-white p-2 rounded-xl mx-auto shadow-md">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=BOOKING_${bookingReceipt.code}`}
@@ -567,8 +595,37 @@ export const BookingPage = () => {
           </div>
         </div>
       ) : (
-        /* STEPPER FORM */
-        <div className="bg-[#141720] border border-[#242938] rounded-3xl p-6 sm:p-8 shadow-xl">
+        /* STEPPER & LIVE ESTIMATOR 2-COLUMN LAYOUT */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+          {/* Main Stepper Form Column */}
+          <div className="lg:col-span-8 space-y-6">
+            {/* Stepper Header (4 Steps) */}
+            <div className="grid grid-cols-4 gap-2 bg-[#141720] border border-[#242938] p-3 rounded-2xl">
+              {[
+                { num: 1, title: 'Studio & Thể Loại' },
+                { num: 2, title: 'Bối Cảnh & Thời Gian' },
+                { num: 3, title: 'Dịch Vụ Đi Kèm' },
+                { num: 4, title: 'Xác Nhận Đặt Lịch' }
+              ].map((s) => (
+                <button
+                  key={s.num}
+                  onClick={() => setStep(s.num)}
+                  className={`p-3 rounded-xl text-left transition-all ${
+                    step === s.num
+                      ? 'bg-amber-500 text-amber-950 shadow-md font-bold'
+                      : step > s.num
+                      ? 'bg-amber-500/10 text-amber-300 font-semibold'
+                      : 'text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  <p className="text-[10px] uppercase font-black tracking-wider">Bước {s.num}</p>
+                  <p className="text-xs sm:text-sm truncate">{s.title}</p>
+                </button>
+              ))}
+            </div>
+
+            {/* STEPPER FORM */}
+            <div className="bg-[#141720] border border-[#242938] rounded-3xl p-6 sm:p-8 shadow-xl">
           {/* STEP 1: SELECT PHOTOGRAPHER & CATEGORY */}
           {step === 1 && (
             <div className="space-y-6">
@@ -908,31 +965,45 @@ export const BookingPage = () => {
               <div className="space-y-3">
                 <label className="block text-xs font-semibold text-gray-300">Dịch Vụ Bổ Sung (Add-on Services)</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {ADDONS.map((ad) => {
-                    const IconComp = ad.icon;
-                    const isSelected = selectedAddons.includes(ad.id);
+                  {availableAddons.map((ad) => {
+                    const addonKey = ad._id || ad.id;
+                    const IconComp = ICON_MAP[ad.icon] || Sparkles;
+                    const isSelected = selectedAddons.includes(ad._id) || selectedAddons.includes(ad.id);
+                    const displayPrice = ad.priceDisplay || `+ ${(Number(ad.price) || 0).toLocaleString('vi-VN')}đ / ${ad.unit || 'lần'}`;
                     return (
                       <div
-                        key={ad.id}
-                        onClick={() => toggleAddon(ad.id)}
+                        key={addonKey}
+                        onClick={() => toggleAddon(addonKey)}
                         className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
                           isSelected
                             ? 'bg-amber-500/10 border-amber-500 text-amber-300 ring-2 ring-amber-500/30'
                             : 'bg-[#0c0d12] border-[#242938] hover:border-gray-600 text-gray-300'
                         }`}
                       >
-                        <div className="flex items-center space-x-3">
-                          <IconComp className="w-5 h-5 text-amber-400 shrink-0" />
-                          <div>
-                            <h4 className="font-bold text-white text-xs sm:text-sm">{ad.label}</h4>
-                            <p className="text-[11px] text-amber-400 font-semibold">{ad.price}</p>
+                        <div className="flex items-start space-x-3 truncate mr-2">
+                          <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0 mt-0.5">
+                            <IconComp className="w-4 h-4" />
+                          </div>
+                          <div className="truncate">
+                            <div className="flex items-center space-x-2">
+                              <h4 className="font-bold text-white text-xs sm:text-sm truncate">{ad.name || ad.label}</h4>
+                              {ad.badge && (
+                                <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold shrink-0">
+                                  {ad.badge}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-amber-400 font-semibold">{displayPrice}</p>
+                            {ad.description && (
+                              <p className="text-[10px] text-gray-400 line-clamp-1 mt-0.5">{ad.description}</p>
+                            )}
                           </div>
                         </div>
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => {}}
-                          className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                          className="w-4 h-4 accent-amber-500 rounded cursor-pointer shrink-0"
                         />
                       </div>
                     );
@@ -1057,8 +1128,28 @@ export const BookingPage = () => {
             </form>
           )}
         </div>
-      )}
+      </div>
+
+      {/* Right Column: Live Price Estimator Sticky Card */}
+      <div className="lg:col-span-4">
+        <BookingPriceEstimator
+          selectedCategory={selectedCategory}
+          categories={categories}
+          selectedAddonIds={selectedAddons}
+          availableAddons={availableAddons}
+          selectedPhotographer={selectedPhotographer}
+          bookingDate={bookingDate}
+          timeSlot={`${startTime} ➔ ${endTime}`}
+          contextLabel={CONTEXT_TYPES.find(c => c.id === contextType)?.label || 'Ngoại cảnh'}
+          peopleCount={peopleCount}
+          onRemoveAddon={toggleAddon}
+          currentStep={step}
+          onProceedStep={step < 4 ? () => setStep(step + 1) : null}
+        />
+      </div>
     </div>
+  )}
+</div>
   );
 };
 

@@ -42,12 +42,14 @@ app.get('/api/health', (req, res) => {
 });
 
 const categoryRoutes = require('./routes/categoryRoutes');
+const addonRoutes = require('./routes/addonRoutes');
 
-// Gắn route API Album, User, Photographer CRM & Dynamic Categories
+// Gắn route API Album, User, Photographer CRM, Dynamic Categories & Dynamic Addons
 app.use('/api/albums', albumRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/photographer', photographerRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/addons', addonRoutes);
 
 // Bắt lỗi 404 cho các route không tồn tại
 app.use(notFoundHandler);
