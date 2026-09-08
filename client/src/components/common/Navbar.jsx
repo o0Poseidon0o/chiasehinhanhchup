@@ -20,7 +20,7 @@ import { MyBookingsModal } from '../booking/MyBookingsModal';
 export const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isLoggedIn, isAdmin, isPhotographer, currentUser, logout, openAuthModal } = useAuth();
+  const { isLoggedIn, isAdmin, isPhotographer, isClient, currentUser, logout, openAuthModal } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [myBookingsOpen, setMyBookingsOpen] = useState(false);
 
@@ -73,48 +73,41 @@ export const Navbar = () => {
                 Photodate<span className="text-amber-400">.vn</span>
               </span>
             </div>
-            <span className="text-[10px] text-gray-400 block tracking-wider uppercase font-semibold">
-              Nền tảng kết nối & Duyệt ảnh
-            </span>
+            <p className="text-[10px] sm:text-xs text-gray-400 font-semibold tracking-wider uppercase leading-none mt-0.5">
+              Nền Tảng Kết Nối & Duyệt Ảnh
+            </p>
           </div>
         </Link>
 
-        {/* Desktop Nav Links (Potonow Style) */}
+        {/* Desktop Nav Links (Gọn gàng, không trùng lặp Đơn Của Tôi) */}
         <nav className="hidden lg:flex items-center space-x-1 font-medium text-sm text-gray-300">
           <Link
             to="/"
-            className={`px-3 py-2 rounded-xl transition-colors ${isHome ? 'text-amber-400 font-semibold' : 'hover:text-white hover:bg-white/5'}`}
+            className={`px-3.5 py-2 rounded-xl transition-colors ${isHome ? 'text-amber-400 font-semibold' : 'hover:text-white hover:bg-white/5'}`}
           >
             Trang Chủ
           </Link>
           <Link
             to="/photographers"
-            className={`px-3 py-2 rounded-xl transition-colors ${location.pathname.startsWith('/photographer') ? 'text-amber-400 font-semibold' : 'hover:text-white hover:bg-white/5'}`}
+            className={`px-3.5 py-2 rounded-xl transition-colors ${location.pathname.startsWith('/photographer') ? 'text-amber-400 font-semibold' : 'hover:text-white hover:bg-white/5'}`}
           >
             Nhiếp Ảnh Gia
           </Link>
           <Link
             to="/bookings"
-            className={`px-3 py-2 rounded-xl transition-colors ${location.pathname === '/bookings' ? 'text-amber-400 font-semibold' : 'hover:text-white hover:bg-white/5'}`}
+            className={`px-3.5 py-2 rounded-xl transition-colors ${location.pathname === '/bookings' ? 'text-amber-400 font-semibold' : 'hover:text-white hover:bg-white/5'}`}
           >
             Đặt Lịch Chụp
           </Link>
           <button
-            onClick={() => setMyBookingsOpen(true)}
-            className="px-3 py-2 rounded-xl text-amber-300 font-bold hover:bg-white/5 transition-colors cursor-pointer flex items-center space-x-1"
-          >
-            <Calendar className="w-3.5 h-3.5" />
-            <span>Đơn Của Tôi</span>
-          </button>
-          <button
             onClick={() => handleNavClick('categories-section')}
-            className="px-3 py-2 rounded-xl hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            className="px-3.5 py-2 rounded-xl hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
           >
             Gói Chụp Ảnh
           </button>
           <button
             onClick={() => handleNavClick('album-lookup')}
-            className="px-3 py-2 rounded-xl hover:text-white hover:bg-white/5 transition-colors cursor-pointer flex items-center space-x-1 text-amber-400"
+            className="px-3.5 py-2 rounded-xl hover:text-white hover:bg-white/5 transition-colors cursor-pointer flex items-center space-x-1 text-amber-400"
           >
             <Search className="w-3.5 h-3.5" />
             <span>Tra Cứu Album</span>
@@ -123,6 +116,21 @@ export const Navbar = () => {
 
         {/* Right Actions & Auth */}
         <div className="flex items-center space-x-2 sm:space-x-3">
+
+          {/* Nếu là Khách Hàng: Nút vào Không Gian Khách Hàng (Xem Đơn & Album) */}
+          {isLoggedIn && isClient && (
+            <button
+              onClick={() => navigate('/app')}
+              className={`hidden sm:flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 shadow-md ${isWorkspace
+                ? 'bg-amber-500 text-amber-950 shadow-amber-500/20'
+                : 'bg-[#141720] hover:bg-[#1c2230] border border-amber-500/40 text-amber-300 hover:text-white'
+                }`}
+              title="Vào Không Gian Khách Hàng (Xem Đơn & Album của bạn)"
+            >
+              <Calendar className="w-4 h-4 text-amber-400" />
+              <span>Đơn & Album Của Tôi</span>
+            </button>
+          )}
 
           {/* Nếu là Nhiếp Ảnh Gia: Nút vào Studio Workspace riêng của họ (Chỉ hiện từ màn hình sm) */}
           {isLoggedIn && isPhotographer && (
@@ -181,16 +189,11 @@ export const Navbar = () => {
           {isLoggedIn ? (
             <div className="flex items-center space-x-2 shrink-0">
               <button
-                onClick={() => setMyBookingsOpen(true)}
-                className="hidden md:flex items-center space-x-1 px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold rounded-xl transition-all"
-                title="Xem danh sách đơn booking của tôi"
+                onClick={() => navigate(isAdmin ? '/admin' : '/app')}
+                className="hidden lg:flex flex-col items-end leading-tight hover:opacity-80 transition-opacity text-left cursor-pointer"
+                title="Xem không gian tài khoản của bạn"
               >
-                <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                <span>Đơn Của Tôi</span>
-              </button>
-
-              <div className="hidden lg:flex flex-col items-end leading-tight">
-                <span className="text-xs font-bold text-white max-w-[110px] truncate">{currentUser?.name || 'Tài khoản'}</span>
+                <span className="text-xs font-bold text-white max-w-[120px] truncate">{currentUser?.name || 'Tài khoản'}</span>
                 <span className={`text-[10px] font-extrabold uppercase ${currentUser?.role === 'admin'
                   ? 'text-amber-400'
                   : currentUser?.role === 'photographer'
@@ -199,7 +202,7 @@ export const Navbar = () => {
                   }`}>
                   {currentUser?.role === 'admin' ? 'Master Admin' : currentUser?.role === 'photographer' ? 'Photographer' : 'Khách Hàng'}
                 </span>
-              </div>
+              </button>
               <button
                 onClick={logout}
                 title="Đăng xuất"
@@ -260,16 +263,18 @@ export const Navbar = () => {
           >
             Đặt Lịch Chụp
           </Link>
-          <button
-            onClick={() => {
-              setMobileMenuOpen(false);
-              setMyBookingsOpen(true);
-            }}
-            className="w-full text-left py-2 px-3 rounded-lg text-sm font-bold text-amber-300 hover:bg-white/5 flex items-center space-x-2"
-          >
-            <Calendar className="w-4 h-4 text-amber-400" />
-            <span>📅 Đơn Đặt Lịch Của Tôi</span>
-          </button>
+          {/* Nếu là Khách Hàng: Đơn & Album Của Tôi */}
+          {isLoggedIn && isClient && (
+            <Link
+              to="/app"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 px-3 rounded-lg text-sm font-bold text-amber-300 hover:bg-white/5 flex items-center space-x-2"
+            >
+              <Calendar className="w-4 h-4 text-amber-400" />
+              <span>Đơn & Album Của Tôi</span>
+            </Link>
+          )}
+
           <button
             onClick={() => handleNavClick('categories-section')}
             className="w-full text-left py-2 px-3 rounded-lg text-sm font-medium text-gray-200 hover:bg-white/5"
@@ -296,14 +301,31 @@ export const Navbar = () => {
               </button>
             )}
 
-            <button
-              onClick={handleStudioWorkspaceClick}
-              className="w-full py-2.5 px-3 bg-[#141720] border border-[#2b3245] text-white rounded-xl text-sm font-bold flex items-center justify-center space-x-2"
-            >
-              <PlusCircle className="w-4 h-4 text-amber-400" />
-              <span>Vào Studio Workspace (Tạo Album)</span>
-              {!isLoggedIn && <Lock className="w-3.5 h-3.5 text-amber-400" />}
-            </button>
+            {/* Nếu là Khách Hàng: Nút vào Không Gian Khách Hàng */}
+            {isLoggedIn && isClient && (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  navigate('/app');
+                }}
+                className="w-full py-2.5 px-3 bg-gradient-to-r from-amber-500 to-amber-400 text-amber-950 font-bold rounded-xl text-sm flex items-center justify-center space-x-2 shadow-md"
+              >
+                <Calendar className="w-4 h-4" />
+                <span>Vào Không Gian Khách Hàng</span>
+              </button>
+            )}
+
+            {/* Nếu là Studio hoặc chưa đăng nhập */}
+            {(!isLoggedIn || isPhotographer || isAdmin) && (
+              <button
+                onClick={handleStudioWorkspaceClick}
+                className="w-full py-2.5 px-3 bg-[#141720] border border-[#2b3245] text-white rounded-xl text-sm font-bold flex items-center justify-center space-x-2"
+              >
+                <PlusCircle className="w-4 h-4 text-amber-400" />
+                <span>{isPhotographer ? 'Studio Của Tôi (Tạo Album)' : 'Vào Studio Workspace'}</span>
+                {!isLoggedIn && <Lock className="w-3.5 h-3.5 text-amber-400" />}
+              </button>
+            )}
           </div>
         </div>
       )}

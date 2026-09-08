@@ -13,6 +13,7 @@ router.post('/admin/login', albumController.verifyAdminPassword);
 
 // Public routes for client & photo selection
 router.get('/public', albumController.getPublicAlbums);
+router.get('/my-albums', albumController.getClientAlbums);
 router.post('/parse-drive', albumController.parseDriveUrl);
 router.get('/proxy-image/:fileId', albumController.proxyImage);
 router.post('/', validateCreateAlbum, albumController.createAlbum);

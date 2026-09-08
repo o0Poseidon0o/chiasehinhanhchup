@@ -527,9 +527,53 @@ const verifyAdminPassword = async (adminPassword) => {
   return { success: true, message: 'Đăng nhập Admin thành công.' };
 };
 
+/**
+ * Lấy danh sách Album dành riêng cho Khách Hàng (dựa theo SĐT hoặc Email)
+ */
+const getClientAlbums = async (phone = '', email = '') => {
+  const cleanPhone = (phone || '').replace(/\D/g, '');
+  const cleanEmail = (email || '').trim().toLowerCase();
+
+  const rawAlbums = await Album.find();
+  const safeList = Array.isArray(rawAlbums) ? rawAlbums : [];
+
+  if (!cleanPhone && !cleanEmail) {
+    return [];
+  }
+
+  const matched = safeList.filter(a => {
+    const aPhone = (a.clientInfo?.phone || '').replace(/\D/g, '');
+    const aEmail = (a.clientInfo?.email || '').trim().toLowerCase();
+    const phoneMatch = cleanPhone && aPhone && (aPhone.includes(cleanPhone) || cleanPhone.includes(aPhone));
+    const emailMatch = cleanEmail && aEmail && aEmail === cleanEmail;
+    return phoneMatch || emailMatch;
+  });
+
+  matched.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+  return matched.map(a => ({
+    _id: a._id,
+    title: a.title,
+    status: a.status || 'selecting',
+    createdAt: a.createdAt,
+    hasPasscode: Boolean(a.passcode),
+    passcode: a.passcode || '',
+    maxSelect: a.maxSelect || 0,
+    allowDownload: a.allowDownload !== undefined ? a.allowDownload : true,
+    allowComment: a.allowComment !== undefined ? a.allowComment : true,
+    imagesCount: Array.isArray(a.images) ? a.images.length : 0,
+    selectedCount: Array.isArray(a.selectedImages) ? a.selectedImages.length : 0,
+    clientInfo: a.clientInfo || {},
+    photographerId: a.photographerId || '',
+    photographerName: a.photographerName || 'Studio Photodate',
+    coverImage: a.coverImage || (a.images?.[0]?.thumbnailUrl || a.images?.[0]?.embedUrl) || ''
+  }));
+};
+
 module.exports = {
   createAlbum,
   getAllAlbums,
+  getClientAlbums,
   getAlbumForClient,
   verifyPasscode,
   submitSelection,
@@ -542,3 +586,4 @@ module.exports = {
   updateAlbumSettings,
   verifyAdminPassword
 };
+

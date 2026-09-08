@@ -45,10 +45,16 @@ import { userApi } from '../api/userApi';
 import { getPublicBaseUrl, formatDate, generateClientShareText } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 import { EditAlbumModal } from '../components/admin/EditAlbumModal';
+import CustomerWorkspace from './CustomerWorkspace';
 
 export const StudioWorkspace = () => {
   const { currentUser, logout } = useAuth();
   const [searchParams] = useSearchParams();
+
+  // Nếu người dùng đăng nhập là Khách Hàng, tự động hiển thị Không Gian Khách Hàng
+  if (currentUser?.role === 'client') {
+    return <CustomerWorkspace />;
+  }
 
   // Tab: 'albums' | 'clients' | 'bookings' | 'profile'
   const [activeTab, setActiveTab] = useState('albums');

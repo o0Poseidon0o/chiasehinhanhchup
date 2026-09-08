@@ -130,6 +130,19 @@ export const AuthProvider = ({ children }) => {
     setRedirectAfterAuth(null);
   };
 
+  /**
+   * Cập nhật thông tin người dùng hiện tại (cập nhật state & sessionStorage)
+   */
+  const updateCurrentUser = (updatedFields) => {
+    setCurrentUser(prev => {
+      const updated = { ...prev, ...updatedFields };
+      try {
+        sessionStorage.setItem('userData', JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -141,6 +154,7 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
+        updateCurrentUser,
         isAuthModalOpen,
         authModalInitialTab,
         authModalInitialRole,

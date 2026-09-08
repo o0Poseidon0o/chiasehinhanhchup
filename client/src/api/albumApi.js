@@ -59,6 +59,21 @@ export const albumApi = {
   },
 
   /**
+   * Lấy danh sách Album dành riêng cho Khách Hàng (dựa theo SĐT hoặc Email)
+   */
+  async getClientAlbums({ phone = '', email = '' } = {}) {
+    try {
+      const response = await api.get('/my-albums', {
+        params: { phone, email }
+      });
+      return response.data;
+    } catch (error) {
+      return { success: true, count: 0, data: [] };
+    }
+  },
+
+
+  /**
    * Quét và trích xuất danh sách ảnh từ link Google Drive bất kỳ
    */
   async parseDriveFolder(url) {

@@ -98,7 +98,7 @@ export const AuthModal = () => {
       } else if (redirectAfterAuth && redirectAfterAuth !== '/admin') {
         navigate(redirectAfterAuth);
       } else {
-        navigate('/');
+        navigate('/app');
       }
     } catch (err) {
       setError(err.message || 'Đăng nhập không thành công. Vui lòng kiểm tra lại.');

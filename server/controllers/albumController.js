@@ -297,9 +297,25 @@ const parseDriveUrl = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * @desc    Lấy danh sách album cho Khách Hàng (dựa theo phone / email)
+ * @route   GET /api/albums/my-albums
+ * @access  Public
+ */
+const getClientAlbums = asyncHandler(async (req, res) => {
+  const { phone, email } = req.query;
+  const albums = await albumService.getClientAlbums(phone, email);
+  res.status(200).json({
+    success: true,
+    count: albums.length,
+    data: albums
+  });
+});
+
 module.exports = {
   createAlbum,
   getAlbums,
+  getClientAlbums,
   getAlbum,
   getPublicAlbums,
   parseDriveUrl,
@@ -316,3 +332,4 @@ module.exports = {
   verifyAdminPassword,
   proxyImage
 };
+

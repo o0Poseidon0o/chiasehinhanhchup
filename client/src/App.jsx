@@ -9,6 +9,7 @@ import PhotographersPage from './pages/PhotographersPage';
 import PhotographerDetailPage from './pages/PhotographerDetailPage';
 import BookingPage from './pages/BookingPage';
 import StudioWorkspace from './pages/StudioWorkspace';
+import CustomerWorkspace from './pages/CustomerWorkspace';
 import AlbumView from './pages/AlbumView';
 import AdminManage from './pages/AdminManage';
 import AdminDashboard from './pages/AdminDashboard';
@@ -40,12 +41,20 @@ function App() {
                 {/* 1.2 Dedicated Booking Page */}
                 <Route path="/bookings" element={<BookingPage />} />
 
-                {/* 2. Protected Studio Workspace (Create Album) - Requires Authentication */}
+                {/* 2. Protected Studio Workspace & Customer Portal */}
                 <Route
                   path="/app"
                   element={
                     <ProtectedRoute>
                       <StudioWorkspace />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/customer"
+                  element={
+                    <ProtectedRoute>
+                      <CustomerWorkspace />
                     </ProtectedRoute>
                   }
                 />
