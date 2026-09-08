@@ -310,6 +310,20 @@ const updateUser = async (id, data) => {
       mergedStudioInfo.coverImage = existingUser.studioInfo.coverImage;
     }
 
+    // Chuẩn hóa link Google Drive thành direct link có thể nhúng trực tiếp
+    if (mergedStudioInfo.avatar && typeof mergedStudioInfo.avatar === 'string' && mergedStudioInfo.avatar.includes('drive.google.com')) {
+      const match = mergedStudioInfo.avatar.match(/\/d\/([a-zA-Z0-9_-]+)/) || mergedStudioInfo.avatar.match(/id=([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        mergedStudioInfo.avatar = `https://lh3.googleusercontent.com/d/${match[1]}`;
+      }
+    }
+    if (mergedStudioInfo.coverImage && typeof mergedStudioInfo.coverImage === 'string' && mergedStudioInfo.coverImage.includes('drive.google.com')) {
+      const match = mergedStudioInfo.coverImage.match(/\/d\/([a-zA-Z0-9_-]+)/) || mergedStudioInfo.coverImage.match(/id=([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        mergedStudioInfo.coverImage = `https://lh3.googleusercontent.com/d/${match[1]}`;
+      }
+    }
+
     updateData.studioInfo = mergedStudioInfo;
   }
 

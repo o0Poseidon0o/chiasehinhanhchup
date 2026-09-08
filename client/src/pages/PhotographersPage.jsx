@@ -8,6 +8,7 @@ import { userApi } from '../api/userApi';
 import { albumApi } from '../api/albumApi';
 import { BookingModal } from '../components/booking/BookingModal';
 import { useAuth } from '../context/AuthContext';
+import { formatAvatarUrl, handleImageError } from '../utils/imageHelper';
 
 const DEFAULT_PHOTOGRAPHERS = [
   {
@@ -177,7 +178,7 @@ export const PhotographersPage = () => {
             _id: p._id,
             name: p.name,
             role: 'Verified Pro Photographer',
-            avatar: p.studioInfo?.avatar || DEFAULT_PHOTOGRAPHERS[idx % DEFAULT_PHOTOGRAPHERS.length].avatar,
+            avatar: formatAvatarUrl(p.studioInfo?.avatar, p.name) || DEFAULT_PHOTOGRAPHERS[idx % DEFAULT_PHOTOGRAPHERS.length].avatar,
             coverImage: coverPhoto,
             studioInfo: {
               location: p.studioInfo?.location || 'Việt Nam',
@@ -350,8 +351,10 @@ export const PhotographersPage = () => {
                     <div className="flex items-end space-x-3.5">
                       <div className="relative">
                         <img
-                          src={p.avatar}
+                          src={formatAvatarUrl(p.avatar, p.name)}
                           alt={p.name}
+                          referrerPolicy="no-referrer"
+                          onError={(e) => handleImageError(e, p.name)}
                           className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-400 shadow-xl"
                         />
                         <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-[#141720] rounded-full" title="Sẵn sàng nhận lịch" />

@@ -10,6 +10,7 @@ import { userApi } from '../api/userApi';
 import { albumApi } from '../api/albumApi';
 import { categoryApi } from '../api/categoryApi';
 import { useAuth } from '../context/AuthContext';
+import { formatAvatarUrl, handleImageError } from '../utils/imageHelper';
 
 const DEFAULT_PACKAGES = [
   {
@@ -165,7 +166,7 @@ export const PhotographerDetailPage = () => {
           _id: found._id,
           name: found.name,
           role: 'Verified Pro Photographer',
-          avatar: found.studioInfo?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=300&auto=format&fit=crop',
+          avatar: formatAvatarUrl(found.studioInfo?.avatar, found.name),
           coverImage: found.studioInfo?.coverImage || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=1200&auto=format&fit=crop',
           studioInfo: {
             location: found.studioInfo?.location || 'Hà Nội & Miền Bắc',
@@ -352,8 +353,10 @@ export const PhotographerDetailPage = () => {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="flex flex-col sm:flex-row sm:items-end space-y-4 sm:space-y-0 sm:space-x-6">
               <img
-                src={photographer.avatar}
+                src={formatAvatarUrl(photographer.avatar, photographer.name)}
                 alt={photographer.name}
+                referrerPolicy="no-referrer"
+                onError={(e) => handleImageError(e, photographer.name)}
                 className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl object-cover border-4 border-[#141720] shadow-2xl ring-2 ring-amber-400/40"
                 style={{
                   objectPosition: photographer.studioInfo?.avatarPositionY !== undefined

@@ -46,6 +46,7 @@ import { getPublicBaseUrl, formatDate, generateClientShareText } from '../utils/
 import { useAuth } from '../context/AuthContext';
 import { EditAlbumModal } from '../components/admin/EditAlbumModal';
 import CustomerWorkspace from './CustomerWorkspace';
+import { formatAvatarUrl, handleImageError } from '../utils/imageHelper';
 
 export const StudioWorkspace = () => {
   const { currentUser, logout } = useAuth();
@@ -1259,11 +1260,12 @@ export const StudioWorkspace = () => {
                     >
                       {profileForm.studioInfo.avatar ? (
                         <img
-                          src={profileForm.studioInfo.avatar}
+                          src={formatAvatarUrl(profileForm.studioInfo.avatar, profileForm.name)}
                           alt="Avatar"
+                          referrerPolicy="no-referrer"
                           className="w-full h-full object-cover pointer-events-none"
                           style={{ objectPosition: `50% ${profileForm.studioInfo.avatarPositionY ?? 50}%` }}
-                          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'; }}
+                          onError={(e) => handleImageError(e, profileForm.name)}
                         />
                       ) : (
                         <Camera className="w-6 h-6 text-amber-400/60" />
@@ -1323,13 +1325,17 @@ export const StudioWorkspace = () => {
                       <input
                         type="url"
                         value={profileForm.studioInfo.avatar || ''}
-                        onChange={(e) => setProfileForm({
-                          ...profileForm,
-                          studioInfo: { ...profileForm.studioInfo, avatar: e.target.value }
-                        })}
-                        placeholder="Hoặc dán URL ảnh Avatar..."
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setProfileForm({
+                            ...profileForm,
+                            studioInfo: { ...profileForm.studioInfo, avatar: formatAvatarUrl(val) }
+                          });
+                        }}
+                        placeholder="Hoặc dán URL ảnh Avatar (hỗ trợ Google Drive)..."
                         className="w-full bg-[#141720] border border-[#242938] rounded-xl px-2.5 py-1 text-[11px] text-white outline-none truncate"
                       />
+                      <p className="text-[10px] text-amber-400/80">💡 Khuyên dùng: Bấm "Tải ảnh từ máy" để ảnh tải lên trực tiếp, không bị hết hạn hoặc chặn link từ Facebook/Zalo.</p>
                     </div>
                   </div>
                 </div>

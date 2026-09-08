@@ -9,6 +9,7 @@ import { userApi } from '../api/userApi';
 import { categoryApi } from '../api/categoryApi';
 import { photographerApi } from '../api/photographerApi';
 import { useAuth } from '../context/AuthContext';
+import { formatAvatarUrl, handleImageError } from '../utils/imageHelper';
 
 const CONTEXT_TYPES = [
   { id: 'outdoor', label: 'Ngoại cảnh (Outdoor)', desc: 'Công viên, Phố cổ, Khung cảnh tự nhiên' },
@@ -610,8 +611,10 @@ export const BookingPage = () => {
                     >
                       <div className="flex items-center space-x-3">
                         <img
-                          src={p.studioInfo?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop'}
+                          src={formatAvatarUrl(p.studioInfo?.avatar, p.name)}
                           alt={p.name}
+                          referrerPolicy="no-referrer"
+                          onError={(e) => handleImageError(e, p.name)}
                           className="w-10 h-10 rounded-xl object-cover border border-amber-400/40"
                         />
                         <div>
