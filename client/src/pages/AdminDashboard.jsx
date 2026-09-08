@@ -46,8 +46,10 @@ import { AdminBookingsManagement } from '../components/admin/AdminBookingsManage
 import { AdminReviewsManagement } from '../components/admin/AdminReviewsManagement';
 import { AdminAddonsManagement } from '../components/admin/AdminAddonsManagement';
 import { AdminContactSettings } from '../components/admin/AdminContactSettings';
+import { useAuth } from '../context/AuthContext';
 
 export const AdminDashboard = () => {
+  const { logout } = useAuth();
   const [activeTab, setActiveTab] = useState('albums'); // 'albums' | 'photographers' | 'bookings' | 'users' | 'categories'
   const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -127,9 +129,9 @@ export const AdminDashboard = () => {
   };
 
   const handleAdminLogout = () => {
-    sessionStorage.removeItem('adminPassword');
     setIsAuthorized(false);
     setAlbums([]);
+    logout();
   };
 
   /**

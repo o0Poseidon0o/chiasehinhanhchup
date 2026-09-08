@@ -106,13 +106,40 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
-   * Đăng xuất
+   * Dọn dẹp triệt để toàn bộ lưu trữ của trình duyệt (localStorage & sessionStorage)
+   * Đảm bảo tính bảo mật tuyệt đối: Sau khi đăng xuất là xóa sạch hoàn toàn mọi dấu vết
+   */
+  const wipeAllClientStorage = () => {
+    try {
+      // Giữ lại cài đặt giao diện (theme) để không bị giật nháy màn hình
+      const savedTheme = localStorage.getItem('app_theme');
+
+      // Xóa toàn bộ localStorage (xóa lịch sử đơn booking, pinned albums, credentials, tokens...)
+      localStorage.clear();
+
+      if (savedTheme) {
+        localStorage.setItem('app_theme', savedTheme);
+      }
+    } catch (e) {
+      console.warn('Lỗi dọn dẹp localStorage:', e);
+    }
+
+    try {
+      // Xóa toàn bộ sessionStorage (xóa mật khẩu admin, session user, passcodes album...)
+      sessionStorage.clear();
+    } catch (e) {
+      console.warn('Lỗi dọn dẹp sessionStorage:', e);
+    }
+  };
+
+  /**
+   * Đăng xuất người dùng & xóa sạch mọi dấu vết bảo mật
    */
   const logout = () => {
-    sessionStorage.removeItem('adminPassword');
-    sessionStorage.removeItem('userRole');
-    sessionStorage.removeItem('userData');
+    wipeAllClientStorage();
     setCurrentUser(null);
+    // Chuyển hướng về trang chủ và làm mới trang để giải phóng toàn bộ bộ nhớ RAM & React State
+    window.location.href = '/';
   };
 
   /**
@@ -154,6 +181,7 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
+        wipeAllClientStorage,
         updateCurrentUser,
         isAuthModalOpen,
         authModalInitialTab,

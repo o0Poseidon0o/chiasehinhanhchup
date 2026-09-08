@@ -49,7 +49,7 @@ import CustomerWorkspace from './CustomerWorkspace';
 import { formatAvatarUrl, handleImageError } from '../utils/imageHelper';
 
 export const StudioWorkspace = () => {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, updateCurrentUser } = useAuth();
   const [searchParams] = useSearchParams();
 
   // Nếu người dùng đăng nhập là Khách Hàng, tự động hiển thị Không Gian Khách Hàng
@@ -359,7 +359,7 @@ export const StudioWorkspace = () => {
     try {
       const res = await userApi.updateProfile(currentUser._id, profileForm);
       if (res.user) {
-        sessionStorage.setItem('user', JSON.stringify(res.user));
+        updateCurrentUser(res.user);
       }
       setNotice({ type: 'success', message: 'Đã lưu cập nhật hồ sơ Studio & Avatar thành công!' });
     } catch (err) {

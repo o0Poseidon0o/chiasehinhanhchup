@@ -326,6 +326,20 @@ export const Navbar = () => {
                 {!isLoggedIn && <Lock className="w-3.5 h-3.5 text-amber-400" />}
               </button>
             )}
+
+            {/* Nút Đăng Xuất An Toàn trên Mobile Drawer */}
+            {isLoggedIn && (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  logout();
+                }}
+                className="w-full py-2.5 px-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 rounded-xl text-sm font-bold flex items-center justify-center space-x-2 transition-colors mt-2"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Đăng Xuất (Xóa Sạch Dấu Vết)</span>
+              </button>
+            )}
           </div>
         </div>
       )}
