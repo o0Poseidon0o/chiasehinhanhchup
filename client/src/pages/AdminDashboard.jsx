@@ -45,6 +45,7 @@ import { AdminCategoriesManagement } from '../components/admin/AdminCategoriesMa
 import { AdminBookingsManagement } from '../components/admin/AdminBookingsManagement';
 import { AdminReviewsManagement } from '../components/admin/AdminReviewsManagement';
 import { AdminAddonsManagement } from '../components/admin/AdminAddonsManagement';
+import { AdminContactSettings } from '../components/admin/AdminContactSettings';
 
 export const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('albums'); // 'albums' | 'photographers' | 'bookings' | 'users' | 'categories'
@@ -401,6 +402,12 @@ export const AdminDashboard = () => {
           title: 'Quản Lý Đánh Giá & Điểm Uy Tín',
           subtitle: 'Kiểm duyệt nhận xét đánh giá từ Khách hàng, ẩn nhận xét rác và quản lý độ uy tín Studio.'
         };
+      case 'contacts':
+        return {
+          icon: <Phone className="w-5 h-5 text-emerald-400" />,
+          title: 'Cấu Hình Kênh Liên Hệ Nhanh (Hotline, Telegram, Zalo, FB)',
+          subtitle: 'Tùy chỉnh số Hotline, link Telegram, Zalo, Facebook Messenger và bật/tắt các kênh theo nhu cầu.'
+        };
       case 'albums':
       default:
         return {
@@ -560,6 +567,18 @@ export const AdminDashboard = () => {
           <Star className="w-4 h-4 shrink-0 text-amber-300 fill-amber-300" />
           <span className="truncate">⭐ Đánh Giá & Uy Tín</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab('contacts')}
+          className={`flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
+            activeTab === 'contacts'
+              ? 'bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 text-emerald-950 shadow-md shadow-emerald-500/20 scale-[1.01]'
+              : 'text-[#a2998a] hover:text-white hover:bg-[#1a1714]'
+          }`}
+        >
+          <Phone className="w-4 h-4 shrink-0 text-emerald-400" />
+          <span className="truncate">Liên Hệ & FAB</span>
+        </button>
       </div>
 
       {activeTab === 'bookings' ? (
@@ -574,6 +593,8 @@ export const AdminDashboard = () => {
         <AdminAddonsManagement />
       ) : activeTab === 'reviews' ? (
         <AdminReviewsManagement />
+      ) : activeTab === 'contacts' ? (
+        <AdminContactSettings />
       ) : (
         <>
       {/* Notice Banner */}

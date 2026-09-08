@@ -1,0 +1,92 @@
+const Setting = require('../models/Setting');
+const { asyncHandler } = require('../middlewares/errorHandler');
+
+/**
+ * @desc    Lấy thông tin cấu hình liên hệ (Hotline, Telegram, Zalo, Messenger, Pill)
+ * @route   GET /api/settings/contact
+ * @access  Public
+ */
+const getContactSettings = asyncHandler(async (req, res) => {
+  let setting = await Setting.findOne({ key: 'contact_settings' });
+  if (!setting) {
+    setting = await Setting.findOneAndUpdate(
+      { key: 'contact_settings' },
+      { key: 'contact_settings' },
+      { new: true, upsert: true }
+    );
+  }
+
+  res.status(200).json({
+    success: true,
+    data: setting
+  });
+});
+
+/**
+ * @desc    Cập nhật thông tin cấu hình liên hệ
+ * @route   PUT /api/settings/contact
+ * @access  Master Admin
+ */
+const updateContactSettings = asyncHandler(async (req, res) => {
+  const {
+    hotline,
+    hotlineDisplay,
+    hotlineHours,
+    enableHotline,
+    telegramUrl,
+    telegramSubtext,
+    enableTelegram,
+    zaloUrl,
+    zaloSubtext,
+    enableZalo,
+    messengerUrl,
+    messengerSubtext,
+    enableMessenger,
+    supportPillText,
+    supportPillSubtext,
+    enableSupportPill
+  } = req.body;
+
+  const updateData = {
+    key: 'contact_settings',
+    updatedAt: new Date()
+  };
+
+  if (hotline !== undefined) updateData.hotline = String(hotline).trim();
+  if (hotlineDisplay !== undefined) updateData.hotlineDisplay = String(hotlineDisplay).trim();
+  if (hotlineHours !== undefined) updateData.hotlineHours = String(hotlineHours).trim();
+  if (enableHotline !== undefined) updateData.enableHotline = Boolean(enableHotline);
+
+  if (telegramUrl !== undefined) updateData.telegramUrl = String(telegramUrl).trim();
+  if (telegramSubtext !== undefined) updateData.telegramSubtext = String(telegramSubtext).trim();
+  if (enableTelegram !== undefined) updateData.enableTelegram = Boolean(enableTelegram);
+
+  if (zaloUrl !== undefined) updateData.zaloUrl = String(zaloUrl).trim();
+  if (zaloSubtext !== undefined) updateData.zaloSubtext = String(zaloSubtext).trim();
+  if (enableZalo !== undefined) updateData.enableZalo = Boolean(enableZalo);
+
+  if (messengerUrl !== undefined) updateData.messengerUrl = String(messengerUrl).trim();
+  if (messengerSubtext !== undefined) updateData.messengerSubtext = String(messengerSubtext).trim();
+  if (enableMessenger !== undefined) updateData.enableMessenger = Boolean(enableMessenger);
+
+  if (supportPillText !== undefined) updateData.supportPillText = String(supportPillText).trim();
+  if (supportPillSubtext !== undefined) updateData.supportPillSubtext = String(supportPillSubtext).trim();
+  if (enableSupportPill !== undefined) updateData.enableSupportPill = Boolean(enableSupportPill);
+
+  const updated = await Setting.findOneAndUpdate(
+    { key: 'contact_settings' },
+    updateData,
+    { new: true, upsert: true }
+  );
+
+  res.status(200).json({
+    success: true,
+    message: 'Đã lưu cấu hình liên hệ thành công!',
+    data: updated
+  });
+});
+
+module.exports = {
+  getContactSettings,
+  updateContactSettings
+};

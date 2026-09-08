@@ -15,6 +15,7 @@ import AdminManage from './pages/AdminManage';
 import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AuthModal from './components/auth/AuthModal';
+import FloatingContactButton from './components/common/FloatingContactButton';
 
 function App() {
   return (
@@ -103,6 +104,9 @@ function App() {
 
             {/* Global Potonow-styled Footer */}
             <Footer />
+
+            {/* Quick Contact Floating Action Button (Hotline, Zalo, Messenger) */}
+            <FloatingContactButton />
           </div>
         </BrowserRouter>
       </AuthProvider>
