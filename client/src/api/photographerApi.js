@@ -87,6 +87,21 @@ export const photographerApi = {
   },
 
   /**
+   * Lấy danh sách Lịch Booking dành riêng cho Khách Hàng (lọc nghiêm ngặt theo SĐT / Email của khách)
+   */
+  async getClientBookings({ phone = '', email = '' } = {}) {
+    try {
+      const response = await api.get('/my-bookings', {
+        params: { phone, email }
+      });
+      return response.data;
+    } catch (error) {
+      return { success: true, count: 0, data: [] };
+    }
+  },
+
+
+  /**
    * Cập nhật trạng thái lịch booking
    */
   async updateBookingStatus(bookingId, status) {

@@ -15,10 +15,28 @@ export const MyBookingsModal = ({ isOpen, onClose }) => {
   const [copiedCode, setCopiedCode] = useState(null);
 
   const fetchMyBookings = async () => {
+    const userPhone = (currentUser?.phone || '').replace(/\D/g, '');
+    const userEmail = (currentUser?.email || '').trim().toLowerCase();
+
     let localList = [];
     try {
       const saved = localStorage.getItem('user_my_bookings');
-      if (saved) localList = JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          if (userPhone || userEmail) {
+            localList = parsed.filter(b => {
+              const bPhone = (b.customerPhone || b.clientPhone || '').replace(/\D/g, '');
+              const bEmail = (b.customerEmail || b.clientEmail || '').trim().toLowerCase();
+              const matchP = userPhone && bPhone && (bPhone.includes(userPhone) || userPhone.includes(bPhone));
+              const matchE = userEmail && bEmail && bEmail === userEmail;
+              return matchP || matchE;
+            });
+          } else {
+            localList = parsed;
+          }
+        }
+      }
     } catch (_) {}
 
     const statusTextMap = {
@@ -29,67 +47,55 @@ export const MyBookingsModal = ({ isOpen, onClose }) => {
     };
 
     try {
-      const apiRes = await photographerApi.getBookings();
-      const realBookings = apiRes.data || [];
+      let realBookings = [];
+      if (userPhone || userEmail) {
+        const apiRes = await photographerApi.getClientBookings({ phone: userPhone, email: userEmail });
+        realBookings = apiRes.data || [];
+      }
 
-      // Start with all local device bookings
-      const mergedList = [...localList];
+      // Hợp nhất bằng Map theo mã booking chuẩn hóa để ngăn chặn tuyệt đối tình trạng nhân đôi đơn
+      const mergedMap = new Map();
 
-      // Merge server bookings into mergedList
+      localList.forEach(b => {
+        const canonicalCode = b.code || (b._id ? `BK-${b._id.slice(-6).toUpperCase()}` : `local_${Math.random()}`);
+        mergedMap.set(canonicalCode, { ...b, code: canonicalCode });
+      });
+
       realBookings.forEach(rb => {
         const rbCode = `BK-${(rb._id || '').slice(-6).toUpperCase()}`;
-        const matchIndex = mergedList.findIndex(b => 
-          (rb._id && String(rb._id) === String(b._id)) ||
-          (b.code && b.code === rbCode) ||
-          (rb.clientPhone && (b.customerPhone || b.clientPhone) && rb.clientPhone.trim() === (b.customerPhone || b.clientPhone).trim() && rb.category === b.categoryTitle)
-        );
-
         const mappedItem = {
-          _id: rb._id || (matchIndex >= 0 ? mergedList[matchIndex]._id : ''),
-          code: rbCode || (matchIndex >= 0 ? mergedList[matchIndex].code : 'BK-LOCAL'),
-          photographerId: rb.photographerId || (matchIndex >= 0 ? mergedList[matchIndex].photographerId : 'ph_default_1'),
-          photographerName: rb.photographerName || (matchIndex >= 0 ? mergedList[matchIndex].photographerName : 'Studio Đã Chọn'),
-          categoryTitle: rb.category || (matchIndex >= 0 ? mergedList[matchIndex].categoryTitle : 'Gói Chụp Ảnh'),
-          bookingDate: rb.bookingDate || (matchIndex >= 0 ? mergedList[matchIndex].bookingDate : 'Chưa xếp'),
-          timeSlot: rb.timeSlot || (matchIndex >= 0 ? mergedList[matchIndex].timeSlot : ''),
-          cityLocation: rb.location || (matchIndex >= 0 ? mergedList[matchIndex].cityLocation : 'Hà Nội'),
+          _id: rb._id,
+          code: rbCode,
+          photographerId: rb.photographerId || 'ph_default_1',
+          photographerName: rb.photographerName || 'Studio Đã Chọn',
+          categoryTitle: rb.category || 'Gói Chụp Ảnh',
+          bookingDate: rb.bookingDate || 'Chưa xếp',
+          timeSlot: rb.timeSlot || '',
+          cityLocation: rb.location || 'Hà Nội',
           detailedLocation: '',
-          customerPhone: rb.clientPhone || (matchIndex >= 0 ? mergedList[matchIndex].customerPhone : ''),
-          customerEmail: rb.clientEmail || (matchIndex >= 0 ? mergedList[matchIndex].customerEmail : ''),
+          customerPhone: rb.clientPhone || '',
+          customerEmail: rb.clientEmail || '',
           status: statusTextMap[rb.status] || rb.status || '⏳ Chờ Xác Nhận',
           createdAt: rb.createdAt || new Date().toISOString()
         };
 
-        if (matchIndex >= 0) {
-          mergedList[matchIndex] = { ...mergedList[matchIndex], ...mappedItem };
-        } else {
-          mergedList.push(mappedItem);
-        }
+        mergedMap.set(rbCode, { ...(mergedMap.get(rbCode) || {}), ...mappedItem });
       });
 
-      // Filter by current logged in user phone or email if logged in
-      let finalDisplay = mergedList;
-      if (currentUser?.phone || currentUser?.email) {
-        const userPhone = (currentUser.phone || '').replace(/\D/g, '');
-        const userEmail = (currentUser.email || '').trim().toLowerCase();
+      let finalDisplay = Array.from(mergedMap.values());
 
-        const filtered = mergedList.filter(b => {
+      if (userPhone || userEmail) {
+        finalDisplay = finalDisplay.filter(b => {
           const bPhone = (b.customerPhone || b.clientPhone || '').replace(/\D/g, '');
           const bEmail = (b.customerEmail || b.clientEmail || '').trim().toLowerCase();
           const matchP = userPhone && bPhone && (bPhone.includes(userPhone) || userPhone.includes(bPhone));
           const matchE = userEmail && bEmail && bEmail === userEmail;
-          return matchP || matchE || (!bPhone && !bEmail);
+          return matchP || matchE;
         });
-
-        // Fallback to mergedList if filtering returned empty but mergedList has bookings
-        finalDisplay = filtered.length > 0 ? filtered : mergedList;
       }
 
+      finalDisplay.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       setBookings(finalDisplay);
-      try {
-        localStorage.setItem('user_my_bookings', JSON.stringify(finalDisplay));
-      } catch (_) {}
-
     } catch (err) {
       setBookings(localList);
     }

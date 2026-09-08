@@ -398,13 +398,41 @@ const createBooking = async (data) => {
   };
 };
 
+/**
+ * Lấy danh sách lịch Booking dành riêng cho Khách Hàng (lọc nghiêm ngặt theo Phone / Email của khách)
+ */
+const getClientBookings = async (phone = '', email = '') => {
+  const cleanPhone = (phone || '').replace(/\D/g, '');
+  const cleanEmail = (email || '').trim().toLowerCase();
+
+  if (!cleanPhone && !cleanEmail) {
+    return [];
+  }
+
+  const allBookings = await Booking.find();
+  const safe = Array.isArray(allBookings) ? allBookings : [];
+
+  const matched = safe.filter(b => {
+    const bPhone = (b.clientPhone || '').replace(/\D/g, '');
+    const bEmail = (b.clientEmail || '').trim().toLowerCase();
+    const phoneMatch = cleanPhone && bPhone && (bPhone === cleanPhone || bPhone.includes(cleanPhone) || cleanPhone.includes(bPhone));
+    const emailMatch = cleanEmail && bEmail && bEmail === cleanEmail;
+    return phoneMatch || emailMatch;
+  });
+
+  matched.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return matched;
+};
+
 module.exports = {
   getPhotographerOverview,
   getPhotographerAlbums,
   getPhotographerClients,
   getPhotographerBookings,
+  getClientBookings,
   updateBookingStatus,
   updateBooking,
   deleteBooking,
   createBooking
 };
+

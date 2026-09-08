@@ -4,6 +4,7 @@ const photographerController = require('../controllers/photographerController');
 
 // Endpoint công khai để khách đặt lịch
 router.post('/bookings', photographerController.createBooking);
+router.get('/my-bookings', photographerController.getClientBookings);
 
 // Endpoints dành cho Nhiếp ảnh gia xem dữ liệu của mình
 router.get('/overview', photographerController.getOverview);

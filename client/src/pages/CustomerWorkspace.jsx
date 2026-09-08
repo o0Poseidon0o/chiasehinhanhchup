@@ -90,13 +90,28 @@ export const CustomerWorkspace = () => {
       let localBookings = [];
       try {
         const saved = localStorage.getItem('user_my_bookings');
-        if (saved) localBookings = JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            // Lọc nghiêm ngặt: chỉ giữ đơn thuộc về khách hàng hiện tại
+            localBookings = parsed.filter(b => {
+              const bPhone = (b.customerPhone || b.clientPhone || '').replace(/\D/g, '');
+              const bEmail = (b.customerEmail || b.clientEmail || '').trim().toLowerCase();
+              const phoneMatch = userPhone && bPhone && (bPhone.includes(userPhone) || userPhone.includes(bPhone));
+              const emailMatch = userEmail && bEmail && bEmail === userEmail;
+              return phoneMatch || emailMatch;
+            });
+          }
+        }
       } catch (_) {}
 
       let realBookings = [];
       try {
-        const res = await photographerApi.getBookings();
-        realBookings = res.data || [];
+        // Chỉ lấy các đơn của khách hàng này từ backend theo số điện thoại hoặc email
+        if (userPhone || userEmail) {
+          const res = await photographerApi.getClientBookings({ phone: userPhone, email: userEmail });
+          realBookings = res.data || [];
+        }
       } catch (_) {}
 
       const statusMap = {
@@ -106,21 +121,21 @@ export const CustomerWorkspace = () => {
         pending: '⏳ Chờ Xác Nhận'
       };
 
+      // Dùng Map với key là Mã Booking (BK-XXXXXX) chuẩn hóa để không bao giờ bị nhân đôi thẻ
       const mergedMap = new Map();
 
       // Nạp local bookings trước
       localBookings.forEach(b => {
-        const key = b._id || b.code || `local_${Math.random()}`;
-        mergedMap.set(key, b);
+        const canonicalCode = b.code || (b._id ? `BK-${b._id.slice(-6).toUpperCase()}` : `local_${Math.random()}`);
+        mergedMap.set(canonicalCode, { ...b, code: canonicalCode });
       });
 
-      // Hợp nhất server bookings
+      // Hợp nhất server bookings (server data ghi đè trạng thái mới nhất cho cùng mã booking)
       realBookings.forEach(rb => {
         const rbCode = `BK-${(rb._id || '').slice(-6).toUpperCase()}`;
-        const key = rb._id || rbCode;
 
         const mappedItem = {
-          _id: rb._id || key,
+          _id: rb._id,
           code: rbCode,
           photographerId: rb.photographerId || 'ph_default',
           photographerName: rb.photographerName || 'Studio Photodate',
@@ -137,26 +152,21 @@ export const CustomerWorkspace = () => {
           createdAt: rb.createdAt || new Date().toISOString()
         };
 
-        mergedMap.set(key, { ...(mergedMap.get(key) || {}), ...mappedItem });
+        mergedMap.set(rbCode, { ...(mergedMap.get(rbCode) || {}), ...mappedItem });
       });
 
       let allMergedList = Array.from(mergedMap.values());
 
-      // Lọc booking thuộc về khách hàng này
-      let finalBookings = allMergedList;
+      // Lọc booking thuộc về khách hàng này một cách nghiêm ngặt (không bao giờ lộ đơn người khác)
+      let finalBookings = [];
       if (userPhone || userEmail) {
-        const userMatched = allMergedList.filter(b => {
+        finalBookings = allMergedList.filter(b => {
           const bPhone = (b.customerPhone || b.clientPhone || '').replace(/\D/g, '');
           const bEmail = (b.customerEmail || b.clientEmail || '').trim().toLowerCase();
           const phoneMatch = userPhone && bPhone && (bPhone.includes(userPhone) || userPhone.includes(bPhone));
           const emailMatch = userEmail && bEmail && bEmail === userEmail;
           return phoneMatch || emailMatch;
         });
-
-        // Nếu lọc theo số điện thoại/email tìm thấy đơn thì dùng kết quả lọc
-        if (userMatched.length > 0) {
-          finalBookings = userMatched;
-        }
       }
 
       // Sắp xếp booking mới nhất lên đầu

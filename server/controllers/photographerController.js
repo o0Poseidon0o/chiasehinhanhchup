@@ -108,13 +108,30 @@ const createBooking = asyncHandler(async (req, res) => {
   res.status(201).json(result);
 });
 
+/**
+ * @desc    Lấy danh sách lịch booking của riêng Khách Hàng (lọc theo phone / email)
+ * @route   GET /api/photographer/my-bookings
+ * @access  Public
+ */
+const getClientBookings = asyncHandler(async (req, res) => {
+  const { phone, email } = req.query;
+  const bookings = await photographerService.getClientBookings(phone, email);
+  res.status(200).json({
+    success: true,
+    count: bookings.length,
+    data: bookings
+  });
+});
+
 module.exports = {
   getOverview,
   getAlbums,
   getClients,
   getBookings,
+  getClientBookings,
   updateBookingStatus,
   updateBooking,
   deleteBooking,
   createBooking
 };
+

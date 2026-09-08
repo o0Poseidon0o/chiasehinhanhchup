@@ -330,6 +330,7 @@ export const BookingPage = () => {
       const bookingCode = `BK-${(createdBooking._id || '').slice(-6).toUpperCase() || Math.floor(100000 + Math.random() * 900000)}`;
 
       const receiptData = {
+        _id: createdBooking._id || '',
         code: bookingCode,
         photographerId: selectedPhotographer?._id || 'ph_default_1',
         photographerName: selectedPhotographer?.name || 'Hệ thống tự đề xuất Studio phù hợp',
