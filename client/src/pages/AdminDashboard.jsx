@@ -33,7 +33,8 @@ import {
   Camera,
   Sparkles,
   Calendar,
-  Star
+  Star,
+  Tag
 } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
 import { getPublicBaseUrl } from '../utils/formatters';
