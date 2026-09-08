@@ -22,10 +22,14 @@ import {
   Unlock,
   FolderKanban,
   CheckCircle2,
-  Users
+  Users,
+  ShieldCheck,
+  ShieldAlert,
+  Sparkles
 } from 'lucide-react';
 import { userApi } from '../../api/userApi';
 import { albumApi } from '../../api/albumApi';
+import { settingApi } from '../../api/settingApi';
 import { formatDate } from '../../utils/formatters';
 
 export const AdminPhotographersHub = () => {
@@ -34,6 +38,11 @@ export const AdminPhotographersHub = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
+
+  // Auto-approval mode & Bulk actions
+  const [autoApprovePhotographer, setAutoApprovePhotographer] = useState(true);
+  const [updatingApprovalMode, setUpdatingApprovalMode] = useState(false);
+  const [isBulkApproving, setIsBulkApproving] = useState(false);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'active' | 'rejected'
@@ -66,12 +75,16 @@ export const AdminPhotographersHub = () => {
     try {
       setLoading(true);
       setError(null);
-      const [usersRes, albumsRes] = await Promise.all([
+      const [usersRes, albumsRes, settingsRes] = await Promise.all([
         userApi.getAll({ role: 'photographer' }),
-        albumApi.getAll()
+        albumApi.getAll(),
+        settingApi.getContactSettings().catch(() => null)
       ]);
       setPhotographers(usersRes.data || []);
       setAlbums(albumsRes.data || []);
+      if (settingsRes?.data?.autoApprovePhotographer !== undefined) {
+        setAutoApprovePhotographer(settingsRes.data.autoApprovePhotographer);
+      }
     } catch (err) {
       setError(err.message || 'Không thể tải danh sách nhiếp ảnh gia.');
     } finally {
@@ -82,6 +95,47 @@ export const AdminPhotographersHub = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Bật/Tắt chế độ duyệt tự do (Auto-Approve) cho Nhiếp ảnh gia
+  const handleToggleApprovalMode = async () => {
+    try {
+      setUpdatingApprovalMode(true);
+      const nextVal = !autoApprovePhotographer;
+      await settingApi.updateContactSettings({ autoApprovePhotographer: nextVal });
+      setAutoApprovePhotographer(nextVal);
+      setNotice({
+        type: 'success',
+        message: nextVal
+          ? '🟢 Đã MỞ CHẾ ĐỘ TRẢI NGHIỆM TỰ DO! Nhiếp ảnh gia đăng ký mới sẽ được kích hoạt ngay lập tức mà không cần chờ duyệt.'
+          : '🔒 Đã BẬT CHẾ ĐỘ KIỂM DUYỆT! Tài khoản Nhiếp ảnh gia đăng ký mới sẽ ở trạng thái Chờ Duyệt và cần Admin phê duyệt.'
+      });
+    } catch (err) {
+      setNotice({ type: 'error', message: err.message || 'Lỗi khi thay đổi chế độ kiểm duyệt.' });
+    } finally {
+      setUpdatingApprovalMode(false);
+    }
+  };
+
+  // Kích hoạt nhanh tất cả hồ sơ Pending
+  const handleApproveAllPending = async () => {
+    if (pendingList.length === 0) return;
+    if (!window.confirm(`Bạn có chắc chắn muốn kích hoạt ngay lập tức toàn bộ ${pendingList.length} hồ sơ Nhiếp ảnh gia đang chờ duyệt không?`)) {
+      return;
+    }
+    try {
+      setIsBulkApproving(true);
+      const res = await settingApi.approveAllPendingPhotographers();
+      setNotice({
+        type: 'success',
+        message: res.message || `Đã kích hoạt thành công ${pendingList.length} tài khoản!`
+      });
+      await fetchData();
+    } catch (err) {
+      setNotice({ type: 'error', message: err.message || 'Không thể kích hoạt danh sách chờ duyệt.' });
+    } finally {
+      setIsBulkApproving(false);
+    }
+  };
 
   // Phê duyệt hồ sơ
   const handleApprove = async (id, name) => {
@@ -208,6 +262,126 @@ export const AdminPhotographersHub = () => {
 
   return (
     <div className="space-y-8 animate-fade-in">
+      {/* MASTER CONTROL BANNER: BẬT / TẮT DUYỆT TÀI KHOẢN NHIẾP ẢNH GIA */}
+      <div className={`relative overflow-hidden rounded-3xl border-2 transition-all shadow-2xl p-6 sm:p-7 ${
+        autoApprovePhotographer
+          ? 'bg-gradient-to-r from-emerald-950/40 via-[#131a22] to-[#12151e] border-emerald-500/50 shadow-emerald-950/30'
+          : 'bg-gradient-to-r from-amber-950/40 via-[#181d24] to-[#12151e] border-amber-500/50 shadow-amber-950/30'
+      }`}>
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div className="space-y-2 max-w-2xl">
+            <div className="flex items-center space-x-3">
+              <div className={`p-2.5 rounded-2xl flex items-center justify-center shadow-lg ${
+                autoApprovePhotographer 
+                  ? 'bg-emerald-500 text-emerald-950 ring-4 ring-emerald-500/20' 
+                  : 'bg-amber-500 text-amber-950 ring-4 ring-amber-500/20'
+              }`}>
+                {autoApprovePhotographer ? (
+                  <ShieldCheck className="w-6 h-6" />
+                ) : (
+                  <ShieldAlert className="w-6 h-6" />
+                )}
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className={`text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                    autoApprovePhotographer 
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                      : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                  }`}>
+                    {autoApprovePhotographer ? '🟢 Trải Nghiệm Tự Do' : '🔒 Kiểm Duyệt Nghiêm Ngặt'}
+                  </span>
+                  <span className="text-[11px] text-gray-400 font-medium">Chính Sách Đăng Ký NAG</span>
+                </div>
+                <h3 className="text-xl font-black text-white mt-1">
+                  {autoApprovePhotographer 
+                    ? 'Chế Độ Mở Cho Phép Trải Nghiệm Tự Do' 
+                    : 'Chế Độ Khóa Phê Duyệt Hồ Sơ Nghiêm Ngặt'}
+                </h3>
+              </div>
+            </div>
+
+            <p className="text-sm text-gray-300 leading-relaxed pl-1">
+              {autoApprovePhotographer ? (
+                <span>
+                  <strong className="text-emerald-400 font-semibold">Đang Mở:</strong> Tất cả Nhiếp ảnh gia đăng ký mới được <strong className="text-white">kích hoạt tài khoản ngay lập tức</strong> để trải nghiệm đăng tải album, quản lý khách hàng và nhận lịch chụp mà không cần chờ Admin phê duyệt.
+                </span>
+              ) : (
+                <span>
+                  <strong className="text-amber-400 font-semibold">Đang Khóa:</strong> Tài khoản Nhiếp ảnh gia mới sẽ ở trạng thái <strong className="text-amber-300">Chờ Phê Duyệt</strong>. Nhiếp ảnh gia bắt buộc nhập Link Portfolio và chỉ có thể đăng nhập sau khi được Master Admin kiểm tra và duyệt hồ sơ.
+                </span>
+              )}
+            </p>
+
+            <div className="text-[12px] text-gray-400 flex items-center space-x-2 pl-1 pt-1">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>
+                {autoApprovePhotographer 
+                  ? 'Khi đã có đủ lượng Nhiếp ảnh gia trải nghiệm, bạn có thể gạt nút tắt để khóa lại bất cứ lúc nào.' 
+                  : 'Bạn có thể mở lại chế độ tự do để thu hút thêm cộng tác viên NAG tham gia hệ thống.'}
+              </span>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+            {/* Bulk Approve Pending button if any exists */}
+            {pendingList.length > 0 && (
+              <button
+                type="button"
+                onClick={handleApproveAllPending}
+                disabled={isBulkApproving}
+                className="px-4 py-3 rounded-2xl font-bold text-xs sm:text-sm bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-amber-950 shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
+              >
+                {isBulkApproving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4" />
+                )}
+                <span>Duyệt Ngay Tất Cả ({pendingList.length}) Chờ</span>
+              </button>
+            )}
+
+            {/* Main Toggle Switch */}
+            <div className="flex items-center space-x-3 bg-[#0f1118]/80 backdrop-blur border border-[#2b3244] rounded-2xl p-2 sm:p-2.5">
+              <div className="text-right hidden sm:block pr-1">
+                <div className="text-xs font-bold text-white">
+                  {autoApprovePhotographer ? 'Tự Động Duyệt' : 'Khóa Phê Duyệt'}
+                </div>
+                <div className="text-[10px] text-gray-400">
+                  {autoApprovePhotographer ? 'Bấm để khóa lại' : 'Bấm để mở tự do'}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleToggleApprovalMode}
+                disabled={updatingApprovalMode}
+                title={autoApprovePhotographer ? 'Bấm để khóa phê duyệt' : 'Bấm để mở trải nghiệm tự do'}
+                className={`relative inline-flex h-8 w-16 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-[#141720] ${
+                  autoApprovePhotographer ? 'bg-emerald-500' : 'bg-gray-700'
+                } ${updatingApprovalMode ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <span className="sr-only">Toggle approval mode</span>
+                <span
+                  className={`pointer-events-none inline-flex h-7 w-7 transform items-center justify-center rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                    autoApprovePhotographer ? 'translate-x-8 text-emerald-600' : 'translate-x-0 text-gray-600'
+                  }`}
+                >
+                  {updatingApprovalMode ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : autoApprovePhotographer ? (
+                    <Unlock className="w-3.5 h-3.5" />
+                  ) : (
+                    <Lock className="w-3.5 h-3.5" />
+                  )}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 1. TOP STATS BAR */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-[#141720] border border-[#242938] rounded-2xl p-5 space-y-1.5 shadow-lg">

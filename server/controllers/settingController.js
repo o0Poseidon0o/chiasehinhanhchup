@@ -44,7 +44,8 @@ const updateContactSettings = asyncHandler(async (req, res) => {
     enableMessenger,
     supportPillText,
     supportPillSubtext,
-    enableSupportPill
+    enableSupportPill,
+    autoApprovePhotographer
   } = req.body;
 
   const updateData = {
@@ -72,6 +73,7 @@ const updateContactSettings = asyncHandler(async (req, res) => {
   if (supportPillText !== undefined) updateData.supportPillText = String(supportPillText).trim();
   if (supportPillSubtext !== undefined) updateData.supportPillSubtext = String(supportPillSubtext).trim();
   if (enableSupportPill !== undefined) updateData.enableSupportPill = Boolean(enableSupportPill);
+  if (autoApprovePhotographer !== undefined) updateData.autoApprovePhotographer = Boolean(autoApprovePhotographer);
 
   const updated = await Setting.findOneAndUpdate(
     { key: 'contact_settings' },
@@ -86,7 +88,32 @@ const updateContactSettings = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * @desc    Kích hoạt nhanh toàn bộ tài khoản Nhiếp ảnh gia đang chờ duyệt
+ * @route   POST /api/settings/approve-all-pending-photographers
+ * @access  Master Admin
+ */
+const approveAllPendingPhotographers = asyncHandler(async (req, res) => {
+  const User = require('../models/User');
+  const pendingUsers = await User.find({ role: 'photographer', status: 'pending' });
+  const count = pendingUsers.length;
+
+  if (count > 0) {
+    for (const u of pendingUsers) {
+      u.status = 'active';
+      await u.save();
+    }
+  }
+
+  res.status(200).json({
+    success: true,
+    count,
+    message: `Đã kích hoạt thành công ${count} tài khoản Nhiếp ảnh gia đang chờ duyệt!`
+  });
+});
+
 module.exports = {
   getContactSettings,
-  updateContactSettings
+  updateContactSettings,
+  approveAllPendingPhotographers
 };

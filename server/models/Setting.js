@@ -24,6 +24,9 @@ const settingSchema = new mongoose.Schema({
   supportPillSubtext: { type: String, default: 'Trả lời tức thì • 24/7' },
   enableSupportPill: { type: Boolean, default: true },
 
+  // Cấu hình chế độ kiểm duyệt tài khoản Nhiếp ảnh gia (Mặc định: true = Mở tự do trải nghiệm, không bắt chờ duyệt)
+  autoApprovePhotographer: { type: Boolean, default: true },
+
   updatedAt: { type: Date, default: Date.now }
 });
 

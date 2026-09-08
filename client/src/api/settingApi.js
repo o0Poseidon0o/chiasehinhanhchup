@@ -63,5 +63,19 @@ export const settingApi = {
     } catch (error) {
       throw new Error(extractErrorMessage(error, 'Không thể cập nhật cấu hình liên hệ.'));
     }
+  },
+
+  /**
+   * Kích hoạt nhanh toàn bộ tài khoản Nhiếp ảnh gia đang chờ duyệt (Master Admin)
+   */
+  async approveAllPendingPhotographers() {
+    try {
+      const response = await api.post('/approve-all-pending-photographers', {}, {
+        headers: getAdminHeaders(),
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không thể kích hoạt tài khoản.'));
+    }
   }
 };

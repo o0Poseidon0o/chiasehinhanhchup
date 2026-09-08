@@ -26,6 +26,7 @@ const DEFAULT_SETTINGS = {
   supportPillText: 'Tư vấn hỗ trợ',
   supportPillSubtext: 'Trả lời tức thì • 24/7',
   enableSupportPill: true,
+  autoApprovePhotographer: true,
   updatedAt: new Date().toISOString()
 };
 

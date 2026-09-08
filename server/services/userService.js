@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const User = require('../models/User');
+const Setting = require('../models/Setting');
 
 /**
  * Helper mã hóa mật khẩu an toàn
@@ -53,17 +54,26 @@ const registerUser = async (data) => {
     throw err;
   }
 
-  // Nếu là Nhiếp ảnh gia -> Bắt buộc có link Portfolio để Admin kiểm duyệt
+  // Kiểm tra cấu hình chế độ kiểm duyệt từ Setting
+  let autoApprovePhotographer = true;
+  try {
+    const setting = await Setting.findOne({ key: 'contact_settings' });
+    if (setting && typeof setting.autoApprovePhotographer === 'boolean') {
+      autoApprovePhotographer = setting.autoApprovePhotographer;
+    }
+  } catch (_) {}
+
+  // Nếu là Nhiếp ảnh gia -> Chỉ bắt buộc có link Portfolio khi chế độ kiểm duyệt BẬT (autoApprovePhotographer === false)
   if (role === 'photographer') {
-    if (!studioInfo.portfolioUrl || !studioInfo.portfolioUrl.trim()) {
+    if (!autoApprovePhotographer && (!studioInfo.portfolioUrl || !studioInfo.portfolioUrl.trim())) {
       const err = new Error('Nhiếp ảnh gia cần cung cấp Link Portfolio / Facebook / Instagram để Ban Quản Trị kiểm duyệt.');
       err.statusCode = 400;
       throw err;
     }
   }
 
-  // Trạng thái: Photographer -> 'pending' (Chờ duyệt); Client/Khách -> 'active'
-  const userStatus = role === 'photographer' ? 'pending' : 'active';
+  // Trạng thái: Nếu autoApprovePhotographer = true -> Kích hoạt ngay ('active'); Ngược lại -> 'pending' (Chờ duyệt)
+  const userStatus = (role === 'photographer' && !autoApprovePhotographer) ? 'pending' : 'active';
 
   const user = new User({
     name: name.trim(),
@@ -77,7 +87,7 @@ const registerUser = async (data) => {
       startingPrice: studioInfo.startingPrice ? studioInfo.startingPrice.trim() : '',
       badge: studioInfo.badge ? studioInfo.badge.trim() : 'Verified Pro',
       coverImage: studioInfo.coverImage ? studioInfo.coverImage.trim() : '',
-      portfolioUrl: studioInfo.portfolioUrl ? studioInfo.portfolioUrl.trim() : '',
+      portfolioUrl: studioInfo.portfolioUrl ? studioInfo.portfolioUrl.trim() : 'https://photodate.vn',
       experience: studioInfo.experience ? studioInfo.experience.trim() : '',
       equipment: studioInfo.equipment ? studioInfo.equipment.trim() : '',
       styles: studioInfo.styles ? studioInfo.styles.trim() : '',
@@ -92,8 +102,11 @@ const registerUser = async (data) => {
 
   return {
     user: formatUserResponse(user),
+    autoApprove: autoApprovePhotographer,
     message: role === 'photographer' 
-      ? 'Đăng ký thành công! Hồ sơ Nhiếp ảnh gia của bạn đã được chuyển tới Ban Quản Trị để kiểm duyệt trong 24h.' 
+      ? (autoApprovePhotographer 
+          ? 'Đăng ký thành công! Chế độ trải nghiệm đang mở, tài khoản Nhiếp ảnh gia của bạn đã được kích hoạt ngay.'
+          : 'Đăng ký thành công! Hồ sơ Nhiếp ảnh gia của bạn đã được chuyển tới Ban Quản Trị để kiểm duyệt trong 24h.')
       : 'Đăng ký tài khoản thành công!'
   };
 };
@@ -164,9 +177,23 @@ const loginUser = async ({ emailOrPhone, password }) => {
 
   // Kiểm tra trạng thái tài khoản
   if (user.status === 'pending') {
-    const err = new Error('Hồ sơ Nhiếp ảnh gia của bạn đang chờ Ban Quản Trị phê duyệt. Vui lòng liên hệ Admin qua hotline 0777908179 nếu bạn cần hỗ trợ gấp.');
-    err.statusCode = 403;
-    throw err;
+    let autoApprovePhotographer = false;
+    try {
+      const setting = await Setting.findOne({ key: 'contact_settings' });
+      if (setting && setting.autoApprovePhotographer) {
+        autoApprovePhotographer = true;
+      }
+    } catch (_) {}
+
+    if (autoApprovePhotographer) {
+      // Chế độ trải nghiệm tự do đang mở -> Kích hoạt ngay cho NAG đăng nhập!
+      user.status = 'active';
+      await user.save();
+    } else {
+      const err = new Error('Hồ sơ Nhiếp ảnh gia của bạn đang chờ Ban Quản Trị phê duyệt. Vui lòng liên hệ Admin qua hotline 0777908179 nếu bạn cần hỗ trợ gấp.');
+      err.statusCode = 403;
+      throw err;
+    }
   }
 
   if (user.status === 'rejected') {

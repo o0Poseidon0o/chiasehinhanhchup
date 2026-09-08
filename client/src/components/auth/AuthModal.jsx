@@ -125,10 +125,21 @@ export const AuthModal = () => {
       const res = await register(payload);
 
       if (role === 'photographer') {
-        setPendingNotice({
-          name: registerData.name,
-          email: registerData.email
-        });
+        if (res.user?.status === 'active' || res.autoApprove) {
+          // Tự động đăng nhập cho Nhiếp ảnh gia vào thẳng Studio Workspace để trải nghiệm
+          await login({
+            emailOrPhone: registerData.email,
+            password: registerData.password,
+            role: 'photographer'
+          });
+          closeAuthModal();
+          navigate('/app');
+        } else {
+          setPendingNotice({
+            name: registerData.name,
+            email: registerData.email
+          });
+        }
       } else {
         // Tự động đăng nhập cho khách hàng
         await login({
@@ -491,13 +502,12 @@ export const AuthModal = () => {
                     {/* Link Portfolio */}
                     <div className="space-y-1">
                       <label className="block text-[11px] font-semibold text-gray-300">
-                        Link Portfolio / Facebook / Instagram tác phẩm <span className="text-red-400">*</span>
+                        Link Portfolio / Facebook / Instagram tác phẩm <span className="text-gray-400 font-normal text-[10px]">(Tùy chọn)</span>
                       </label>
                       <div className="relative">
                         <Globe className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                           type="url"
-                          required
                           value={registerData.studioInfo.portfolioUrl}
                           onChange={(e) => setRegisterData({
                             ...registerData,
