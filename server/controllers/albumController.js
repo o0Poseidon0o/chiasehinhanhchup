@@ -227,7 +227,7 @@ const proxyImage = asyncHandler(async (req, res) => {
  * @access  Public
  */
 const verifyAdminPassword = asyncHandler(async (req, res) => {
-  const { adminPassword } = req.body;
+  const adminPassword = (req.body.adminPassword || req.body.password || '').trim();
   const result = await albumService.verifyAdminPassword(adminPassword);
   res.status(200).json(result);
 });

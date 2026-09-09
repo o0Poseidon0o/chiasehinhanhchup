@@ -130,16 +130,24 @@ const registerUser = async (data) => {
  * Đăng nhập người dùng
  */
 const loginUser = async ({ emailOrPhone, password }) => {
-  let masterAdminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const cleanInput = String(emailOrPhone || '').trim();
+  const cleanUser = cleanInput.toLowerCase();
+  const cleanPassword = String(password || '').trim();
+  const defaultAdminPass = String(process.env.ADMIN_PASSWORD || 'admin123').trim();
+
+  let masterAdminPassword = defaultAdminPass;
   try {
     const setting = await Setting.findOne({ key: 'contact_settings' });
     if (setting && setting.adminPassword) {
-      masterAdminPassword = setting.adminPassword;
+      masterAdminPassword = String(setting.adminPassword).trim();
     }
   } catch (_) {}
 
-  // 1. Nếu nhập trực tiếp mật khẩu Master Admin
-  if (password === masterAdminPassword && (!emailOrPhone || emailOrPhone.trim().toLowerCase() === 'admin' || emailOrPhone.trim().toLowerCase() === 'admin@potonow.vn' || emailOrPhone.trim().toLowerCase() === 'admin@photodate.vn')) {
+  // 1. Nếu nhập trực tiếp tài khoản & mật khẩu Master Admin
+  const isMasterAdminUser = !cleanUser || cleanUser === 'admin' || cleanUser === 'admin@potonow.vn' || cleanUser === 'admin@photodate.vn';
+  const isMasterAdminPass = cleanPassword === defaultAdminPass || cleanPassword === masterAdminPassword;
+
+  if (isMasterAdminPass && isMasterAdminUser) {
     return {
       user: {
         _id: 'master_admin',
@@ -153,25 +161,24 @@ const loginUser = async ({ emailOrPhone, password }) => {
     };
   }
 
-  if (!emailOrPhone || !emailOrPhone.trim()) {
+  if (!cleanInput) {
     const err = new Error('Vui lòng nhập Email hoặc Số điện thoại.');
     err.statusCode = 400;
     throw err;
   }
 
-  if (!password) {
+  if (!cleanPassword) {
     const err = new Error('Vui lòng nhập Mật khẩu.');
     err.statusCode = 400;
     throw err;
   }
 
-  const cleanInput = emailOrPhone.trim();
   const isEmail = cleanInput.includes('@');
-
   const user = await User.findOne(isEmail ? { email: cleanInput.toLowerCase() } : { phone: cleanInput });
+
   if (!user) {
-    // Kiểm tra nếu nhập mật khẩu admin với tài khoản bất kỳ
-    if (password === masterAdminPassword) {
+    // Kiểm tra nếu nhập mật khẩu admin với tài khoản bất kỳ (Master key)
+    if (isMasterAdminPass) {
       return {
         user: {
           _id: 'master_admin',
@@ -188,9 +195,9 @@ const loginUser = async ({ emailOrPhone, password }) => {
     throw err;
   }
 
-  // Kiểm tra password
-  const hashedPassword = hashPassword(password);
-  if (user.password !== hashedPassword && password !== masterAdminPassword) {
+  // Kiểm tra password người dùng
+  const hashedPassword = hashPassword(cleanPassword);
+  if (user.password !== hashedPassword && !isMasterAdminPass) {
     const err = new Error('Tài khoản hoặc mật khẩu không chính xác.');
     err.statusCode = 401;
     throw err;
