@@ -15,7 +15,9 @@ import {
   Clock, 
   Tag, 
   Sparkles,
-  Compass
+  Compass,
+  Play,
+  Video
 } from 'lucide-react';
 import { locationGuideApi } from '../../api/locationGuideApi';
 
@@ -50,6 +52,7 @@ export const AdminLocationGuidesManagement = () => {
     ticketPrice: 'Miễn phí',
     suitableConcepts: '',
     tips: '',
+    videoUrl: '',
     isFeatured: false,
     order: 1
   });
@@ -83,6 +86,7 @@ export const AdminLocationGuidesManagement = () => {
       ticketPrice: 'Miễn phí',
       suitableConcepts: '',
       tips: '',
+      videoUrl: '',
       isFeatured: false,
       order: locations.length + 1
     });
@@ -102,6 +106,7 @@ export const AdminLocationGuidesManagement = () => {
       ticketPrice: loc.ticketPrice || 'Miễn phí',
       suitableConcepts: Array.isArray(loc.suitableConcepts) ? loc.suitableConcepts.join(', ') : (loc.suitableConcepts || ''),
       tips: loc.tips || '',
+      videoUrl: loc.videoUrl || '',
       isFeatured: Boolean(loc.isFeatured),
       order: Number(loc.order) || 1
     });
@@ -294,6 +299,12 @@ export const AdminLocationGuidesManagement = () => {
                     <span className="px-2 py-0.5 rounded-md bg-amber-500/30 border border-amber-500/40 text-[10px] text-amber-300 font-bold">
                       {loc.regionName || loc.region}
                     </span>
+                    {loc.videoUrl && (
+                      <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-rose-500/30 border border-rose-500/40 text-[10px] text-rose-300 font-bold backdrop-blur-md">
+                        <Play className="w-2.5 h-2.5 fill-rose-300" />
+                        <span>Video Review</span>
+                      </span>
+                    )}
                   </div>
 
                   <button
@@ -492,6 +503,28 @@ export const AdminLocationGuidesManagement = () => {
                   placeholder="Chọn trang phục màu trắng/be, chụp ngược sáng đón bình minh..."
                   className="w-full bg-[#1a1714] border border-[#2c2620] focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-white outline-none"
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-gray-300">
+                    Link Video Review / TikTok / YouTube (URL)
+                  </label>
+                  <span className="text-[11px] text-amber-400 font-medium">Hỗ trợ TikTok, YouTube & Shorts</span>
+                </div>
+                <div className="relative">
+                  <Video className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="url"
+                    value={formData.videoUrl}
+                    onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+                    placeholder="https://www.youtube.com/watch?v=... hoặc https://www.tiktok.com/@.../video/..."
+                    className="w-full bg-[#1a1714] border border-[#2c2620] focus:border-amber-500 rounded-xl pl-10 pr-3.5 py-2.5 text-white outline-none font-mono text-xs"
+                  />
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  Gắn video clip thực tế để khách hàng xem góc quay, mẹo tạo dáng hoặc flycam trước khi đặt lịch chụp.
+                </p>
               </div>
 
               <div className="flex items-center justify-between pt-2">

@@ -19,6 +19,8 @@ const LocationGuideSchema = new mongoose.Schema({
   ticketPrice: { type: String, default: 'Miễn phí', trim: true },
   suitableConcepts: { type: [String], default: [] },
   tips: { type: String, default: '', trim: true },
+  videoUrl: { type: String, default: '', trim: true },
+  videoType: { type: String, default: '', trim: true },
   isFeatured: { type: Boolean, default: false },
   order: { type: Number, default: 1 },
   createdAt: { type: Date, default: Date.now }

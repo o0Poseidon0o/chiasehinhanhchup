@@ -12,9 +12,19 @@ import {
   Compass, 
   Star,
   CheckCircle2,
-  Calendar
+  Calendar,
+  Play,
+  Video,
+  ExternalLink
 } from 'lucide-react';
 import { locationGuideApi } from '../../api/locationGuideApi';
+
+const getYouTubeEmbedUrl = (url) => {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : null;
+};
 
 const REGION_TABS = [
   { id: 'all', label: 'Toàn Quốc' },
@@ -30,6 +40,7 @@ export const LocationGuidesSection = () => {
   const [activeRegion, setActiveRegion] = useState('all');
   const [loading, setLoading] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [modalTab, setModalTab] = useState('photo'); // 'photo' | 'video'
 
   useEffect(() => {
     fetchLocations();
@@ -143,6 +154,16 @@ export const LocationGuidesSection = () => {
                     {loc.regionName || 'Việt Nam'}
                   </span>
                 </div>
+
+                {/* Video Pill Badge */}
+                {loc.videoUrl && (
+                  <div className="absolute bottom-3 right-3">
+                    <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-rose-600/90 text-white text-[10px] font-extrabold shadow-lg backdrop-blur-md">
+                      <Play className="w-2.5 h-2.5 fill-white" />
+                      <span>{loc.videoUrl.includes('tiktok.com') ? 'TikTok' : 'Video'}</span>
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Card Body */}
@@ -242,20 +263,102 @@ export const LocationGuidesSection = () => {
               </h3>
             </div>
 
-            {/* Cover Image in modal */}
-            <div className="relative h-64 sm:h-80 rounded-2xl overflow-hidden bg-black/50">
-              <img
-                src={selectedLocation.image}
-                alt={selectedLocation.name}
-                className="w-full h-full object-cover"
-              />
-              {selectedLocation.ticketPrice && (
-                <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-white text-xs font-semibold flex items-center space-x-1.5">
-                  <Tag className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Giá vé: {selectedLocation.ticketPrice}</span>
+            {/* Media View Tab (Nếu có video) */}
+            {selectedLocation.videoUrl ? (
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2 border-b border-[#232938] pb-2">
+                  <button
+                    type="button"
+                    onClick={() => setModalTab('photo')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center space-x-1.5 ${
+                      modalTab === 'photo'
+                        ? 'bg-amber-500 text-amber-950 shadow-md'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <span>🖼️ Ảnh Góc Máy</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModalTab('video')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center space-x-1.5 ${
+                      modalTab === 'video'
+                        ? 'bg-rose-600 text-white shadow-md'
+                        : 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/10'
+                    }`}
+                  >
+                    <Play className="w-3 h-3 fill-current" />
+                    <span>🎬 Video Review / TikTok</span>
+                  </button>
                 </div>
-              )}
-            </div>
+
+                {modalTab === 'photo' ? (
+                  <div className="relative h-64 sm:h-80 rounded-2xl overflow-hidden bg-black/50">
+                    <img
+                      src={selectedLocation.image}
+                      alt={selectedLocation.name}
+                      className="w-full h-full object-cover"
+                    />
+                    {selectedLocation.ticketPrice && (
+                      <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-white text-xs font-semibold flex items-center space-x-1.5">
+                        <Tag className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Giá vé: {selectedLocation.ticketPrice}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {getYouTubeEmbedUrl(selectedLocation.videoUrl) ? (
+                      <div className="relative aspect-video rounded-2xl overflow-hidden bg-black border border-white/10 shadow-xl">
+                        <iframe
+                          src={getYouTubeEmbedUrl(selectedLocation.videoUrl)}
+                          title={`Video Review ${selectedLocation.name}`}
+                          className="w-full h-full"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-2xl bg-[#0f1118] border border-rose-500/30 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#25f4ee] to-[#fe2c55] flex items-center justify-center text-black font-black text-xs">
+                            TikTok
+                          </div>
+                          <div>
+                            <span className="block text-xs font-bold text-white">Video Review Góc Máy Thực Tế</span>
+                            <span className="text-[11px] text-gray-400">Xem clip sống ảo, hậu trường & hướng dẫn tạo dáng</span>
+                          </div>
+                        </div>
+                        <a
+                          href={selectedLocation.videoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#fe2c55] to-[#25f4ee] text-black font-extrabold text-xs flex items-center space-x-1.5 shadow-md hover:opacity-90 transition-opacity whitespace-nowrap"
+                        >
+                          <span>Mở Video Ngay</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Cover Image in modal when no video */
+              <div className="relative h-64 sm:h-80 rounded-2xl overflow-hidden bg-black/50">
+                <img
+                  src={selectedLocation.image}
+                  alt={selectedLocation.name}
+                  className="w-full h-full object-cover"
+                />
+                {selectedLocation.ticketPrice && (
+                  <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-white text-xs font-semibold flex items-center space-x-1.5">
+                    <Tag className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Giá vé: {selectedLocation.ticketPrice}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Content Details */}
             <div className="space-y-4 text-sm">

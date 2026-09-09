@@ -18,6 +18,8 @@ const DEFAULT_LOCATIONS = [
     ticketPrice: 'Miễn phí',
     suitableConcepts: ['Áo dài truyền thống', 'Vintage hoài cổ', 'Street Style Hà Nội', 'Film tone'],
     tips: 'Nên chọn trang phục tone trắng, be hoặc đỏ nhung cổ điển. Chụp lúc sáng sớm vắng vẻ không vướng người.',
+    videoUrl: 'https://www.youtube.com/watch?v=F52kQkC_sio',
+    videoType: 'youtube',
     isFeatured: true,
     order: 1,
     createdAt: new Date().toISOString()
@@ -35,6 +37,8 @@ const DEFAULT_LOCATIONS = [
     ticketPrice: 'Vé thuyền ~250.000đ, vé Hang Múa 100.000đ',
     suitableConcepts: ['Cổ phục Việt phục', 'Nàng thơ Cinematic', 'Pre-Wedding kỳ vĩ', 'Du mục Boho'],
     tips: 'Trang phục màu đỏ hoặc vàng nổi bật trên nền núi đá xanh ngắt. Mang giày thể thao để leo Hang Múa.',
+    videoUrl: 'https://www.youtube.com/watch?v=2r7d7B3gT9Q',
+    videoType: 'youtube',
     isFeatured: true,
     order: 2,
     createdAt: new Date().toISOString()
@@ -52,6 +56,8 @@ const DEFAULT_LOCATIONS = [
     ticketPrice: 'Bản Cát Cát: 150.000đ/vé',
     suitableConcepts: ['Trang phục dân tộc H’Mông/Dao', 'Cổ tích Tây Bắc', 'Áo ấm Đông Bohemian'],
     tips: 'Thuê trang phục bản địa tại lối vào bản để có set đồ ăn rơ trọn vẹn. Săn mây đẹp nhất sau cơn mưa sáng.',
+    videoUrl: 'https://www.youtube.com/watch?v=kYJm3sT9190',
+    videoType: 'youtube',
     isFeatured: true,
     order: 3,
     createdAt: new Date().toISOString()
@@ -103,6 +109,8 @@ const DEFAULT_LOCATIONS = [
     ticketPrice: 'Đồi chè: Miễn phí, khu cắm trại: tùy dịch vụ',
     suitableConcepts: ['Nàng thơ trong trẻo', 'Pre-Wedding Hàn Quốc', 'Vintage Film', 'Dã ngoại Acoustic'],
     tips: 'Chuẩn bị áo ấm, khăn choàng len màu pastel. Luôn mang theo dù trong suốt vừa che sương vừa làm phụ kiện ảnh tuyệt đẹp.',
+    videoUrl: 'https://www.youtube.com/watch?v=eLwL0vYv94I',
+    videoType: 'youtube',
     isFeatured: true,
     order: 6,
     createdAt: new Date().toISOString()
@@ -189,6 +197,8 @@ class LocalLocationGuide {
       ? data.suitableConcepts
       : (data.suitableConcepts ? String(data.suitableConcepts).split(',').map(s => s.trim()) : []);
     this.tips = data.tips || '';
+    this.videoUrl = data.videoUrl || '';
+    this.videoType = data.videoType || (data.videoUrl ? (data.videoUrl.includes('tiktok.com') ? 'tiktok' : data.videoUrl.includes('youtu') ? 'youtube' : 'other') : '');
     this.isFeatured = Boolean(data.isFeatured);
     this.order = Number(data.order) || 1;
     this.createdAt = data.createdAt || new Date().toISOString();

@@ -82,6 +82,9 @@ const createLocation = async (data) => {
     ? data.suitableConcepts
     : (data.suitableConcepts ? String(data.suitableConcepts).split(',').map(s => s.trim()).filter(Boolean) : []);
 
+  const videoUrl = String(data.videoUrl || '').trim();
+  const videoType = data.videoType || (videoUrl ? (videoUrl.includes('tiktok.com') ? 'tiktok' : videoUrl.includes('youtu') ? 'youtube' : 'other') : '');
+
   const newLoc = new LocationGuide({
     name: String(data.name).trim(),
     city: String(data.city).trim(),
@@ -94,6 +97,8 @@ const createLocation = async (data) => {
     ticketPrice: String(data.ticketPrice || 'Miễn phí').trim(),
     suitableConcepts,
     tips: String(data.tips || '').trim(),
+    videoUrl,
+    videoType,
     isFeatured: Boolean(data.isFeatured),
     order: Number(data.order) || 1
   });
@@ -121,6 +126,11 @@ const updateLocation = async (id, data) => {
       .split(',')
       .map(s => s.trim())
       .filter(Boolean);
+  }
+  if (updatePayload.videoUrl !== undefined) {
+    const vUrl = String(updatePayload.videoUrl || '').trim();
+    updatePayload.videoUrl = vUrl;
+    updatePayload.videoType = vUrl ? (vUrl.includes('tiktok.com') ? 'tiktok' : vUrl.includes('youtu') ? 'youtube' : 'other') : '';
   }
 
   return await LocationGuide.findByIdAndUpdate(id, updatePayload, { new: true, runValidators: true });
