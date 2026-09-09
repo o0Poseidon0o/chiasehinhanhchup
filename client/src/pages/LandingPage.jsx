@@ -1,6 +1,7 @@
 import React from 'react';
 import HeroSection from '../components/landing/HeroSection';
 import CategoriesSection from '../components/landing/CategoriesSection';
+import LocationGuidesSection from '../components/landing/LocationGuidesSection';
 import WhyUsSection from '../components/landing/WhyUsSection';
 import PhotographersSection from '../components/landing/PhotographersSection';
 import HowItWorksSection from '../components/landing/HowItWorksSection';
@@ -16,19 +17,22 @@ export const LandingPage = () => {
       {/* 2. Shooting Categories */}
       <CategoriesSection />
 
-      {/* 3. Why Choose Us & SelectPhoto Engine */}
+      {/* 3. Location Guides (Địa điểm chụp ảnh đẹp trên mọi miền) */}
+      <LocationGuidesSection />
+
+      {/* 4. Why Choose Us & SelectPhoto Engine */}
       <WhyUsSection />
 
-      {/* 4. Featured Photographers */}
+      {/* 5. Featured Photographers */}
       <PhotographersSection />
 
-      {/* 5. How It Works */}
+      {/* 6. How It Works */}
       <HowItWorksSection />
 
-      {/* 6. Quick Album Lookup & Consultation Form */}
+      {/* 7. Quick Album Lookup & Consultation Form */}
       <AlbumLookupSection />
 
-      {/* 7. Testimonials & Call to action banner */}
+      {/* 8. Testimonials & Call to action banner */}
       <TestimonialsCTA />
     </div>
   );

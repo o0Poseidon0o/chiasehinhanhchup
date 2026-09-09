@@ -38,7 +38,9 @@ import {
   Mail,
   Eye,
   EyeOff,
-  X
+  X,
+  Compass,
+  MapPin
 } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
 import { userApi } from '../api/userApi';
@@ -47,6 +49,7 @@ import { EditAlbumModal } from '../components/admin/EditAlbumModal';
 import { AdminUserManagement } from '../components/admin/AdminUserManagement';
 import { AdminPhotographersHub } from '../components/admin/AdminPhotographersHub';
 import { AdminCategoriesManagement } from '../components/admin/AdminCategoriesManagement';
+import { AdminLocationGuidesManagement } from '../components/admin/AdminLocationGuidesManagement';
 import { AdminBookingsManagement } from '../components/admin/AdminBookingsManagement';
 import { AdminReviewsManagement } from '../components/admin/AdminReviewsManagement';
 import { AdminAddonsManagement } from '../components/admin/AdminAddonsManagement';
@@ -462,6 +465,12 @@ export const AdminDashboard = () => {
           title: 'Quản Lý Thể Loại & Giao Diện CMS',
           subtitle: 'Tùy chỉnh danh mục thể loại dịch vụ chụp ảnh và nội dung giao diện landing page.'
         };
+      case 'locations':
+        return {
+          icon: <Compass className="w-5 h-5 text-amber-400" />,
+          title: 'Quản Lý Cẩm Nang Địa Điểm Chụp (Location Guides)',
+          subtitle: 'Thiết lập danh sách tọa độ chụp ảnh đẹp mọi miền, giờ vàng săn ảnh, giá vé và concept sống ảo.'
+        };
       case 'addons':
         return {
           icon: <Tag className="w-5 h-5 text-gold-400" />,
@@ -632,6 +641,18 @@ export const AdminDashboard = () => {
         </button>
 
         <button
+          onClick={() => setActiveTab('locations')}
+          className={`flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
+            activeTab === 'locations'
+              ? 'bg-gradient-to-r from-amber-500 to-amber-400 text-amber-950 shadow-md shadow-amber-500/20 scale-[1.01]'
+              : 'text-[#a2998a] hover:text-white hover:bg-[#1a1714]'
+          }`}
+        >
+          <Compass className="w-4 h-4 shrink-0 text-amber-400" />
+          <span className="truncate">Địa Điểm Chụp</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('addons')}
           className={`flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
             activeTab === 'addons'
@@ -688,6 +709,8 @@ export const AdminDashboard = () => {
         <AdminUserManagement />
       ) : activeTab === 'categories' ? (
         <AdminCategoriesManagement />
+      ) : activeTab === 'locations' ? (
+        <AdminLocationGuidesManagement />
       ) : activeTab === 'addons' ? (
         <AdminAddonsManagement />
       ) : activeTab === 'reviews' ? (
