@@ -136,15 +136,23 @@ const loginUser = async ({ emailOrPhone, password }) => {
   const defaultAdminPass = String(process.env.ADMIN_PASSWORD || 'admin123').trim();
 
   let masterAdminPassword = defaultAdminPass;
+  let masterAdminEmail = 'admin@potonow.vn';
   try {
     const setting = await Setting.findOne({ key: 'contact_settings' });
     if (setting && setting.adminPassword) {
       masterAdminPassword = String(setting.adminPassword).trim();
     }
+    if (setting && setting.emailUser) {
+      masterAdminEmail = String(setting.emailUser).trim();
+    }
   } catch (_) {}
 
   // 1. Nếu nhập trực tiếp tài khoản & mật khẩu Master Admin
-  const isMasterAdminUser = !cleanUser || cleanUser === 'admin' || cleanUser === 'admin@potonow.vn' || cleanUser === 'admin@photodate.vn';
+  const isMasterAdminUser = !cleanUser || 
+    cleanUser === 'admin' || 
+    cleanUser === masterAdminEmail.toLowerCase() || 
+    cleanUser === 'admin@potonow.vn' || 
+    cleanUser === 'admin@photodate.vn';
   const isMasterAdminPass = cleanPassword === defaultAdminPass || cleanPassword === masterAdminPassword;
 
   if (isMasterAdminPass && isMasterAdminUser) {
@@ -152,7 +160,7 @@ const loginUser = async ({ emailOrPhone, password }) => {
       user: {
         _id: 'master_admin',
         name: 'Quản Trị Hệ Thống (Master Admin)',
-        email: 'admin@potonow.vn',
+        email: masterAdminEmail,
         phone: '19006868',
         role: 'admin',
         status: 'active'
@@ -277,6 +285,30 @@ const getAllUsers = async (query = {}) => {
 
   // Sắp xếp mới nhất lên đầu
   filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  // Đảm bảo Master Admin luôn hiển thị trong danh sách người dùng
+  if (!role || role === 'all' || role === 'admin') {
+    let masterAdminEmail = 'admin@potonow.vn';
+    let hotline = '0777908179';
+    try {
+      const setting = await Setting.findOne({ key: 'contact_settings' });
+      if (setting?.emailUser) masterAdminEmail = setting.emailUser.trim();
+      if (setting?.hotline) hotline = setting.hotline.trim();
+    } catch (_) {}
+
+    const hasAdmin = filtered.some(u => u._id === 'master_admin' || u.role === 'admin');
+    if (!hasAdmin) {
+      filtered.unshift({
+        _id: 'master_admin',
+        name: 'Quản Trị Hệ Thống (Master Admin)',
+        email: masterAdminEmail,
+        phone: hotline,
+        role: 'admin',
+        status: 'active',
+        createdAt: new Date('2026-01-01').toISOString()
+      });
+    }
+  }
 
   return filtered;
 };
@@ -485,17 +517,38 @@ const forgotPassword = async ({ email, originUrl }) => {
     user = await User.findOne({ phone: cleanPhone });
   }
 
-  // Nếu là email/tài khoản Master Admin đặc biệt mà chưa có trong bảng User
-  const isMasterAdminEmail = cleanInput.toLowerCase() === 'admin@potonow.vn' || cleanInput.toLowerCase() === 'admin@photodate.vn' || cleanInput.toLowerCase() === 'admin';
-  if (!user && isMasterAdminEmail) {
-    user = new User({
-      name: 'Quản Trị Hệ Thống (Master Admin)',
-      email: 'admin@potonow.vn',
-      phone: '19006868',
-      password: hashPassword(process.env.ADMIN_PASSWORD || 'admin123'),
-      role: 'admin',
-      status: 'active'
-    });
+  // Đọc email của Master Admin từ Setting
+  let masterAdminEmail = 'admin@potonow.vn';
+  try {
+    const setting = await Setting.findOne({ key: 'contact_settings' });
+    if (setting && setting.emailUser) {
+      masterAdminEmail = setting.emailUser.trim().toLowerCase();
+    }
+  } catch (_) {}
+
+  const isMasterAdminTarget = cleanInput.toLowerCase() === 'admin' || 
+                             cleanInput.toLowerCase() === masterAdminEmail || 
+                             cleanInput.toLowerCase() === 'admin@potonow.vn' || 
+                             cleanInput.toLowerCase() === 'admin@photodate.vn';
+
+  if (!user && isMasterAdminTarget) {
+    user = await User.findOne({ role: 'admin' });
+    if (!user) {
+      user = new User({
+        name: 'Quản Trị Hệ Thống (Master Admin)',
+        email: masterAdminEmail,
+        phone: '19006868',
+        password: hashPassword(process.env.ADMIN_PASSWORD || 'admin123'),
+        role: 'admin',
+        status: 'active'
+      });
+      await user.save();
+    }
+  }
+
+  // Nếu là tài khoản Admin nhưng email chưa khớp với email chính trong Setting, cập nhật sang email chính
+  if (user && user.role === 'admin' && masterAdminEmail && user.email !== masterAdminEmail) {
+    user.email = masterAdminEmail;
     await user.save();
   }
 
@@ -665,14 +718,47 @@ const adminResetPassword = async (id, { newPassword, sendEmail = true }) => {
 
   // Xử lý nếu là master_admin
   if (id === 'master_admin') {
+    let adminEmail = '';
+    try {
+      const setting = await Setting.findOne({ key: 'contact_settings' });
+      adminEmail = setting?.emailUser ? setting.emailUser.trim() : '';
+    } catch (_) {}
+
     await Setting.findOneAndUpdate(
       { key: 'contact_settings' },
       { adminPassword: cleanPassword, updatedAt: new Date() },
       { upsert: true }
     );
+
+    // Cập nhật cả user admin nếu có trong bảng User
+    try {
+      await User.updateMany({ role: 'admin' }, { password: hashPassword(cleanPassword) });
+    } catch (_) {}
+
+    let emailNotice = '';
+    if (sendEmail && adminEmail) {
+      try {
+        await emailService.sendAdminResetNotificationEmail({
+          to: adminEmail,
+          name: 'Quản Trị Hệ Thống (Master Admin)',
+          newPassword: cleanPassword,
+          role: 'admin'
+        });
+        emailNotice = ` và đã gửi email thông báo tới "${adminEmail}"`;
+      } catch (mailErr) {
+        console.warn('Lỗi gửi email cho Master Admin:', mailErr.message);
+      }
+    }
+
     return {
       success: true,
-      message: 'Đã cập nhật mật khẩu Master Admin thành công!'
+      message: `Đã cập nhật mật khẩu Master Admin thành công${emailNotice}!`,
+      data: {
+        userId: 'master_admin',
+        name: 'Quản Trị Hệ Thống (Master Admin)',
+        email: adminEmail,
+        newPassword: cleanPassword
+      }
     };
   }
 

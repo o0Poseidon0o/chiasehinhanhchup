@@ -35,9 +35,13 @@ import {
   Calendar,
   Star,
   Tag,
-  Mail
+  Mail,
+  Eye,
+  EyeOff,
+  X
 } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
+import { userApi } from '../api/userApi';
 import { getPublicBaseUrl } from '../utils/formatters';
 import { EditAlbumModal } from '../components/admin/EditAlbumModal';
 import { AdminUserManagement } from '../components/admin/AdminUserManagement';
@@ -56,15 +60,23 @@ export const AdminDashboard = () => {
   const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [adminPasswordInput, setAdminPasswordInput] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [authenticating, setAuthenticating] = useState(false);
+
+  // Master Admin Change Password states
+  const [isChangeAdminPassOpen, setIsChangeAdminPassOpen] = useState(false);
+  const [newAdminPassword, setNewAdminPassword] = useState('');
+  const [showNewAdminPass, setShowNewAdminPass] = useState(false);
+  const [adminPassSaving, setAdminPassSaving] = useState(false);
+  const [adminPassNotice, setAdminPassNotice] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState([]);
   const [copiedLink, setCopiedLink] = useState(null);
 
   // State xác thực Admin
   const [isAuthorized, setIsAuthorized] = useState(Boolean(sessionStorage.getItem('adminPassword')));
-  const [adminPasswordInput, setAdminPasswordInput] = useState('');
-  const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
 
   // State cho việc sửa cài đặt Album
@@ -493,6 +505,15 @@ export const AdminDashboard = () => {
             title="Làm mới dữ liệu"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-gold-400' : ''}`} />
+          </button>
+
+          <button
+            onClick={handleOpenChangePassModal}
+            className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-[#1d1a17] hover:bg-amber-950/40 border border-amber-500/20 hover:border-amber-500/50 text-amber-300 text-xs sm:text-sm font-medium transition-all"
+            title="Đổi mật khẩu Quản Trị Hệ Thống (Master Admin)"
+          >
+            <KeyRound className="w-4 h-4 text-amber-400" />
+            <span className="hidden sm:inline">Đổi MK Admin</span>
           </button>
 
           <button
@@ -1077,6 +1098,106 @@ export const AdminDashboard = () => {
         </div>
       )}
         </>
+      )}
+      {/* MODAL ĐỔI MẬT KHẨU MASTER ADMIN */}
+      {isChangeAdminPassOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-[#141721] border border-[#232938] rounded-3xl w-full max-w-md p-6 relative shadow-2xl space-y-5">
+            <button
+              onClick={() => setIsChangeAdminPassOpen(false)}
+              className="absolute top-5 right-5 text-gray-400 hover:text-white p-1 rounded-xl hover:bg-[#1f2433] transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Đổi Mật Khẩu Master Admin</h3>
+                <p className="text-xs text-gray-400">Cập nhật mật khẩu quản trị cấp cao nhất</p>
+              </div>
+            </div>
+
+            {adminPassNotice && (
+              <div
+                className={`p-3 rounded-xl border text-xs flex items-center space-x-2 ${
+                  adminPassNotice.type === 'success'
+                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+                    : 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+                }`}
+              >
+                <span>{adminPassNotice.text}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveNewAdminPassword} className="space-y-4">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-gray-300">
+                    Mật khẩu Quản trị mới *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateRandomPass}
+                    className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold hover:underline"
+                  >
+                    Tạo ngẫu nhiên
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showNewAdminPass ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={newAdminPassword}
+                    onChange={(e) => setNewAdminPassword(e.target.value)}
+                    placeholder="Nhập mật khẩu admin mới..."
+                    className="w-full bg-[#0c0e14] border border-[#232938] focus:border-amber-500 rounded-xl pl-3.5 pr-10 py-2.5 text-xs sm:text-sm text-white font-mono outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewAdminPass(!showNewAdminPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-1"
+                  >
+                    {showNewAdminPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  Mật khẩu này dùng để đăng nhập vào trang Quản trị và cấp quyền hệ thống.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end space-x-2 pt-3 border-t border-[#232938]">
+                <button
+                  type="button"
+                  onClick={() => setIsChangeAdminPassOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-[#232938] text-gray-300 hover:text-white hover:bg-[#1a1f2c] text-xs font-semibold"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={adminPassSaving}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-amber-950 font-bold text-xs flex items-center space-x-1.5 shadow-md disabled:opacity-50"
+                >
+                  {adminPassSaving ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Đang lưu...</span>
+                    </>
+                  ) : (
+                    <>
+                      <KeyRound className="w-3.5 h-3.5" />
+                      <span>Lưu Mật Khẩu Mới</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

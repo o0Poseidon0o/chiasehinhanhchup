@@ -136,6 +136,50 @@ export const AdminUserManagement = () => {
     }
   };
 
+  // Mở modal đặt lại mật khẩu cho user
+  const handleOpenResetModal = (targetUser) => {
+    setResetModalUser(targetUser);
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    setResetPasswordInput(`Poto@${randomSuffix}`);
+    setResetSendEmail(Boolean(targetUser.email));
+    setShowResetPassword(false);
+  };
+
+  // Tạo mật khẩu ngẫu nhiên
+  const handleGenerateRandom = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    let pass = 'Poto@';
+    for (let i = 0; i < 4; i++) {
+      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setResetPasswordInput(pass);
+  };
+
+  // Xác nhận đặt lại mật khẩu
+  const handleConfirmReset = async (e) => {
+    e.preventDefault();
+    if (!resetModalUser) return;
+    if (!resetPasswordInput || resetPasswordInput.trim().length < 6) {
+      setNotice({ type: 'error', message: 'Mật khẩu mới phải có ít nhất 6 ký tự.' });
+      return;
+    }
+
+    try {
+      setProcessingId(`reset_${resetModalUser._id}`);
+      const res = await userApi.adminResetPassword(resetModalUser._id, {
+        newPassword: resetPasswordInput.trim(),
+        sendEmail: resetSendEmail
+      });
+      setNotice({ type: 'success', message: res.message || `Đã đổi mật khẩu thành công cho ${resetModalUser.name}!` });
+      setResetModalUser(null);
+      await fetchData();
+    } catch (err) {
+      setNotice({ type: 'error', message: err.message || 'Không thể đặt lại mật khẩu.' });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   // Thay đổi Role hoặc Status nhanh
   const handleUpdateRole = async (id, newRole) => {
     try {
@@ -590,24 +634,24 @@ export const AdminUserManagement = () => {
 
                     {/* Actions */}
                     <td className="py-3.5 px-4 text-right">
-                      {u._id !== 'master_admin' && (
-                        <div className="flex items-center justify-end space-x-1">
-                          {u.status === 'pending' && (
-                            <button
-                              title="Phê duyệt ngay"
-                              onClick={() => handleApprove(u._id, u.name)}
-                              className="p-1.5 text-emerald-400 hover:bg-emerald-500/10 rounded-lg"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                            </button>
-                          )}
+                      <div className="flex items-center justify-end space-x-1">
+                        {u.status === 'pending' && (
                           <button
-                            title="Đặt lại mật khẩu cho tài khoản này"
-                            onClick={() => handleOpenResetModal(u)}
-                            className="p-1.5 text-amber-400 hover:bg-amber-500/15 rounded-lg transition-colors"
+                            title="Phê duyệt ngay"
+                            onClick={() => handleApprove(u._id, u.name)}
+                            className="p-1.5 text-emerald-400 hover:bg-emerald-500/10 rounded-lg"
                           >
-                            <KeyRound className="w-4 h-4" />
+                            <CheckCircle className="w-4 h-4" />
                           </button>
+                        )}
+                        <button
+                          title="Đặt lại mật khẩu cho tài khoản này"
+                          onClick={() => handleOpenResetModal(u)}
+                          className="p-1.5 text-amber-400 hover:bg-amber-500/15 rounded-lg transition-colors"
+                        >
+                          <KeyRound className="w-4 h-4" />
+                        </button>
+                        {u._id !== 'master_admin' && (
                           <button
                             title="Xóa người dùng"
                             onClick={() => handleDelete(u._id, u.name)}
@@ -615,8 +659,8 @@ export const AdminUserManagement = () => {
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
