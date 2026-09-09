@@ -53,17 +53,39 @@ const validateManageToken = (req, res, next) => {
 /**
  * Middleware kiểm tra mật khẩu Admin toàn hệ thống
  */
-const validateAdminPassword = (req, res, next) => {
-  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
-  const provided = req.headers['x-admin-password'] || req.query.adminPassword || req.body?.adminPassword;
+const validateAdminPassword = async (req, res, next) => {
+  try {
+    const defaultAdmin = String(process.env.ADMIN_PASSWORD || 'admin123').trim();
+    let expectedPassword = defaultAdmin;
+    let hasCustomAdminPass = false;
 
-  if (!provided || provided !== adminPassword) {
-    const error = new Error('Mật khẩu Admin không chính xác hoặc bạn không có quyền truy cập trang quản trị.');
-    error.statusCode = 401;
-    return next(error);
+    try {
+      const Setting = require('../models/Setting');
+      const setting = await Setting.findOne({ key: 'contact_settings' });
+      if (setting && setting.adminPassword && String(setting.adminPassword).trim()) {
+        expectedPassword = String(setting.adminPassword).trim();
+        hasCustomAdminPass = true;
+      }
+    } catch (_) {}
+
+    const provided = String(
+      req.headers['x-admin-password'] || req.query.adminPassword || req.body?.adminPassword || ''
+    ).trim();
+
+    const isValid = hasCustomAdminPass
+      ? (provided && provided === expectedPassword)
+      : (provided && (provided === expectedPassword || provided === defaultAdmin));
+
+    if (!provided || !isValid) {
+      const error = new Error('Mật khẩu Admin không chính xác hoặc bạn không có quyền truy cập trang quản trị.');
+      error.statusCode = 401;
+      return next(error);
+    }
+
+    next();
+  } catch (err) {
+    next(err);
   }
-
-  next();
 };
 
 module.exports = {

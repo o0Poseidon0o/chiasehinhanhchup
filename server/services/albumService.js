@@ -519,17 +519,24 @@ const updateAlbumSettings = async (id, token, settings = {}) => {
  */
 const verifyAdminPassword = async (adminPassword) => {
   const cleanInput = (adminPassword || '').trim();
-  let expectedPassword = (process.env.ADMIN_PASSWORD || 'admin123').trim();
+  const defaultAdmin = String(process.env.ADMIN_PASSWORD || 'admin123').trim();
+  let expectedPassword = defaultAdmin;
+  let hasCustomAdminPass = false;
+
   try {
     const Setting = require('../models/Setting');
     const setting = await Setting.findOne({ key: 'contact_settings' });
-    if (setting && setting.adminPassword) {
+    if (setting && setting.adminPassword && String(setting.adminPassword).trim()) {
       expectedPassword = String(setting.adminPassword).trim();
+      hasCustomAdminPass = true;
     }
   } catch (_) {}
 
-  const defaultAdmin = (process.env.ADMIN_PASSWORD || 'admin123').trim();
-  if (!cleanInput || (cleanInput !== expectedPassword && cleanInput !== defaultAdmin)) {
+  const isValid = hasCustomAdminPass
+    ? cleanInput === expectedPassword
+    : (cleanInput === expectedPassword || cleanInput === defaultAdmin);
+
+  if (!cleanInput || !isValid) {
     const error = new Error('Mật khẩu Admin không chính xác.');
     error.statusCode = 401;
     throw error;

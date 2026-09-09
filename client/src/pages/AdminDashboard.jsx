@@ -71,6 +71,7 @@ export const AdminDashboard = () => {
   const [showNewAdminPass, setShowNewAdminPass] = useState(false);
   const [adminPassSaving, setAdminPassSaving] = useState(false);
   const [adminPassNotice, setAdminPassNotice] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState([]);
   const [copiedLink, setCopiedLink] = useState(null);
@@ -146,6 +147,47 @@ export const AdminDashboard = () => {
     setIsAuthorized(false);
     setAlbums([]);
     logout();
+  };
+
+  const handleOpenChangePassModal = () => {
+    setNewAdminPassword('');
+    setShowNewAdminPass(false);
+    setAdminPassNotice(null);
+    setIsChangeAdminPassOpen(true);
+  };
+
+  const handleGenerateRandomPass = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    let res = '';
+    for (let i = 0; i < 10; i++) {
+      res += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setNewAdminPassword(res);
+  };
+
+  const handleSaveNewAdminPassword = async (e) => {
+    e.preventDefault();
+    if (!newAdminPassword || newAdminPassword.trim().length < 6) {
+      setAdminPassNotice({ type: 'error', text: 'Mật khẩu phải có ít nhất 6 ký tự.' });
+      return;
+    }
+    setAdminPassSaving(true);
+    setAdminPassNotice(null);
+    try {
+      await userApi.adminResetPassword('master_admin', {
+        newPassword: newAdminPassword.trim(),
+        sendEmail: false
+      });
+      sessionStorage.setItem('adminPassword', newAdminPassword.trim());
+      setAdminPassNotice({ type: 'success', text: 'Đổi mật khẩu Admin thành công! Đã cập nhật phiên đăng nhập mới.' });
+      setTimeout(() => {
+        setIsChangeAdminPassOpen(false);
+      }, 1500);
+    } catch (err) {
+      setAdminPassNotice({ type: 'error', text: err.message || 'Không thể đổi mật khẩu Admin.' });
+    } finally {
+      setAdminPassSaving(false);
+    }
   };
 
   /**

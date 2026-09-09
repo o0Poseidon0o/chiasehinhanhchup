@@ -137,10 +137,12 @@ const loginUser = async ({ emailOrPhone, password }) => {
 
   let masterAdminPassword = defaultAdminPass;
   let masterAdminEmail = 'admin@potonow.vn';
+  let hasCustomAdminPass = false;
   try {
     const setting = await Setting.findOne({ key: 'contact_settings' });
-    if (setting && setting.adminPassword) {
+    if (setting && setting.adminPassword && String(setting.adminPassword).trim()) {
       masterAdminPassword = String(setting.adminPassword).trim();
+      hasCustomAdminPass = true;
     }
     if (setting && setting.emailUser) {
       masterAdminEmail = String(setting.emailUser).trim();
@@ -153,7 +155,9 @@ const loginUser = async ({ emailOrPhone, password }) => {
     cleanUser === masterAdminEmail.toLowerCase() || 
     cleanUser === 'admin@potonow.vn' || 
     cleanUser === 'admin@photodate.vn';
-  const isMasterAdminPass = cleanPassword === defaultAdminPass || cleanPassword === masterAdminPassword;
+  const isMasterAdminPass = hasCustomAdminPass
+    ? cleanPassword === masterAdminPassword
+    : (cleanPassword === masterAdminPassword || cleanPassword === defaultAdminPass);
 
   if (isMasterAdminPass && isMasterAdminUser) {
     return {
