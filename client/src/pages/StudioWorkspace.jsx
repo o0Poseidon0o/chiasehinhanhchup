@@ -1175,30 +1175,41 @@ export const StudioWorkspace = () => {
                       <span>Tạo Album Khách</span>
                     </button>
 
-                    {b.status !== 'confirmed' && (
+                    {/* Chỉ hiện nút 'Xác Nhận Lịch' khi đơn đang ở trạng thái chờ duyệt (pending) */}
+                    {(b.status === 'pending' || (!['confirmed', 'completed', 'cancelled'].includes(b.status))) && (
                       <button
                         onClick={() => handleBookingStatus(b._id, 'confirmed')}
-                        className="flex-1 py-2 px-3 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold rounded-xl text-xs flex items-center justify-center space-x-1 shadow-sm"
+                        className="flex-1 py-2 px-3 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold rounded-xl text-xs flex items-center justify-center space-x-1 shadow-sm transition-colors"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>Xác Nhận Lịch</span>
                       </button>
                     )}
 
+                    {/* Khi đã xác nhận lịch thì hiện nút 'Đã Chụp Xong' */}
                     {b.status === 'confirmed' && (
                       <button
                         onClick={() => handleBookingStatus(b._id, 'completed')}
-                        className="flex-1 py-2 px-3 bg-blue-500 hover:bg-blue-400 text-blue-950 font-bold rounded-xl text-xs flex items-center justify-center space-x-1 shadow-sm"
+                        className="flex-1 py-2 px-3 bg-blue-500 hover:bg-blue-400 text-blue-950 font-bold rounded-xl text-xs flex items-center justify-center space-x-1 shadow-sm transition-colors"
                       >
                         <Award className="w-3.5 h-3.5" />
                         <span>Đã Chụp Xong</span>
                       </button>
                     )}
 
-                    {b.status !== 'cancelled' && (
+                    {/* Khi đã chụp xong -> ẩn nút xác nhận & hủy, hiển thị trạng thái hoàn tất */}
+                    {b.status === 'completed' && (
+                      <div className="flex-1 py-2 px-3 bg-blue-500/10 border border-blue-500/25 text-blue-300 font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 select-none">
+                        <Award className="w-3.5 h-3.5 text-blue-400" />
+                        <span>Buổi chụp hoàn tất</span>
+                      </div>
+                    )}
+
+                    {/* Chỉ hiển thị nút Hủy khi lịch chưa hoàn thành và chưa bị hủy */}
+                    {b.status !== 'cancelled' && b.status !== 'completed' && (
                       <button
                         onClick={() => handleBookingStatus(b._id, 'cancelled')}
-                        className="py-2 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-semibold"
+                        className="py-2 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-semibold transition-colors"
                       >
                         Hủy
                       </button>
