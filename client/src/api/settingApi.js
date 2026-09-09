@@ -77,5 +77,47 @@ export const settingApi = {
     } catch (error) {
       throw new Error(extractErrorMessage(error, 'Không thể kích hoạt tài khoản.'));
     }
+  },
+
+  /**
+   * Lấy cấu hình Email Gmail / SMTP (Master Admin)
+   */
+  async getEmailSettings() {
+    try {
+      const response = await api.get('/email', {
+        headers: getAdminHeaders(),
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không thể tải cấu hình Email.'));
+    }
+  },
+
+  /**
+   * Cập nhật cấu hình Email Gmail / SMTP (Master Admin)
+   */
+  async updateEmailSettings(data) {
+    try {
+      const response = await api.put('/email', data, {
+        headers: getAdminHeaders(),
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không thể lưu cấu hình Email.'));
+    }
+  },
+
+  /**
+   * Gửi email thử nghiệm (Test Email Connection)
+   */
+  async testEmailSettings(testEmail) {
+    try {
+      const response = await api.post('/email/test', { testEmail }, {
+        headers: getAdminHeaders(),
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Kiểm tra gửi email thất bại. Vui lòng kiểm tra lại Gmail hoặc Mật khẩu ứng dụng.'));
+    }
   }
 };

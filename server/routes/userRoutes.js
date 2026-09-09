@@ -8,6 +8,11 @@ router.post('/register', userController.register);
 router.post('/login', userController.login);
 router.get('/photographers', userController.getActivePhotographers);
 
+// Public routes (Quên & Đổi mật khẩu qua Email)
+router.post('/forgot-password', userController.forgotPassword);
+router.post('/verify-reset-code', userController.verifyResetCode);
+router.post('/reset-password', userController.resetPassword);
+
 // Self Profile Update (Nhiếp ảnh gia tự cập nhật profile cá nhân)
 router.put('/profile/:id', userController.updateUser);
 router.put('/:id', userController.updateUser);

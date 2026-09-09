@@ -34,7 +34,12 @@ const userSchema = new mongoose.Schema({
     bio: { type: String, default: '', trim: true }
   },
   createdAt: { type: Date, default: Date.now },
-  lastLogin: { type: Date, default: null }
+  lastLogin: { type: Date, default: null },
+
+  // Quên & Đổi mật khẩu qua Email
+  resetPasswordCode: { type: String, default: null },
+  resetPasswordToken: { type: String, default: null },
+  resetPasswordExpires: { type: Date, default: null }
 });
 
 const MongooseUser = mongoose.models.User || mongoose.model('User', userSchema);

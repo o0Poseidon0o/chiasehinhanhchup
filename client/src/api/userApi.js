@@ -44,6 +44,45 @@ export const userApi = {
   },
 
   /**
+   * Yêu cầu gửi mã OTP đặt lại mật khẩu qua Email
+   */
+  async forgotPassword(email) {
+    try {
+      const response = await api.post('/forgot-password', {
+        email,
+        originUrl: window.location.origin
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không thể gửi yêu cầu đặt lại mật khẩu.'));
+    }
+  },
+
+  /**
+   * Kiểm tra tính hợp lệ của mã OTP
+   */
+  async verifyResetCode(email, code) {
+    try {
+      const response = await api.post('/verify-reset-code', { email, code });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Mã xác thực không hợp lệ hoặc đã hết hạn.'));
+    }
+  },
+
+  /**
+   * Đặt lại mật khẩu mới
+   */
+  async resetPassword({ email, code, token, newPassword }) {
+    try {
+      const response = await api.post('/reset-password', { email, code, token, newPassword });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Đặt lại mật khẩu thất bại.'));
+    }
+  },
+
+  /**
    * Lấy danh sách các Nhiếp ảnh gia đã được duyệt (Cho khách chọn chụp)
    */
   async getActivePhotographers() {

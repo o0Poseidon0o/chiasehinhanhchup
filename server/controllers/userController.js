@@ -141,6 +141,40 @@ const deleteUser = asyncHandler(async (req, res) => {
   res.status(200).json(result);
 });
 
+/**
+ * @desc    Yêu cầu mã đặt lại mật khẩu qua email
+ * @route   POST /api/users/forgot-password
+ * @access  Public
+ */
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { email, originUrl } = req.body;
+  const origin = originUrl || req.headers.origin || `${req.protocol}://${req.get('host')}`;
+  const result = await userService.forgotPassword({ email, originUrl: origin });
+  res.status(200).json(result);
+});
+
+/**
+ * @desc    Xác thực mã OTP trước khi đổi mật khẩu
+ * @route   POST /api/users/verify-reset-code
+ * @access  Public
+ */
+const verifyResetCode = asyncHandler(async (req, res) => {
+  const { email, code } = req.body;
+  const result = await userService.verifyResetCode({ email, code });
+  res.status(200).json(result);
+});
+
+/**
+ * @desc    Đặt lại mật khẩu mới
+ * @route   POST /api/users/reset-password
+ * @access  Public
+ */
+const resetPassword = asyncHandler(async (req, res) => {
+  const { email, code, token, newPassword } = req.body;
+  const result = await userService.resetPassword({ email, code, token, newPassword });
+  res.status(200).json(result);
+});
+
 module.exports = {
   register,
   login,
@@ -152,5 +186,8 @@ module.exports = {
   rejectPhotographer,
   createUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  forgotPassword,
+  verifyResetCode,
+  resetPassword
 };

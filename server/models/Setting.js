@@ -27,6 +27,15 @@ const settingSchema = new mongoose.Schema({
   // Cấu hình chế độ kiểm duyệt tài khoản Nhiếp ảnh gia (Mặc định: true = Mở tự do trải nghiệm, không bắt chờ duyệt)
   autoApprovePhotographer: { type: Boolean, default: true },
 
+  // Cấu hình gửi Mail qua Gmail / SMTP dành cho Master Admin
+  emailUser: { type: String, default: '', trim: true },
+  emailPass: { type: String, default: '', trim: true },
+  emailSenderName: { type: String, default: 'Photodate.vn', trim: true },
+  emailService: { type: String, default: 'gmail', trim: true },
+
+  // Mật khẩu tùy chỉnh của Master Admin nếu được đổi qua email
+  adminPassword: { type: String, default: '', trim: true },
+
   updatedAt: { type: Date, default: Date.now }
 });
 

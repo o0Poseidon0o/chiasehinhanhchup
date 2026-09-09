@@ -78,6 +78,9 @@ class LocalUser {
     };
     this.createdAt = data.createdAt ? new Date(data.createdAt) : new Date();
     this.lastLogin = data.lastLogin ? new Date(data.lastLogin) : null;
+    this.resetPasswordCode = data.resetPasswordCode || null;
+    this.resetPasswordToken = data.resetPasswordToken || null;
+    this.resetPasswordExpires = data.resetPasswordExpires ? new Date(data.resetPasswordExpires) : null;
   }
 
   async save() {
@@ -94,7 +97,10 @@ class LocalUser {
       status: this.status,
       studioInfo: this.studioInfo,
       createdAt: this.createdAt,
-      lastLogin: this.lastLogin
+      lastLogin: this.lastLogin,
+      resetPasswordCode: this.resetPasswordCode,
+      resetPasswordToken: this.resetPasswordToken,
+      resetPasswordExpires: this.resetPasswordExpires
     };
 
     if (index >= 0) {

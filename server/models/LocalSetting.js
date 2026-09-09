@@ -27,6 +27,14 @@ const DEFAULT_SETTINGS = {
   supportPillSubtext: 'Trả lời tức thì • 24/7',
   enableSupportPill: true,
   autoApprovePhotographer: true,
+
+  // Cấu hình email Gmail / SMTP
+  emailUser: '',
+  emailPass: '',
+  emailSenderName: 'Photodate.vn',
+  emailService: 'gmail',
+  adminPassword: '',
+
   updatedAt: new Date().toISOString()
 };
 

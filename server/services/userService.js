@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const User = require('../models/User');
 const Setting = require('../models/Setting');
+const emailService = require('./emailService');
 
 /**
  * Helper mã hóa mật khẩu an toàn
@@ -17,6 +18,9 @@ const formatUserResponse = (user) => {
   if (!user) return null;
   const obj = user.toObject ? user.toObject() : { ...user };
   delete obj.password;
+  delete obj.resetPasswordCode;
+  delete obj.resetPasswordToken;
+  delete obj.resetPasswordExpires;
   return obj;
 };
 
@@ -44,22 +48,33 @@ const registerUser = async (data) => {
     throw err;
   }
 
-  const cleanEmail = email.toLowerCase().trim();
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanPhone = (phone || '').trim();
 
   // Kiểm tra trùng lặp email
-  const existing = await User.findOne({ email: cleanEmail });
-  if (existing) {
-    const err = new Error('Email này đã được đăng ký tài khoản. Vui lòng đăng nhập hoặc dùng email khác.');
-    err.statusCode = 400;
+  const existingEmail = await User.findOne({ email: cleanEmail });
+  if (existingEmail) {
+    const err = new Error('Địa chỉ email này đã được sử dụng. Vui lòng chọn email khác hoặc Đăng nhập.');
+    err.statusCode = 409;
     throw err;
   }
 
-  // Kiểm tra cấu hình chế độ kiểm duyệt từ Setting
+  // Kiểm tra trùng lặp số điện thoại (nếu có nhập)
+  if (cleanPhone) {
+    const existingPhone = await User.findOne({ phone: cleanPhone });
+    if (existingPhone) {
+      const err = new Error('Số điện thoại này đã được đăng ký.');
+      err.statusCode = 409;
+      throw err;
+    }
+  }
+
+  // Lấy cấu hình tự động duyệt NAG từ Setting
   let autoApprovePhotographer = true;
   try {
     const setting = await Setting.findOne({ key: 'contact_settings' });
-    if (setting && typeof setting.autoApprovePhotographer === 'boolean') {
-      autoApprovePhotographer = setting.autoApprovePhotographer;
+    if (setting && setting.autoApprovePhotographer !== undefined) {
+      autoApprovePhotographer = Boolean(setting.autoApprovePhotographer);
     }
   } catch (_) {}
 
@@ -115,10 +130,16 @@ const registerUser = async (data) => {
  * Đăng nhập người dùng
  */
 const loginUser = async ({ emailOrPhone, password }) => {
-  const masterAdminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  let masterAdminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  try {
+    const setting = await Setting.findOne({ key: 'contact_settings' });
+    if (setting && setting.adminPassword) {
+      masterAdminPassword = setting.adminPassword;
+    }
+  } catch (_) {}
 
   // 1. Nếu nhập trực tiếp mật khẩu Master Admin
-  if (password === masterAdminPassword && (!emailOrPhone || emailOrPhone.trim().toLowerCase() === 'admin' || emailOrPhone.trim().toLowerCase() === 'admin@potonow.vn')) {
+  if (password === masterAdminPassword && (!emailOrPhone || emailOrPhone.trim().toLowerCase() === 'admin' || emailOrPhone.trim().toLowerCase() === 'admin@potonow.vn' || emailOrPhone.trim().toLowerCase() === 'admin@photodate.vn')) {
     return {
       user: {
         _id: 'master_admin',
@@ -435,6 +456,172 @@ const getUserStats = async () => {
   };
 };
 
+/**
+ * Yêu cầu đặt lại mật khẩu - Tạo mã OTP 6 số và gửi qua Email
+ */
+const forgotPassword = async ({ email, originUrl }) => {
+  if (!email || !email.trim()) {
+    const err = new Error('Vui lòng nhập địa chỉ email của bạn.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+
+  // Tìm user theo email
+  let user = await User.findOne({ email: cleanEmail });
+
+  // Nếu là email Master Admin đặc biệt mà chưa có trong bảng User
+  if (!user && (cleanEmail === 'admin@potonow.vn' || cleanEmail === 'admin@photodate.vn')) {
+    user = new User({
+      name: 'Quản Trị Hệ Thống (Master Admin)',
+      email: cleanEmail,
+      phone: '19006868',
+      password: hashPassword(process.env.ADMIN_PASSWORD || 'admin123'),
+      role: 'admin',
+      status: 'active'
+    });
+    await user.save();
+  }
+
+  if (!user) {
+    const err = new Error('Không tìm thấy tài khoản nào liên kết với email này trên hệ thống.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Tạo mã OTP 6 chữ số ngẫu nhiên
+  const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+  // Tạo token ngẫu nhiên cho link nhấp trực tiếp
+  const resetToken = crypto.randomBytes(24).toString('hex');
+  // Hết hạn sau 15 phút
+  const expires = new Date(Date.now() + 15 * 60 * 1000);
+
+  user.resetPasswordCode = resetCode;
+  user.resetPasswordToken = resetToken;
+  user.resetPasswordExpires = expires;
+  await user.save();
+
+  // Gửi email qua emailService
+  await emailService.sendPasswordResetEmail({
+    to: user.email,
+    name: user.name,
+    code: resetCode,
+    token: resetToken,
+    originUrl,
+    role: user.role
+  });
+
+  return {
+    success: true,
+    message: `Đã gửi mã xác thực 6 chữ số đến email "${user.email}". Vui lòng kiểm tra hộp thư (cả mục Spam/Quảng cáo).`,
+    email: user.email
+  };
+};
+
+/**
+ * Xác thực mã OTP trước khi đổi mật khẩu
+ */
+const verifyResetCode = async ({ email, code }) => {
+  if (!email || !code) {
+    const err = new Error('Thiếu email hoặc mã xác nhận.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanCode = String(code).trim();
+
+  let user = await User.findOne({ email: cleanEmail });
+  if (!user) {
+    const err = new Error('Tài khoản không tồn tại.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (!user.resetPasswordCode || user.resetPasswordCode !== cleanCode) {
+    const err = new Error('Mã xác thực OTP không chính xác.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (!user.resetPasswordExpires || new Date() > new Date(user.resetPasswordExpires)) {
+    const err = new Error('Mã xác thực đã hết hạn (chỉ có hiệu lực trong 15 phút). Vui lòng yêu cầu mã mới.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return {
+    success: true,
+    message: 'Mã xác thực chính xác!'
+  };
+};
+
+/**
+ * Đặt lại mật khẩu mới
+ */
+const resetPassword = async ({ email, code, token, newPassword }) => {
+  if (!email || !email.trim()) {
+    const err = new Error('Thiếu địa chỉ email.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (!newPassword || newPassword.length < 6) {
+    const err = new Error('Mật khẩu mới phải có ít nhất 6 ký tự.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const user = await User.findOne({ email: cleanEmail });
+  if (!user) {
+    const err = new Error('Tài khoản không tồn tại.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Kiểm tra thời hạn
+  if (!user.resetPasswordExpires || new Date() > new Date(user.resetPasswordExpires)) {
+    const err = new Error('Mã xác thực hoặc liên kết đổi mật khẩu đã hết hạn. Vui lòng gửi lại yêu cầu.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Kiểm tra hoặc bằng code hoặc bằng token
+  const validByCode = code && user.resetPasswordCode && String(user.resetPasswordCode).trim() === String(code).trim();
+  const validByToken = token && user.resetPasswordToken && user.resetPasswordToken === token;
+
+  if (!validByCode && !validByToken) {
+    const err = new Error('Mã xác thực hoặc liên kết đặt lại mật khẩu không hợp lệ.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Cập nhật mật khẩu mới
+  user.password = hashPassword(newPassword);
+  user.resetPasswordCode = null;
+  user.resetPasswordToken = null;
+  user.resetPasswordExpires = null;
+  await user.save();
+
+  // Nếu là Master Admin hoặc user có role admin, cập nhật cả mật khẩu Master Admin trong Setting
+  if (user.role === 'admin' || cleanEmail === 'admin@potonow.vn' || cleanEmail === 'admin@photodate.vn') {
+    try {
+      await Setting.findOneAndUpdate(
+        { key: 'contact_settings' },
+        { adminPassword: newPassword, updatedAt: new Date() },
+        { upsert: true }
+      );
+    } catch (_) {}
+  }
+
+  return {
+    success: true,
+    message: 'Đặt lại mật khẩu thành công! Bạn có thể đăng nhập ngay bằng mật khẩu mới.'
+  };
+};
+
 module.exports = {
   registerUser,
   loginUser,
@@ -445,5 +632,8 @@ module.exports = {
   updateUser,
   adminCreateUser,
   deleteUser,
-  getUserStats
+  getUserStats,
+  forgotPassword,
+  verifyResetCode,
+  resetPassword
 };

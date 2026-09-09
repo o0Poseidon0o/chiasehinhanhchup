@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Sparkles,
   ArrowRight,
+  ArrowLeft,
   UserCheck,
   User,
   Mail,
@@ -17,14 +18,19 @@ import {
   Globe,
   Award,
   CheckCircle2,
-  Clock
+  Clock,
+  RefreshCw,
+  Send,
+  Key
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { userApi } from '../../api/userApi';
 
 export const AuthModal = () => {
   const {
     isAuthModalOpen,
     closeAuthModal,
+    openAuthModal,
     login,
     register,
     redirectAfterAuth,
@@ -34,7 +40,7 @@ export const AuthModal = () => {
 
   const navigate = useNavigate();
 
-  // Mode: 'login' | 'register'
+  // Mode: 'login' | 'register' | 'forgot' | 'reset'
   const [tab, setTab] = useState('login');
   // Role for register/login: 'photographer' | 'client' | 'admin'
   const [role, setRole] = useState('photographer');
@@ -44,6 +50,15 @@ export const AuthModal = () => {
     emailOrPhone: '',
     password: ''
   });
+
+  // Forgot & Reset Password states
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetSuccessMessage, setResetSuccessMessage] = useState('');
+  const [resendCountdown, setResendCountdown] = useState(0);
 
   const [registerData, setRegisterData] = useState({
     name: '',
@@ -66,6 +81,34 @@ export const AuthModal = () => {
   const [error, setError] = useState('');
   const [pendingNotice, setPendingNotice] = useState(null);
 
+  // Tự động bắt URL query param nếu người dùng click link từ email (vd: ?action=reset-password&token=xxx&email=yyy)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const action = params.get('action');
+      const token = params.get('token');
+      const email = params.get('email');
+      if (action === 'reset-password' || token) {
+        if (email) setForgotEmail(email);
+        if (token) setResetToken(token);
+        setTab('reset');
+        setError('');
+        if (!isAuthModalOpen && typeof openAuthModal === 'function') {
+          openAuthModal(null, 'reset');
+        }
+      }
+    } catch (_) {}
+  }, []);
+
+  // Bộ đếm ngược gửi lại mã OTP (60s)
+  useEffect(() => {
+    if (resendCountdown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCountdown(c => (c > 0 ? c - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCountdown]);
+
   useEffect(() => {
     if (isAuthModalOpen) {
       setTab(authModalInitialTab || 'login');
@@ -74,6 +117,93 @@ export const AuthModal = () => {
       setPendingNotice(null);
     }
   }, [isAuthModalOpen, authModalInitialTab, authModalInitialRole]);
+
+  // Xử lý gửi yêu cầu quên mật khẩu
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail || !forgotEmail.trim()) {
+      setError('Vui lòng nhập địa chỉ email của bạn.');
+      return;
+    }
+    setError('');
+    setResetSuccessMessage('');
+    setLoading(true);
+    try {
+      const res = await userApi.forgotPassword(forgotEmail.trim());
+      setTab('reset');
+      setResendCountdown(60);
+      setResetSuccessMessage(res.message || 'Mã xác thực 6 số đã được gửi tới email của bạn!');
+    } catch (err) {
+      setError(err.message || 'Không thể gửi mã xác nhận. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Gửi lại mã OTP
+  const handleResendCode = async () => {
+    if (resendCountdown > 0 || loading) return;
+    setError('');
+    setResetSuccessMessage('');
+    setLoading(true);
+    try {
+      const res = await userApi.forgotPassword(forgotEmail.trim());
+      setResendCountdown(60);
+      setResetSuccessMessage('Đã gửi lại mã OTP mới. Vui lòng kiểm tra hộp thư!');
+    } catch (err) {
+      setError(err.message || 'Không thể gửi lại mã.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Đặt lại mật khẩu mới
+  const handleResetSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setResetSuccessMessage('');
+
+    if (!resetCode && !resetToken) {
+      setError('Vui lòng nhập mã xác thực OTP 6 chữ số đã nhận qua email.');
+      return;
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      setError('Mật khẩu mới phải có ít nhất 6 ký tự.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await userApi.resetPassword({
+        email: forgotEmail.trim(),
+        code: resetCode.trim(),
+        token: resetToken,
+        newPassword
+      });
+
+      setResetSuccessMessage(res.message || 'Đặt lại mật khẩu thành công!');
+      setLoginData(prev => ({ ...prev, emailOrPhone: forgotEmail.trim(), password: '' }));
+      setResetCode('');
+      setResetToken('');
+      setNewPassword('');
+      setConfirmPassword('');
+
+      // Chuyển sang màn hình đăng nhập sau 1.5s
+      setTimeout(() => {
+        setTab('login');
+      }, 1500);
+    } catch (err) {
+      setError(err.message || 'Đặt lại mật khẩu thất bại.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!isAuthModalOpen) return null;
 
@@ -224,39 +354,69 @@ export const AuthModal = () => {
                 />
               </div>
               <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-                {tab === 'login' ? 'Đăng Nhập Hệ Thống' : 'Đăng Ký Tài Khoản'}
+                {tab === 'login'
+                  ? 'Đăng Nhập Hệ Thống'
+                  : tab === 'register'
+                  ? 'Đăng Ký Tài Khoản'
+                  : tab === 'forgot'
+                  ? 'Khôi Phục Mật Khẩu'
+                  : 'Thiết Lập Mật Khẩu Mới'}
               </h3>
               <p className="text-xs text-gray-400">
                 {tab === 'login'
                   ? 'Truy cập Studio Workspace hoặc Bảng điều khiển quản trị'
-                  : 'Gia nhập mạng lưới Nhiếp ảnh gia chuyên nghiệp & Khách hàng'}
+                  : tab === 'register'
+                  ? 'Gia nhập mạng lưới Nhiếp ảnh gia chuyên nghiệp & Khách hàng'
+                  : tab === 'forgot'
+                  ? 'Nhập email của bạn để nhận mã xác thực OTP đặt lại mật khẩu'
+                  : 'Nhập mã 6 số từ email và thiết lập mật khẩu mới cho tài khoản'}
               </p>
             </div>
 
-            {/* Mode Switcher: Login vs Register */}
-            <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#0c0d12] rounded-2xl border border-[#242938] mb-5">
-              <button
-                type="button"
-                onClick={() => { setTab('login'); setError(''); }}
-                className={`py-2 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${tab === 'login'
-                    ? 'bg-amber-500 text-amber-950 font-bold shadow-md shadow-amber-500/20'
-                    : 'text-gray-400 hover:text-white'
-                  }`}
-              >
-                Đăng Nhập
-              </button>
+            {/* Back Button khi đang ở màn hình Quên / Đặt lại mật khẩu */}
+            {(tab === 'forgot' || tab === 'reset') && (
+              <div className="mb-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTab('login');
+                    setError('');
+                    setResetSuccessMessage('');
+                  }}
+                  className="inline-flex items-center space-x-1.5 text-xs text-amber-400 hover:text-amber-300 font-semibold transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Quay lại Đăng nhập</span>
+                </button>
+              </div>
+            )}
 
-              <button
-                type="button"
-                onClick={() => { setTab('register'); setError(''); }}
-                className={`py-2 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${tab === 'register'
-                    ? 'bg-amber-500 text-amber-950 font-bold shadow-md shadow-amber-500/20'
-                    : 'text-gray-400 hover:text-white'
-                  }`}
-              >
-                Đăng Ký Mới
-              </button>
-            </div>
+            {/* Mode Switcher: Chỉ hiện khi ở chế độ Login hoặc Register */}
+            {(tab === 'login' || tab === 'register') && (
+              <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#0c0d12] rounded-2xl border border-[#242938] mb-5">
+                <button
+                  type="button"
+                  onClick={() => { setTab('login'); setError(''); setResetSuccessMessage(''); }}
+                  className={`py-2 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${tab === 'login'
+                      ? 'bg-amber-500 text-amber-950 font-bold shadow-md shadow-amber-500/20'
+                      : 'text-gray-400 hover:text-white'
+                    }`}
+                >
+                  Đăng Nhập
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setTab('register'); setError(''); setResetSuccessMessage(''); }}
+                  className={`py-2 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${tab === 'register'
+                      ? 'bg-amber-500 text-amber-950 font-bold shadow-md shadow-amber-500/20'
+                      : 'text-gray-400 hover:text-white'
+                    }`}
+                >
+                  Đăng Ký Mới
+                </button>
+              </div>
+            )}
 
             {/* Role Switcher (For Registration) */}
             {tab === 'register' && (
@@ -295,6 +455,13 @@ export const AuthModal = () => {
             {/* TAB 1: FORM ĐĂNG NHẬP */}
             {tab === 'login' && (
               <form onSubmit={handleLoginSubmit} className="space-y-4">
+                {resetSuccessMessage && (
+                  <div className="flex items-start space-x-2 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-300 text-xs animate-fade-in">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
+                    <span className="leading-relaxed">{resetSuccessMessage}</span>
+                  </div>
+                )}
+
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-gray-200">
                     Email, Số điện thoại
@@ -314,9 +481,23 @@ export const AuthModal = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-gray-200">
-                    Mật khẩu
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold text-gray-200">
+                      Mật khẩu
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForgotEmail(loginData.emailOrPhone?.includes('@') ? loginData.emailOrPhone : '');
+                        setTab('forgot');
+                        setError('');
+                        setResetSuccessMessage('');
+                      }}
+                      className="text-xs font-semibold text-amber-400 hover:text-amber-300 transition-colors"
+                    >
+                      Quên mật khẩu?
+                    </button>
+                  </div>
                   <div className="relative">
                     <KeyRound className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
@@ -354,6 +535,172 @@ export const AuthModal = () => {
                     </>
                   )}
                 </button>
+              </form>
+            )}
+
+            {/* TAB: QUÊN MẬT KHẨU (GỬI OTP) */}
+            {tab === 'forgot' && (
+              <form onSubmit={handleForgotSubmit} className="space-y-4 animate-fade-in">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-gray-200">
+                    Địa chỉ Email tài khoản
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="email"
+                      required
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="VD: studio@potonow.vn hoặc email của bạn"
+                      className="w-full bg-[#0c0d12] border border-[#2b3245] focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-2xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 outline-none transition-all"
+                      autoFocus
+                    />
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-normal">
+                    Hệ thống sẽ gửi mã xác thực 6 chữ số và liên kết đặt lại mật khẩu đến hòm thư này.
+                  </p>
+                </div>
+
+                {error && (
+                  <div className="flex items-start space-x-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span className="leading-relaxed">{error}</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3.5 px-4 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-amber-950 font-bold rounded-2xl text-sm shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Đang gửi mã xác thực...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>Gửi Mã Xác Nhận Qua Email</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
+
+            {/* TAB: ĐẶT LẠI MẬT KHẨU MỚI (VỚI OTP) */}
+            {tab === 'reset' && (
+              <form onSubmit={handleResetSubmit} className="space-y-4 animate-fade-in">
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-xs text-amber-200 flex items-start space-x-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                  <span className="leading-relaxed">
+                    Mã OTP 6 số đã được gửi tới: <strong className="text-white">{forgotEmail}</strong>. Vui lòng kiểm tra hộp thư (cả mục Spam/Quảng cáo).
+                  </span>
+                </div>
+
+                {/* Mã OTP 6 số */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-gray-200">
+                    Mã xác thực OTP (6 chữ số)
+                  </label>
+                  <div className="relative">
+                    <Key className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      required
+                      maxLength={6}
+                      value={resetCode}
+                      onChange={(e) => setResetCode(e.target.value.replace(/\D/g, ''))}
+                      placeholder="VD: 123456"
+                      className="w-full bg-[#0c0d12] border border-[#2b3245] focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-2xl pl-10 pr-4 py-3 text-base text-white tracking-widest font-mono placeholder-gray-600 outline-none transition-all"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                {/* Mật khẩu mới */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-gray-200">
+                    Mật khẩu mới (Tối thiểu 6 ký tự)
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="password"
+                      required
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Nhập mật khẩu mới..."
+                      className="w-full bg-[#0c0d12] border border-[#2b3245] focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-2xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Xác nhận mật khẩu mới */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-gray-200">
+                    Xác nhận lại mật khẩu mới
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Nhập lại mật khẩu mới..."
+                      className="w-full bg-[#0c0d12] border border-[#2b3245] focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-2xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                {resetSuccessMessage && (
+                  <div className="flex items-start space-x-2 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-300 text-xs animate-fade-in">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
+                    <span className="leading-relaxed">{resetSuccessMessage}</span>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="flex items-start space-x-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span className="leading-relaxed">{error}</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3.5 px-4 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-amber-950 font-bold rounded-2xl text-sm shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Đang cập nhật mật khẩu...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Đặt Lại Mật Khẩu Mới</span>
+                    </>
+                  )}
+                </button>
+
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    disabled={resendCountdown > 0 || loading}
+                    onClick={handleResendCode}
+                    className="text-xs font-semibold text-gray-400 hover:text-amber-400 disabled:opacity-50 transition-colors"
+                  >
+                    {resendCountdown > 0 ? (
+                      <span>Chưa nhận được mã? Gửi lại sau <strong className="text-amber-400">{resendCountdown}s</strong></span>
+                    ) : (
+                      <span>Chưa nhận được mã? <strong className="text-amber-400">Gửi lại mã OTP ngay</strong></span>
+                    )}
+                  </button>
+                </div>
               </form>
             )}
 

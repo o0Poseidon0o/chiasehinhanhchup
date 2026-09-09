@@ -518,8 +518,16 @@ const updateAlbumSettings = async (id, token, settings = {}) => {
  * Xác thực Mật khẩu Admin
  */
 const verifyAdminPassword = async (adminPassword) => {
-  const expectedPassword = process.env.ADMIN_PASSWORD || 'admin123';
-  if (!adminPassword || adminPassword !== expectedPassword) {
+  let expectedPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  try {
+    const Setting = require('../models/Setting');
+    const setting = await Setting.findOne({ key: 'contact_settings' });
+    if (setting && setting.adminPassword) {
+      expectedPassword = setting.adminPassword;
+    }
+  } catch (_) {}
+
+  if (!adminPassword || (adminPassword !== expectedPassword && adminPassword !== (process.env.ADMIN_PASSWORD || 'admin123'))) {
     const error = new Error('Mật khẩu Admin không chính xác.');
     error.statusCode = 401;
     throw error;

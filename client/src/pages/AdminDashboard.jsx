@@ -34,7 +34,8 @@ import {
   Sparkles,
   Calendar,
   Star,
-  Tag
+  Tag,
+  Mail
 } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
 import { getPublicBaseUrl } from '../utils/formatters';
@@ -46,10 +47,11 @@ import { AdminBookingsManagement } from '../components/admin/AdminBookingsManage
 import { AdminReviewsManagement } from '../components/admin/AdminReviewsManagement';
 import { AdminAddonsManagement } from '../components/admin/AdminAddonsManagement';
 import { AdminContactSettings } from '../components/admin/AdminContactSettings';
+import { AdminEmailSettings } from '../components/admin/AdminEmailSettings';
 import { useAuth } from '../context/AuthContext';
 
 export const AdminDashboard = () => {
-  const { logout } = useAuth();
+  const { logout, openAuthModal } = useAuth();
   const [activeTab, setActiveTab] = useState('albums'); // 'albums' | 'photographers' | 'bookings' | 'users' | 'categories'
   const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -361,6 +363,20 @@ export const AdminDashboard = () => {
               <span>XÁC NHẬN ĐĂNG NHẬP</span>
             )}
           </button>
+
+          <div className="text-center pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof openAuthModal === 'function') {
+                  openAuthModal('/admin', 'forgot', 'admin');
+                }
+              }}
+              className="text-xs text-amber-400 hover:text-amber-300 font-semibold transition-colors"
+            >
+              Quên mật khẩu Quản Trị?
+            </button>
+          </div>
         </form>
       </div>
     );
@@ -409,6 +425,12 @@ export const AdminDashboard = () => {
           icon: <Phone className="w-5 h-5 text-emerald-400" />,
           title: 'Cấu Hình Kênh Liên Hệ Nhanh (Hotline, Telegram, Zalo, FB)',
           subtitle: 'Tùy chỉnh số Hotline, link Telegram, Zalo, Facebook Messenger và bật/tắt các kênh theo nhu cầu.'
+        };
+      case 'email':
+        return {
+          icon: <Mail className="w-5 h-5 text-amber-400" />,
+          title: 'Cấu Hình Email Gửi Thư (Gmail / SMTP)',
+          subtitle: 'Thiết lập tài khoản Gmail chính thức để gửi mã OTP khôi phục mật khẩu và thư thông báo tới người dùng.'
         };
       case 'albums':
       default:
@@ -581,6 +603,18 @@ export const AdminDashboard = () => {
           <Phone className="w-4 h-4 shrink-0 text-emerald-400" />
           <span className="truncate">Liên Hệ & FAB</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab('email')}
+          className={`flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
+            activeTab === 'email'
+              ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 text-white shadow-md shadow-blue-500/20 scale-[1.01]'
+              : 'text-[#a2998a] hover:text-white hover:bg-[#1a1714]'
+          }`}
+        >
+          <Mail className="w-4 h-4 shrink-0 text-blue-300" />
+          <span className="truncate">📧 Cấu Hình Email</span>
+        </button>
       </div>
 
       {activeTab === 'bookings' ? (
@@ -597,6 +631,8 @@ export const AdminDashboard = () => {
         <AdminReviewsManagement />
       ) : activeTab === 'contacts' ? (
         <AdminContactSettings />
+      ) : activeTab === 'email' ? (
+        <AdminEmailSettings />
       ) : (
         <>
       {/* Notice Banner */}

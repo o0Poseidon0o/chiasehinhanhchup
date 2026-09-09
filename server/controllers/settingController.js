@@ -112,8 +112,81 @@ const approveAllPendingPhotographers = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * @desc    Lấy thông tin cấu hình Email của hệ thống (Master Admin)
+ * @route   GET /api/settings/email
+ * @access  Master Admin
+ */
+const getEmailSettings = asyncHandler(async (req, res) => {
+  const emailService = require('../services/emailService');
+  const config = await emailService.getEmailConfig();
+  
+  res.status(200).json({
+    success: true,
+    data: {
+      emailUser: config.user || '',
+      emailSenderName: config.senderName || 'Photodate.vn',
+      emailService: config.service || 'gmail',
+      isConfigured: Boolean(config.user && config.pass),
+      hasPassword: Boolean(config.pass)
+    }
+  });
+});
+
+/**
+ * @desc    Cập nhật thông tin cấu hình Email Gmail / SMTP (Master Admin)
+ * @route   PUT /api/settings/email
+ * @access  Master Admin
+ */
+const updateEmailSettings = asyncHandler(async (req, res) => {
+  const { emailUser, emailPass, emailSenderName, emailService } = req.body;
+
+  const updateData = {
+    updatedAt: new Date()
+  };
+
+  if (emailUser !== undefined) updateData.emailUser = String(emailUser).trim();
+  if (emailPass !== undefined && emailPass.trim() && !emailPass.includes('•••')) {
+    updateData.emailPass = String(emailPass).trim();
+  }
+  if (emailSenderName !== undefined) updateData.emailSenderName = String(emailSenderName).trim();
+  if (emailService !== undefined) updateData.emailService = String(emailService).trim();
+
+  const updated = await Setting.findOneAndUpdate(
+    { key: 'contact_settings' },
+    updateData,
+    { new: true, upsert: true }
+  );
+
+  res.status(200).json({
+    success: true,
+    message: 'Đã lưu thông tin cấu hình Email thành công!',
+    data: {
+      emailUser: updated.emailUser || '',
+      emailSenderName: updated.emailSenderName || 'Photodate.vn',
+      emailService: updated.emailService || 'gmail',
+      isConfigured: Boolean(updated.emailUser && updated.emailPass)
+    }
+  });
+});
+
+/**
+ * @desc    Gửi email thử nghiệm (Test Email Connection)
+ * @route   POST /api/settings/email/test
+ * @access  Master Admin
+ */
+const testEmailSettings = asyncHandler(async (req, res) => {
+  const emailService = require('../services/emailService');
+  const { testEmail } = req.body;
+  const result = await emailService.verifyAndSendTestEmail(testEmail);
+  res.status(200).json(result);
+});
+
 module.exports = {
   getContactSettings,
   updateContactSettings,
-  approveAllPendingPhotographers
+  approveAllPendingPhotographers,
+  getEmailSettings,
+  updateEmailSettings,
+  testEmailSettings
 };
