@@ -1,4 +1,9 @@
-const nodemailer = require('nodemailer');
+let nodemailer = null;
+try {
+  nodemailer = require('nodemailer');
+} catch (e) {
+  console.warn('⚠️ Ghi chú: Thư viện nodemailer chưa sẵn sàng:', e.message);
+}
 const Setting = require('../models/Setting');
 
 /**
@@ -32,6 +37,16 @@ const getEmailConfig = async () => {
  */
 const createTransporter = async () => {
   const config = await getEmailConfig();
+
+  if (!nodemailer) {
+    try {
+      nodemailer = require('nodemailer');
+    } catch (_) {
+      const err = new Error('Thư viện gửi email (nodemailer) chưa được cài đặt trên máy chủ.');
+      err.statusCode = 500;
+      throw err;
+    }
+  }
 
   if (!config.user || !config.pass) {
     const err = new Error(
