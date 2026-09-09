@@ -14,7 +14,10 @@ const getEmailConfig = async () => {
     user: process.env.GMAIL_USER || '',
     pass: process.env.GMAIL_PASS || '',
     senderName: 'Photodate.vn - Nền Tảng Nhiếp Ảnh',
-    service: 'gmail'
+    service: 'gmail', // 'gmail' | 'smtp' | 'custom'
+    host: process.env.SMTP_HOST || '',
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_SECURE === 'true'
   };
 
   try {
@@ -24,6 +27,9 @@ const getEmailConfig = async () => {
       if (setting.emailPass) config.pass = setting.emailPass.trim();
       if (setting.emailSenderName) config.senderName = setting.emailSenderName.trim();
       if (setting.emailService) config.service = setting.emailService.trim();
+      if (setting.emailHost) config.host = setting.emailHost.trim();
+      if (setting.emailPort) config.port = Number(setting.emailPort);
+      if (typeof setting.emailSecure === 'boolean') config.secure = setting.emailSecure;
     }
   } catch (err) {
     console.warn('Không thể đọc cấu hình email từ Setting:', err.message);
@@ -33,7 +39,7 @@ const getEmailConfig = async () => {
 };
 
 /**
- * Khởi tạo Transporter cho Nodemailer
+ * Khởi tạo Transporter cho Nodemailer (Hỗ trợ Gmail & Custom SMTP đa máy chủ)
  */
 const createTransporter = async () => {
   const config = await getEmailConfig();
@@ -50,26 +56,54 @@ const createTransporter = async () => {
 
   if (!config.user || !config.pass) {
     const err = new Error(
-      'Hệ thống chưa được thiết lập tài khoản Gmail gửi thư. Vui lòng vào trang Quản trị Master Admin -> Cấu hình Email để cài đặt.'
+      'Hệ thống chưa được thiết lập tài khoản gửi thư. Vui lòng vào trang Quản trị Master Admin -> Cấu hình Email để cài đặt.'
     );
     err.statusCode = 400;
     throw err;
   }
 
-  // Chuẩn hóa mật khẩu ứng dụng (loại bỏ khoảng trắng nếu người dùng copy dạng: abcd efgh ijkl mnop)
+  // Chuẩn hóa mật khẩu (loại bỏ khoảng trắng nếu người dùng copy dạng: abcd efgh ijkl mnop)
   const cleanPass = config.pass.replace(/\s+/g, '');
 
   const createFn = (nodemailer.createTransport || (nodemailer.default && nodemailer.default.createTransport) || nodemailer).bind(nodemailer);
 
-  const transporter = createFn({
-    service: 'gmail',
-    auth: {
-      user: config.user,
-      pass: cleanPass
-    }
-  });
+  let transporter;
+  const isCustomSmtp = config.service === 'smtp' || config.service === 'custom' || (config.host && config.service !== 'gmail');
 
-  return { transporter, config };
+  if (isCustomSmtp) {
+    if (!config.host) {
+      const err = new Error('Vui lòng nhập địa chỉ máy chủ SMTP (Host) trong trang Cấu hình Email.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const port = Number(config.port) || (config.secure ? 465 : 587);
+    const secure = typeof config.secure === 'boolean' ? config.secure : port === 465;
+
+    transporter = createFn({
+      host: config.host,
+      port,
+      secure,
+      auth: {
+        user: config.user,
+        pass: cleanPass
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
+  } else {
+    // Mặc định: Gmail service
+    transporter = createFn({
+      service: 'gmail',
+      auth: {
+        user: config.user,
+        pass: cleanPass
+      }
+    });
+  }
+
+  return { transporter, config, isCustomSmtp };
 };
 
 /**
@@ -211,9 +245,9 @@ const verifyAndSendTestEmail = async (testToEmail) => {
   const info = await transporter.sendMail({
     from: `"${config.senderName}" <${config.user}>`,
     to,
-    subject: `[Photodate] Kiểm tra cấu hình Gmail gửi thư thành công!`,
+    subject: `[Photodate] Kiểm tra cấu hình Email gửi thư thành công!`,
     html,
-    text: `Hệ thống Photodate.vn đã kết nối thành công với tài khoản Gmail: ${config.user}. Sẵn sàng gửi mã OTP!`
+    text: `Hệ thống Photodate.vn đã kết nối thành công với tài khoản Email: ${config.user}. Sẵn sàng gửi mã OTP!`
   });
 
   return {
@@ -224,9 +258,93 @@ const verifyAndSendTestEmail = async (testToEmail) => {
   };
 };
 
+/**
+ * Gửi thông báo khi Master Admin đặt lại mật khẩu thủ công cho người dùng
+ */
+const sendAdminResetNotificationEmail = async ({ to, name, newPassword, role }) => {
+  const recipientName = name || 'Quý khách';
+  const roleDisplay = role === 'photographer' 
+    ? 'Nhiếp Ảnh Gia' 
+    : role === 'admin' 
+    ? 'Quản Trị Viên' 
+    : 'Khách Hàng';
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Thông báo mật khẩu mới</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #0b0c10; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #e2e8f0;">
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; background-color: #0b0c10; padding: 40px 10px;">
+        <tr>
+          <td align="center">
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 560px; background-color: #141721; border-radius: 20px; border: 1px solid #232938; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+              <tr>
+                <td style="padding: 36px 36px 20px 36px; text-align: center; background: linear-gradient(180deg, rgba(245, 158, 11, 0.1) 0%, rgba(20, 23, 33, 0) 100%);">
+                  <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #f59e0b; letter-spacing: -0.5px;">
+                    Photodate.vn
+                  </h1>
+                  <p style="margin: 6px 0 0 0; font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px;">
+                    Nền Tảng Nhiếp Ảnh & Chọn Ảnh Trực Tuyến
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 36px 30px 36px;">
+                  <h2 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 700; color: #ffffff;">
+                    Thông báo đặt lại mật khẩu (${roleDisplay})
+                  </h2>
+                  <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #cbd5e1;">
+                    Xin chào <strong>${recipientName}</strong>,
+                  </p>
+                  <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: #cbd5e1;">
+                    Quản trị viên hệ thống (Master Admin) vừa thiết lập lại mật khẩu đăng nhập cho tài khoản của bạn. Dưới đây là thông tin đăng nhập mới:
+                  </p>
+                  
+                  <div style="background: #0c0e14; border: 1px dashed #f59e0b; border-radius: 14px; padding: 20px; text-align: center; margin-bottom: 24px;">
+                    <span style="display: block; font-size: 12px; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase;">
+                      Mật khẩu mới của bạn
+                    </span>
+                    <span style="display: inline-block; font-family: monospace; font-size: 26px; font-weight: 800; letter-spacing: 2px; color: #f59e0b; background: #1c2230; padding: 8px 24px; border-radius: 10px; border: 1px solid #334155;">
+                      ${newPassword}
+                    </span>
+                  </div>
+
+                  <p style="margin: 0 0 24px 0; font-size: 13px; line-height: 1.6; color: #94a3b8;">
+                    ⚠️ Vì lý do bảo mật, bạn hãy đăng nhập ngay và đổi lại mật khẩu cá nhân tại trang Workspace của bạn.
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 20px 36px; background-color: #0e1017; border-top: 1px solid #1e2433; text-align: center;">
+                  <p style="margin: 0; font-size: 12px; color: #64748b;">
+                    © ${new Date().getFullYear()} Photodate.vn. Mọi quyền được bảo lưu.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  return await sendMail({
+    to,
+    subject: `[Photodate] Quản trị viên đã cấp lại mật khẩu đăng nhập của bạn`,
+    html,
+    text: `Xin chào ${recipientName}, Mật khẩu đăng nhập mới của bạn tại Photodate.vn là: ${newPassword}. Vui lòng đăng nhập và đổi lại mật khẩu.`
+  });
+};
+
 module.exports = {
   getEmailConfig,
   sendMail,
   sendPasswordResetEmail,
-  verifyAndSendTestEmail
+  verifyAndSendTestEmail,
+  sendAdminResetNotificationEmail
 };

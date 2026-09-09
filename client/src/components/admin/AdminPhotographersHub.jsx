@@ -25,7 +25,10 @@ import {
   Users,
   ShieldCheck,
   ShieldAlert,
-  Sparkles
+  Sparkles,
+  KeyRound,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { userApi } from '../../api/userApi';
 import { albumApi } from '../../api/albumApi';
@@ -70,6 +73,12 @@ export const AdminPhotographersHub = () => {
 
   // Modal View Photographer's Albums
   const [viewingPhotographer, setViewingPhotographer] = useState(null);
+
+  // Admin Reset Password Modal states
+  const [resetModalUser, setResetModalUser] = useState(null);
+  const [resetPasswordInput, setResetPasswordInput] = useState('');
+  const [resetSendEmail, setResetSendEmail] = useState(true);
+  const [showResetPassword, setShowResetPassword] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -145,7 +154,50 @@ export const AdminPhotographersHub = () => {
       setNotice({ type: 'success', message: `Đã phê duyệt và kích hoạt thành công hồ sơ của "${name}"!` });
       await fetchData();
     } catch (err) {
-      setNotice({ type: 'error', message: err.message || 'Không thể phê duyệt.' });
+      setNotice({ type: 'error', message: err.message || 'Lỗi khi xử lý.' });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  // Mở modal đặt lại mật khẩu cho photographer
+  const handleOpenResetModal = (photographer) => {
+    setResetModalUser(photographer);
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    setResetPasswordInput(`Poto@${randomSuffix}`);
+    setResetSendEmail(Boolean(photographer.email));
+    setShowResetPassword(false);
+  };
+
+  // Tạo mật khẩu ngẫu nhiên
+  const handleGenerateRandom = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    let pass = 'Poto@';
+    for (let i = 0; i < 4; i++) {
+      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setResetPasswordInput(pass);
+  };
+
+  // Xác nhận đặt lại mật khẩu
+  const handleConfirmReset = async (e) => {
+    e.preventDefault();
+    if (!resetModalUser) return;
+    if (!resetPasswordInput || resetPasswordInput.trim().length < 6) {
+      setNotice({ type: 'error', message: 'Mật khẩu mới phải có ít nhất 6 ký tự.' });
+      return;
+    }
+
+    try {
+      setProcessingId(`reset_${resetModalUser._id}`);
+      const res = await userApi.adminResetPassword(resetModalUser._id, {
+        newPassword: resetPasswordInput.trim(),
+        sendEmail: resetSendEmail
+      });
+      setNotice({ type: 'success', message: res.message || `Đã đổi mật khẩu thành công cho ${resetModalUser.name}!` });
+      setResetModalUser(null);
+    } catch (err) {
+      setNotice({ type: 'error', message: err.message || 'Không thể đặt lại mật khẩu.' });
     } finally {
       setProcessingId(null);
     }
@@ -770,6 +822,14 @@ export const AdminPhotographersHub = () => {
                           )}
 
                           <button
+                            title="Đặt lại mật khẩu cho Nhiếp ảnh gia này"
+                            onClick={() => handleOpenResetModal(p)}
+                            className="p-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-lg transition-colors"
+                          >
+                            <KeyRound className="w-4 h-4" />
+                          </button>
+
+                          <button
                             title="Xóa đối tác"
                             onClick={() => handleDelete(p._id, p.name)}
                             className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
@@ -961,6 +1021,126 @@ export const AdminPhotographersHub = () => {
               >
                 {processingId === 'create' ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Thêm Đối Tác</span>}
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL MASTER ADMIN RESET MẬT KHẨU CHO PHOTOGRAPHER */}
+      {resetModalUser && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-[#141721] border border-[#232938] rounded-3xl w-full max-w-md p-6 relative shadow-2xl space-y-5">
+            <button
+              onClick={() => setResetModalUser(null)}
+              className="absolute top-5 right-5 text-gray-400 hover:text-white p-1 rounded-xl hover:bg-[#1f2433] transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Đặt Lại Mật Khẩu</h3>
+                <p className="text-xs text-gray-400">Cấp mật khẩu mới cho Nhiếp ảnh gia</p>
+              </div>
+            </div>
+
+            {/* Photographer Preview */}
+            <div className="p-3.5 bg-[#0c0e14] border border-[#232938] rounded-2xl space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Nhiếp ảnh gia:</span>
+                <span className="font-bold text-white">{resetModalUser.name}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Email:</span>
+                <span className="text-amber-300 font-mono">{resetModalUser.email || 'Chưa cập nhật'}</span>
+              </div>
+              {resetModalUser.phone && (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">SĐT / Zalo:</span>
+                  <span className="text-gray-200 font-mono">{resetModalUser.phone}</span>
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={handleConfirmReset} className="space-y-4">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-gray-300">
+                    Mật khẩu mới (Tối thiểu 6 ký tự) *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateRandom}
+                    className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold hover:underline"
+                  >
+                    Tạo ngẫu nhiên
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showResetPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={resetPasswordInput}
+                    onChange={(e) => setResetPasswordInput(e.target.value)}
+                    placeholder="Nhập mật khẩu mới..."
+                    className="w-full bg-[#0c0e14] border border-[#232938] focus:border-amber-500 rounded-xl pl-3.5 pr-10 py-2.5 text-xs sm:text-sm text-white font-mono outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowResetPassword(!showResetPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-1"
+                  >
+                    {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Send email toggle */}
+              {resetModalUser.email && (
+                <div className="flex items-start space-x-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="phResetSendEmailCheckbox"
+                    checked={resetSendEmail}
+                    onChange={(e) => setResetSendEmail(e.target.checked)}
+                    className="w-4 h-4 accent-amber-500 rounded cursor-pointer mt-0.5"
+                  />
+                  <label htmlFor="phResetSendEmailCheckbox" className="text-xs text-gray-300 cursor-pointer leading-relaxed">
+                    Gửi email thông báo mật khẩu mới tới <strong className="text-amber-400">{resetModalUser.email}</strong>
+                  </label>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end space-x-2 pt-3 border-t border-[#232938]">
+                <button
+                  type="button"
+                  onClick={() => setResetModalUser(null)}
+                  className="px-4 py-2.5 rounded-xl border border-[#232938] text-gray-300 hover:text-white hover:bg-[#1a1f2c] text-xs font-semibold"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={processingId === `reset_${resetModalUser._id}`}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-amber-950 font-bold text-xs flex items-center space-x-1.5 shadow-md disabled:opacity-50"
+                >
+                  {processingId === `reset_${resetModalUser._id}` ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Đang cập nhật...</span>
+                    </>
+                  ) : (
+                    <>
+                      <KeyRound className="w-3.5 h-3.5" />
+                      <span>Cấp Mật Khẩu Mới</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </form>
           </div>
         </div>

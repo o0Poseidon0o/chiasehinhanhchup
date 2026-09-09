@@ -205,6 +205,20 @@ export const userApi = {
     }
   },
 
+  /**
+   * Master Admin đặt lại mật khẩu trực tiếp cho người dùng / Nhiếp ảnh gia
+   */
+  async adminResetPassword(id, { newPassword, sendEmail = true }) {
+    try {
+      const response = await api.post(`/${id}/admin-reset-password`, { newPassword, sendEmail }, {
+        headers: getAdminHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Không thể đặt lại mật khẩu người dùng.'));
+    }
+  },
+
   // =========================================================
   // HỆ THỐNG ĐÁNH GIÁ SAO & UY TÍN NHIẾP ẢNH GIA (REVIEWS & RATING)
   // =========================================================

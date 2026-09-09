@@ -33,6 +33,9 @@ const DEFAULT_SETTINGS = {
   emailPass: '',
   emailSenderName: 'Photodate.vn',
   emailService: 'gmail',
+  emailHost: '',
+  emailPort: 587,
+  emailSecure: false,
   adminPassword: '',
 
   updatedAt: new Date().toISOString()

@@ -127,6 +127,9 @@ const getEmailSettings = asyncHandler(async (req, res) => {
       emailUser: config.user || '',
       emailSenderName: config.senderName || 'Photodate.vn',
       emailService: config.service || 'gmail',
+      emailHost: config.host || '',
+      emailPort: config.port || 587,
+      emailSecure: Boolean(config.secure),
       isConfigured: Boolean(config.user && config.pass),
       hasPassword: Boolean(config.pass)
     }
@@ -139,7 +142,7 @@ const getEmailSettings = asyncHandler(async (req, res) => {
  * @access  Master Admin
  */
 const updateEmailSettings = asyncHandler(async (req, res) => {
-  const { emailUser, emailPass, emailSenderName, emailService } = req.body;
+  const { emailUser, emailPass, emailSenderName, emailService, emailHost, emailPort, emailSecure } = req.body;
 
   const updateData = {
     updatedAt: new Date()
@@ -151,6 +154,9 @@ const updateEmailSettings = asyncHandler(async (req, res) => {
   }
   if (emailSenderName !== undefined) updateData.emailSenderName = String(emailSenderName).trim();
   if (emailService !== undefined) updateData.emailService = String(emailService).trim();
+  if (emailHost !== undefined) updateData.emailHost = String(emailHost).trim();
+  if (emailPort !== undefined) updateData.emailPort = Number(emailPort) || 587;
+  if (emailSecure !== undefined) updateData.emailSecure = Boolean(emailSecure);
 
   const updated = await Setting.findOneAndUpdate(
     { key: 'contact_settings' },
@@ -165,6 +171,9 @@ const updateEmailSettings = asyncHandler(async (req, res) => {
       emailUser: updated.emailUser || '',
       emailSenderName: updated.emailSenderName || 'Photodate.vn',
       emailService: updated.emailService || 'gmail',
+      emailHost: updated.emailHost || '',
+      emailPort: updated.emailPort || 587,
+      emailSecure: Boolean(updated.emailSecure),
       isConfigured: Boolean(updated.emailUser && updated.emailPass)
     }
   });

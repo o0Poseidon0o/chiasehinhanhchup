@@ -24,6 +24,7 @@ router.post('/', validateAdminPassword, userController.createUser);
 router.get('/:id', validateAdminPassword, userController.getUser);
 router.put('/:id/approve', validateAdminPassword, userController.approvePhotographer);
 router.put('/:id/reject', validateAdminPassword, userController.rejectPhotographer);
+router.post('/:id/admin-reset-password', validateAdminPassword, userController.adminResetPassword);
 router.delete('/:id', validateAdminPassword, userController.deleteUser);
 
 module.exports = router;

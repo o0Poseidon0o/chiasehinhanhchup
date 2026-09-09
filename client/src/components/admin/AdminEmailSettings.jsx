@@ -13,7 +13,9 @@ import {
   Eye,
   EyeOff,
   ShieldCheck,
-  AlertTriangle
+  AlertTriangle,
+  Server,
+  Globe
 } from 'lucide-react';
 import { settingApi } from '../../api/settingApi';
 
@@ -29,7 +31,10 @@ export const AdminEmailSettings = () => {
     emailUser: '',
     emailPass: '',
     emailSenderName: 'Photodate.vn - Nền Tảng Nhiếp Ảnh',
-    emailService: 'gmail',
+    emailService: 'gmail', // 'gmail' | 'custom'
+    emailHost: '',
+    emailPort: 587,
+    emailSecure: false,
     isConfigured: false,
     hasPassword: false
   });
@@ -41,11 +46,15 @@ export const AdminEmailSettings = () => {
       setLoading(true);
       const res = await settingApi.getEmailSettings();
       if (res && res.data) {
+        const isCustom = res.data.emailService === 'custom' || res.data.emailService === 'smtp';
         setFormData({
           emailUser: res.data.emailUser || '',
           emailPass: res.data.hasPassword ? '••••••••••••••••' : '',
           emailSenderName: res.data.emailSenderName || 'Photodate.vn - Nền Tảng Nhiếp Ảnh',
-          emailService: res.data.emailService || 'gmail',
+          emailService: isCustom ? 'custom' : 'gmail',
+          emailHost: res.data.emailHost || '',
+          emailPort: res.data.emailPort || 587,
+          emailSecure: Boolean(res.data.emailSecure),
           isConfigured: Boolean(res.data.isConfigured),
           hasPassword: Boolean(res.data.hasPassword)
         });
@@ -67,7 +76,12 @@ export const AdminEmailSettings = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!formData.emailUser.trim()) {
-      setNotice({ type: 'error', text: 'Vui lòng nhập địa chỉ Gmail gửi thư.' });
+      setNotice({ type: 'error', text: 'Vui lòng nhập địa chỉ Email / Tài khoản gửi thư.' });
+      return;
+    }
+
+    if (formData.emailService === 'custom' && !formData.emailHost.trim()) {
+      setNotice({ type: 'error', text: 'Vui lòng nhập địa chỉ máy chủ SMTP (Host) khi sử dụng máy chủ riêng.' });
       return;
     }
 
@@ -79,7 +93,10 @@ export const AdminEmailSettings = () => {
       const payload = {
         emailUser: formData.emailUser.trim(),
         emailSenderName: formData.emailSenderName.trim(),
-        emailService: formData.emailService
+        emailService: formData.emailService,
+        emailHost: formData.emailHost.trim(),
+        emailPort: Number(formData.emailPort) || 587,
+        emailSecure: Boolean(formData.emailSecure)
       };
 
       // Chỉ gửi emailPass nếu người dùng đã thay đổi (không phải placeholder ••••)
@@ -116,7 +133,7 @@ export const AdminEmailSettings = () => {
     } catch (err) {
       setTestResult({
         type: 'error',
-        text: err.message || 'Kiểm tra thất bại. Vui lòng xem lại Gmail hoặc Mật khẩu ứng dụng 16 ký tự.'
+        text: err.message || 'Kiểm tra gửi thư thất bại. Vui lòng kiểm tra lại thông tin Host, Port hoặc Mật khẩu.'
       });
     } finally {
       setTesting(false);
@@ -194,24 +211,145 @@ export const AdminEmailSettings = () => {
 
       {/* Main Settings Form */}
       <div className="bg-[#14120e] border border-[#24201b] rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
+        {/* Service Type Selector */}
+        <div className="space-y-2 pb-5 border-b border-[#24201b]">
+          <label className="block text-xs font-bold text-white flex items-center space-x-1.5">
+            <Server className="w-4 h-4 text-amber-400" />
+            <span>Phương thức gửi email (Email Service Provider)</span>
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, emailService: 'gmail' })}
+              className={`p-4 rounded-2xl border text-left transition-all flex items-start space-x-3 ${
+                formData.emailService === 'gmail'
+                  ? 'bg-amber-500/10 border-amber-500/50 text-white shadow-md'
+                  : 'bg-[#0c0a08] border-[#2b251f] text-[#8e8474] hover:text-white hover:border-[#443a2f]'
+              }`}
+            >
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                formData.emailService === 'gmail' ? 'bg-amber-500 text-amber-950 font-bold' : 'bg-[#1a1714] text-[#8e8474]'
+              }`}>
+                G
+              </div>
+              <div className="space-y-0.5">
+                <div className="text-xs sm:text-sm font-bold text-white flex items-center space-x-1.5">
+                  <span>Gmail (Google Workspace)</span>
+                  {formData.emailService === 'gmail' && (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
+                  )}
+                </div>
+                <div className="text-[11px] text-[#8e8474]">
+                  Sử dụng tài khoản Gmail và Mật khẩu ứng dụng 16 số. Cài đặt nhanh trong 2 phút.
+                </div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, emailService: 'custom' })}
+              className={`p-4 rounded-2xl border text-left transition-all flex items-start space-x-3 ${
+                formData.emailService === 'custom'
+                  ? 'bg-amber-500/10 border-amber-500/50 text-white shadow-md'
+                  : 'bg-[#0c0a08] border-[#2b251f] text-[#8e8474] hover:text-white hover:border-[#443a2f]'
+              }`}
+            >
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                formData.emailService === 'custom' ? 'bg-amber-500 text-amber-950 font-bold' : 'bg-[#1a1714] text-[#8e8474]'
+              }`}>
+                <Globe className="w-4 h-4" />
+              </div>
+              <div className="space-y-0.5">
+                <div className="text-xs sm:text-sm font-bold text-white flex items-center space-x-1.5">
+                  <span>Máy Chủ SMTP Riêng / Mail Công Ty</span>
+                  {formData.emailService === 'custom' && (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
+                  )}
+                </div>
+                <div className="text-[11px] text-[#8e8474]">
+                  Hỗ trợ bất kỳ máy chủ SMTP (Tên miền riêng, SendGrid, Amazon SES, Office 365, Mail Hosting...).
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+
         <form onSubmit={handleSave} className="space-y-6">
+          {/* Custom SMTP Fields */}
+          {formData.emailService === 'custom' && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-2xl bg-[#0c0a08] border border-[#2b251f]">
+              <div className="sm:col-span-2 space-y-1.5">
+                <label className="block text-xs font-bold text-white flex items-center space-x-1.5">
+                  <Server className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Máy chủ SMTP (Host) *</span>
+                </label>
+                <input
+                  type="text"
+                  required={formData.emailService === 'custom'}
+                  value={formData.emailHost}
+                  onChange={(e) => setFormData({ ...formData, emailHost: e.target.value })}
+                  placeholder="VD: smtp.domain.vn hoặc mail.company.com"
+                  className="w-full bg-[#14120e] border border-[#332b21] focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-[#5a5245] outline-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-white">
+                  <span>Cổng (Port) *</span>
+                </label>
+                <input
+                  type="number"
+                  required={formData.emailService === 'custom'}
+                  value={formData.emailPort}
+                  onChange={(e) => {
+                    const port = parseInt(e.target.value, 10);
+                    setFormData({
+                      ...formData,
+                      emailPort: e.target.value,
+                      emailSecure: port === 465 ? true : formData.emailSecure
+                    });
+                  }}
+                  placeholder="587 hoặc 465"
+                  className="w-full bg-[#14120e] border border-[#332b21] focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-[#5a5245] outline-none"
+                />
+              </div>
+
+              <div className="sm:col-span-3 flex items-center space-x-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="smtpSecureCheckbox"
+                  checked={formData.emailSecure}
+                  onChange={(e) => setFormData({ ...formData, emailSecure: e.target.checked })}
+                  className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                />
+                <label htmlFor="smtpSecureCheckbox" className="text-xs text-[#a2998a] cursor-pointer">
+                  Sử dụng kết nối bảo mật SSL / TLS trực tiếp (Bật khi dùng cổng <strong className="text-white">465</strong>, Tắt khi dùng cổng <strong className="text-white">587</strong> với STARTTLS)
+                </label>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* 1. Gmail Address */}
+            {/* 1. Account / Username */}
             <div className="space-y-2">
               <label className="block text-xs font-bold text-white flex items-center space-x-1.5">
                 <Mail className="w-4 h-4 text-amber-400" />
-                <span>Tài khoản Gmail gửi thư *</span>
+                <span>
+                  {formData.emailService === 'custom' ? 'Tài khoản đăng nhập / Email gửi thư *' : 'Tài khoản Gmail gửi thư *'}
+                </span>
               </label>
               <input
-                type="email"
+                type="text"
                 required
                 value={formData.emailUser}
                 onChange={(e) => setFormData({ ...formData, emailUser: e.target.value })}
-                placeholder="VD: photostudio@gmail.com"
+                placeholder={formData.emailService === 'custom' ? 'lienhe@domain.vn' : 'VD: photostudio@gmail.com'}
                 className="w-full bg-[#0c0a08] border border-[#332b21] focus:border-amber-500 rounded-2xl px-4 py-3 text-xs sm:text-sm text-white placeholder-[#5a5245] outline-none transition-all"
               />
               <p className="text-[11px] text-[#8e8474]">
-                Địa chỉ Gmail hoặc Google Workspace dùng để gửi thư tới người dùng.
+                {formData.emailService === 'custom'
+                  ? 'Tài khoản xác thực trên máy chủ SMTP của công ty hoặc dịch vụ email riêng.'
+                  : 'Địa chỉ Gmail hoặc Google Workspace dùng để gửi thư tới người dùng.'}
               </p>
             </div>
 
@@ -234,12 +372,16 @@ export const AdminEmailSettings = () => {
               </p>
             </div>
 
-            {/* 3. Google App Password */}
+            {/* 3. Password */}
             <div className="space-y-2 md:col-span-2">
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-bold text-white flex items-center space-x-1.5">
                   <KeyRound className="w-4 h-4 text-amber-400" />
-                  <span>Mật khẩu ứng dụng Gmail (Google App Password - 16 ký tự) *</span>
+                  <span>
+                    {formData.emailService === 'custom'
+                      ? 'Mật khẩu / Token xác thực máy chủ SMTP *'
+                      : 'Mật khẩu ứng dụng Gmail (Google App Password - 16 ký tự) *'}
+                  </span>
                 </label>
                 {formData.hasPassword && (
                   <span className="text-[11px] text-emerald-400 font-semibold flex items-center space-x-1">
@@ -254,7 +396,7 @@ export const AdminEmailSettings = () => {
                   required={!formData.hasPassword}
                   value={formData.emailPass}
                   onChange={(e) => setFormData({ ...formData, emailPass: e.target.value })}
-                  placeholder={formData.hasPassword ? '•••••••••••••••• (Để trống nếu giữ nguyên)' : 'VD: abcd efgh ijkl mnop'}
+                  placeholder={formData.hasPassword ? '•••••••••••••••• (Để trống nếu giữ nguyên)' : formData.emailService === 'custom' ? 'Nhập mật khẩu SMTP...' : 'VD: abcd efgh ijkl mnop'}
                   className="w-full bg-[#0c0a08] border border-[#332b21] focus:border-amber-500 rounded-2xl pl-4 pr-12 py-3 text-xs sm:text-sm text-white font-mono placeholder-[#5a5245] outline-none transition-all"
                 />
                 <button
@@ -267,7 +409,9 @@ export const AdminEmailSettings = () => {
                 </button>
               </div>
               <p className="text-[11px] text-[#8e8474]">
-                ⚠️ Đây là <strong>Mật khẩu ứng dụng 16 chữ cái</strong> do Google cấp (không phải mật khẩu đăng nhập tài khoản thông thường). Xem hướng dẫn tạo bên dưới.
+                {formData.emailService === 'custom'
+                  ? 'Mật khẩu hòm thư hoặc API Key do dịch vụ SMTP cấp.'
+                  : '⚠️ Đây là Mật khẩu ứng dụng 16 chữ cái do Google cấp (không phải mật khẩu đăng nhập tài khoản thông thường). Xem hướng dẫn tạo bên dưới.'}
               </p>
             </div>
           </div>

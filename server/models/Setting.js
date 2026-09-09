@@ -31,7 +31,10 @@ const settingSchema = new mongoose.Schema({
   emailUser: { type: String, default: '', trim: true },
   emailPass: { type: String, default: '', trim: true },
   emailSenderName: { type: String, default: 'Photodate.vn', trim: true },
-  emailService: { type: String, default: 'gmail', trim: true },
+  emailService: { type: String, default: 'gmail', trim: true }, // 'gmail' | 'smtp' | 'custom'
+  emailHost: { type: String, default: '', trim: true }, // Ví dụ: smtp.gmail.com, smtp.domain.com, mail.company.vn
+  emailPort: { type: Number, default: 587 }, // 465 (SSL) hoặc 587 (TLS/STARTTLS)
+  emailSecure: { type: Boolean, default: false }, // true cho port 465, false cho port 587
 
   // Mật khẩu tùy chỉnh của Master Admin nếu được đổi qua email
   adminPassword: { type: String, default: '', trim: true },

@@ -467,22 +467,30 @@ const getUserStats = async () => {
  * Yêu cầu đặt lại mật khẩu - Tạo mã OTP 6 số và gửi qua Email
  */
 const forgotPassword = async ({ email, originUrl }) => {
-  if (!email || !email.trim()) {
-    const err = new Error('Vui lòng nhập địa chỉ email của bạn.');
+  const cleanInput = String(email || '').trim();
+  if (!cleanInput) {
+    const err = new Error('Vui lòng nhập Email hoặc Số điện thoại của bạn.');
     err.statusCode = 400;
     throw err;
   }
 
-  const cleanEmail = email.trim().toLowerCase();
+  const isEmail = cleanInput.includes('@');
+  let user = null;
 
-  // Tìm user theo email
-  let user = await User.findOne({ email: cleanEmail });
+  if (isEmail) {
+    user = await User.findOne({ email: cleanInput.toLowerCase() });
+  } else {
+    // Tìm bằng số điện thoại
+    const cleanPhone = cleanInput.replace(/\D/g, '');
+    user = await User.findOne({ phone: cleanPhone });
+  }
 
-  // Nếu là email Master Admin đặc biệt mà chưa có trong bảng User
-  if (!user && (cleanEmail === 'admin@potonow.vn' || cleanEmail === 'admin@photodate.vn')) {
+  // Nếu là email/tài khoản Master Admin đặc biệt mà chưa có trong bảng User
+  const isMasterAdminEmail = cleanInput.toLowerCase() === 'admin@potonow.vn' || cleanInput.toLowerCase() === 'admin@photodate.vn' || cleanInput.toLowerCase() === 'admin';
+  if (!user && isMasterAdminEmail) {
     user = new User({
       name: 'Quản Trị Hệ Thống (Master Admin)',
-      email: cleanEmail,
+      email: 'admin@potonow.vn',
       phone: '19006868',
       password: hashPassword(process.env.ADMIN_PASSWORD || 'admin123'),
       role: 'admin',
@@ -492,8 +500,16 @@ const forgotPassword = async ({ email, originUrl }) => {
   }
 
   if (!user) {
-    const err = new Error('Không tìm thấy tài khoản nào liên kết với email này trên hệ thống.');
+    const err = new Error('Không tìm thấy tài khoản nào phù hợp trên hệ thống.');
     err.statusCode = 404;
+    throw err;
+  }
+
+  if (!user.email) {
+    const err = new Error(
+      `Tài khoản "${user.name}" (SĐT: ${user.phone}) chưa cập nhật địa chỉ email nhận OTP. Vui lòng liên hệ Master Admin để được đặt lại mật khẩu trực tiếp.`
+    );
+    err.statusCode = 400;
     throw err;
   }
 
@@ -519,9 +535,15 @@ const forgotPassword = async ({ email, originUrl }) => {
     role: user.role
   });
 
+  // Che bớt email để bảo mật thông tin (vd: l***n@gmail.com)
+  const atIndex = user.email.indexOf('@');
+  const maskedEmail = atIndex > 2 
+    ? `${user.email[0]}***${user.email[atIndex - 1]}${user.email.slice(atIndex)}` 
+    : user.email;
+
   return {
     success: true,
-    message: `Đã gửi mã xác thực 6 chữ số đến email "${user.email}". Vui lòng kiểm tra hộp thư (cả mục Spam/Quảng cáo).`,
+    message: `Đã gửi mã xác thực 6 chữ số đến email "${maskedEmail}". Vui lòng kiểm tra hộp thư (cả mục Spam/Quảng cáo).`,
     email: user.email
   };
 };
@@ -629,6 +651,84 @@ const resetPassword = async ({ email, code, token, newPassword }) => {
   };
 };
 
+/**
+ * Master Admin trực tiếp đặt lại mật khẩu cho bất kỳ User / NAG nào
+ */
+const adminResetPassword = async (id, { newPassword, sendEmail = true }) => {
+  if (!newPassword || String(newPassword).trim().length < 6) {
+    const err = new Error('Mật khẩu mới phải có ít nhất 6 ký tự.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const cleanPassword = String(newPassword).trim();
+
+  // Xử lý nếu là master_admin
+  if (id === 'master_admin') {
+    await Setting.findOneAndUpdate(
+      { key: 'contact_settings' },
+      { adminPassword: cleanPassword, updatedAt: new Date() },
+      { upsert: true }
+    );
+    return {
+      success: true,
+      message: 'Đã cập nhật mật khẩu Master Admin thành công!'
+    };
+  }
+
+  const user = await User.findById(id);
+  if (!user) {
+    const err = new Error('Không tìm thấy tài khoản người dùng.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  user.password = hashPassword(cleanPassword);
+  user.resetPasswordCode = null;
+  user.resetPasswordToken = null;
+  user.resetPasswordExpires = null;
+  await user.save();
+
+  // Nếu user có role là admin, cập nhật cả Setting
+  if (user.role === 'admin') {
+    try {
+      await Setting.findOneAndUpdate(
+        { key: 'contact_settings' },
+        { adminPassword: cleanPassword, updatedAt: new Date() },
+        { upsert: true }
+      );
+    } catch (_) {}
+  }
+
+  let emailNotice = '';
+  // Gửi email thông báo nếu được yêu cầu và user có email
+  if (sendEmail && user.email) {
+    try {
+      await emailService.sendAdminResetNotificationEmail({
+        to: user.email,
+        name: user.name,
+        newPassword: cleanPassword,
+        role: user.role
+      });
+      emailNotice = ` và đã gửi email thông báo tới "${user.email}"`;
+    } catch (mailErr) {
+      console.warn('Không thể gửi email thông báo mật khẩu mới:', mailErr.message);
+      emailNotice = ` (Lưu ý: Không thể gửi email thông báo: ${mailErr.message})`;
+    }
+  }
+
+  return {
+    success: true,
+    message: `Đã đổi mật khẩu thành công cho "${user.name}"${emailNotice}!`,
+    data: {
+      userId: user._id,
+      name: user.name,
+      email: user.email,
+      newPassword: cleanPassword
+    }
+  };
+};
+
 module.exports = {
   registerUser,
   loginUser,
@@ -642,5 +742,6 @@ module.exports = {
   getUserStats,
   forgotPassword,
   verifyResetCode,
-  resetPassword
+  resetPassword,
+  adminResetPassword
 };

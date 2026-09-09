@@ -175,6 +175,18 @@ const resetPassword = asyncHandler(async (req, res) => {
   res.status(200).json(result);
 });
 
+/**
+ * @desc    Master Admin trực tiếp đặt lại mật khẩu cho User / Photographer
+ * @route   POST /api/users/:id/admin-reset-password
+ * @access  Master Admin
+ */
+const adminResetPassword = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { newPassword, sendEmail } = req.body;
+  const result = await userService.adminResetPassword(id, { newPassword, sendEmail });
+  res.status(200).json(result);
+});
+
 module.exports = {
   register,
   login,
@@ -189,5 +201,6 @@ module.exports = {
   deleteUser,
   forgotPassword,
   verifyResetCode,
-  resetPassword
+  resetPassword,
+  adminResetPassword
 };
