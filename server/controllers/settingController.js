@@ -177,8 +177,8 @@ const updateEmailSettings = asyncHandler(async (req, res) => {
  */
 const testEmailSettings = asyncHandler(async (req, res) => {
   const emailService = require('../services/emailService');
-  const { testEmail } = req.body;
-  const result = await emailService.verifyAndSendTestEmail(testEmail);
+  const targetEmail = req.body.testEmail || req.body.to || req.body.email;
+  const result = await emailService.verifyAndSendTestEmail(targetEmail);
   res.status(200).json(result);
 });
 

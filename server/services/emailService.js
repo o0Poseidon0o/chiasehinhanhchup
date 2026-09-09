@@ -59,7 +59,9 @@ const createTransporter = async () => {
   // Chuẩn hóa mật khẩu ứng dụng (loại bỏ khoảng trắng nếu người dùng copy dạng: abcd efgh ijkl mnop)
   const cleanPass = config.pass.replace(/\s+/g, '');
 
-  const transporter = nodemailer.createTransporter({
+  const createFn = (nodemailer.createTransport || (nodemailer.default && nodemailer.default.createTransport) || nodemailer).bind(nodemailer);
+
+  const transporter = createFn({
     service: 'gmail',
     auth: {
       user: config.user,
