@@ -15,10 +15,16 @@ export const AddressSelector = ({
   const [selectedProvinceName, setSelectedProvinceName] = useState('');
   const [selectedWardId, setSelectedWardId] = useState('');
   const [selectedWardName, setSelectedWardName] = useState('');
-  const [streetAddress, setStreetAddress] = useState('');
+  const [streetAddress, setStreetAddress] = useState(value || '');
   
   const [loadingProvinces, setLoadingProvinces] = useState(false);
   const [loadingWards, setLoadingWards] = useState(false);
+
+  useEffect(() => {
+    if (value && !streetAddress && !selectedProvinceName) {
+      setStreetAddress(value);
+    }
+  }, [value]);
 
   // Tải danh sách Tỉnh/Thành từ database nội bộ khi mount
   useEffect(() => {
@@ -26,8 +32,9 @@ export const AddressSelector = ({
     setLoadingProvinces(true);
     addressApi.getProvinces()
       .then(res => {
-        if (isMounted && res.data) {
-          setProvinces(res.data);
+        const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        if (isMounted && list.length > 0) {
+          setProvinces(list);
         }
       })
       .finally(() => {
@@ -49,8 +56,9 @@ export const AddressSelector = ({
     setLoadingWards(true);
     addressApi.getWards(selectedProvinceId)
       .then(res => {
-        if (isMounted && res.data) {
-          setWards(res.data);
+        const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        if (isMounted) {
+          setWards(list);
         }
       })
       .finally(() => {

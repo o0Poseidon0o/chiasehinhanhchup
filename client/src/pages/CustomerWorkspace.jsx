@@ -32,6 +32,7 @@ import { useAuth } from '../context/AuthContext';
 import { photographerApi } from '../api/photographerApi';
 import { albumApi } from '../api/albumApi';
 import { userApi } from '../api/userApi';
+import { AddressSelector } from '../components/common/AddressSelector';
 
 export const CustomerWorkspace = () => {
   const navigate = useNavigate();
@@ -996,16 +997,23 @@ export const CustomerWorkspace = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1.5">
-                Địa Chỉ / Khu Vực Chụp Yêu Thích
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-gray-300 mb-1.5 flex items-center justify-between">
+                <span>Địa Chỉ / Khu Vực Cư Trú & Chụp Ảnh</span>
+                {profileData.address && (
+                  <span className="text-[11px] text-amber-400 font-normal">
+                    Hiện tại: {profileData.address}
+                  </span>
+                )}
               </label>
-              <input
-                type="text"
+              <AddressSelector
                 value={profileData.address}
-                onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
-                placeholder="VD: Cầu Giấy, Hà Nội hoặc Quận 1, TP.HCM"
-                className="w-full px-4 py-2.5 bg-[#0d0e14] border border-[#2b3347] focus:border-amber-400 rounded-xl text-sm text-white placeholder-gray-500 outline-none"
+                onChange={(addr) => {
+                  setProfileData(prev => ({
+                    ...prev,
+                    address: addr.fullAddress || prev.address
+                  }));
+                }}
               />
             </div>
 

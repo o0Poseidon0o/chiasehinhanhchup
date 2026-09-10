@@ -33,6 +33,7 @@ import {
 import { userApi } from '../../api/userApi';
 import { albumApi } from '../../api/albumApi';
 import { settingApi } from '../../api/settingApi';
+import { addressApi } from '../../api/addressApi';
 import { formatDate } from '../../utils/formatters';
 
 export const AdminPhotographersHub = () => {
@@ -79,6 +80,19 @@ export const AdminPhotographersHub = () => {
   const [resetPasswordInput, setResetPasswordInput] = useState('');
   const [resetSendEmail, setResetSendEmail] = useState(true);
   const [showResetPassword, setShowResetPassword] = useState(false);
+  const [provinces, setProvinces] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    addressApi.getProvinces()
+      .then(res => {
+        if (mounted && res.data?.success && Array.isArray(res.data.data)) {
+          setProvinces(res.data.data);
+        }
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -952,15 +966,15 @@ export const AdminPhotographersHub = () => {
                     })}
                     className="w-full bg-[#0c0d12] border border-[#242938] rounded-xl px-2.5 py-2 text-xs text-white outline-none cursor-pointer"
                   >
-                    <option value="Hà Nội">Hà Nội</option>
-                    <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
-                    <option value="Đà Nẵng">Đà Nẵng</option>
-                    <option value="Nha Trang">Nha Trang</option>
-                    <option value="Đà Lạt">Đà Lạt</option>
-                    <option value="Hải Phòng">Hải Phòng</option>
-                    <option value="Cần Thơ">Cần Thơ</option>
-                    <option value="Huế">Huế</option>
-                    <option value="Quảng Ninh">Quảng Ninh</option>
+                    {provinces.length > 0 ? (
+                      provinces.map((p) => (
+                        <option key={p.provinceId} value={p.name}>
+                          {p.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="Hà Nội">Hà Nội</option>
+                    )}
                     <option value="Toàn quốc (Nhận chụp xa)">Toàn quốc (Nhận chụp xa)</option>
                   </select>
                 </div>

@@ -21,6 +21,7 @@ import {
   Video
 } from 'lucide-react';
 import { locationGuideApi } from '../../api/locationGuideApi';
+import { addressApi } from '../../api/addressApi';
 
 const REGION_OPTIONS = [
   { value: 'north', label: 'Miền Bắc' },
@@ -29,12 +30,75 @@ const REGION_OPTIONS = [
   { value: 'south', label: 'Miền Nam' }
 ];
 
+const mapProvinceToRegion = (provName) => {
+  if (!provName) return null;
+  const name = provName.toLowerCase();
+  
+  // Tây Nguyên
+  if (name.includes('lâm đồng') || name.includes('đà lạt') || name.includes('đắk lắk') || name.includes('đắc lắk') || 
+      name.includes('gia lai') || name.includes('kon tum') || name.includes('đắk nông')) {
+    return { region: 'highlands', regionName: 'Tây Nguyên' };
+  }
+  
+  // Miền Nam
+  if (name.includes('hồ chí minh') || name.includes('sài gòn') || name.includes('bình dương') || 
+      name.includes('đồng nai') || name.includes('vũng tàu') || name.includes('cần thơ') || 
+      name.includes('long an') || name.includes('tiền giang') || name.includes('bến tre') || 
+      name.includes('trà vinh') || name.includes('vĩnh long') || name.includes('đồng tháp') || 
+      name.includes('an giang') || name.includes('kiên giang') || name.includes('hậu giang') || 
+      name.includes('sóc trăng') || name.includes('bạc liêu') || name.includes('cà mau') || 
+      name.includes('tây ninh') || name.includes('bình phước')) {
+    return { region: 'south', regionName: 'Miền Nam' };
+  }
+  
+  // Miền Trung
+  if (name.includes('đà nẵng') || name.includes('huế') || name.includes('thừa thiên') || 
+      name.includes('quảng nam') || name.includes('quảng ngãi') || name.includes('bình định') || 
+      name.includes('phú yên') || name.includes('khánh hòa') || name.includes('nha trang') || 
+      name.includes('ninh thuận') || name.includes('bình thuận') || name.includes('quảng bình') || 
+      name.includes('quảng trị') || name.includes('hà tĩnh') || name.includes('nghệ an') || 
+      name.includes('thanh hóa')) {
+    return { region: 'central', regionName: 'Miền Trung' };
+  }
+  
+  // Miền Bắc
+  return { region: 'north', regionName: 'Miền Bắc' };
+};
+
 export const AdminLocationGuidesManagement = () => {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('all');
+  const [selectedCity, setSelectedCity] = useState('all');
+  const [provinces, setProvinces] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    addressApi.getProvinces()
+      .then(res => {
+        if (mounted && res.data?.success && Array.isArray(res.data.data)) {
+          setProvinces(res.data.data);
+        }
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  const handleCityChange = (cityName) => {
+    const regionData = mapProvinceToRegion(cityName);
+    if (regionData) {
+      setFormData(prev => ({
+        ...prev,
+        city: cityName,
+        region: regionData.region,
+        regionName: regionData.regionName
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, city: cityName }));
+    }
+  };
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -204,7 +268,8 @@ export const AdminLocationGuidesManagement = () => {
     const q = searchQuery.toLowerCase().trim();
     const matchesQuery = !q || (loc.name || '').toLowerCase().includes(q) || (loc.city || '').toLowerCase().includes(q);
     const matchesRegion = selectedRegion === 'all' || loc.region === selectedRegion;
-    return matchesQuery && matchesRegion;
+    const matchesCity = selectedCity === 'all' || (loc.city || '').toLowerCase().includes(selectedCity.toLowerCase());
+    return matchesQuery && matchesRegion && matchesCity;
   });
 
   return (
@@ -234,9 +299,9 @@ export const AdminLocationGuidesManagement = () => {
 
       {/* Top Bar: Search, Filter & Actions */}
       <div className="bg-[#141210] p-4 rounded-2xl border border-[#24201b] flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3 w-full md:w-auto flex-1">
+        <div className="flex items-center gap-3 w-full md:w-auto flex-1 flex-wrap">
           {/* Search */}
-          <div className="relative w-full md:w-72">
+          <div className="relative w-full md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
@@ -258,6 +323,18 @@ export const AdminLocationGuidesManagement = () => {
             <option value="central">Miền Trung</option>
             <option value="highlands">Tây Nguyên</option>
             <option value="south">Miền Nam</option>
+          </select>
+
+          {/* City Select */}
+          <select
+            value={selectedCity}
+            onChange={(e) => setSelectedCity(e.target.value)}
+            className="bg-[#1a1714] border border-[#2c2620] rounded-xl px-3 py-2 text-xs sm:text-sm text-gray-300 focus:outline-none focus:border-amber-500 max-w-[170px]"
+          >
+            <option value="all">Tất cả tỉnh thành</option>
+            {provinces.map((p) => (
+              <option key={p.provinceId} value={p.name}>{p.name}</option>
+            ))}
           </select>
         </div>
 
@@ -433,14 +510,27 @@ export const AdminLocationGuidesManagement = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-gray-300">Tỉnh / Thành phố *</label>
-                  <input
-                    type="text"
+                  <select
                     required
                     value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    placeholder="Ví dụ: Hà Nội, Đà Lạt, Ninh Bình..."
-                    className="w-full bg-[#1a1714] border border-[#2c2620] focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-white outline-none"
-                  />
+                    onChange={(e) => handleCityChange(e.target.value)}
+                    className="w-full bg-[#1a1714] border border-[#2c2620] focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-white outline-none cursor-pointer"
+                  >
+                    <option value="">-- Chọn Tỉnh / Thành phố --</option>
+                    {provinces.length > 0 ? (
+                      provinces.map((p) => (
+                        <option key={p.provinceId} value={p.name}>
+                          {p.name}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="Hà Nội">Hà Nội</option>
+                        <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
+                        <option value="Đà Nẵng">Đà Nẵng</option>
+                      </>
+                    )}
+                  </select>
                 </div>
 
                 <div className="space-y-1.5">

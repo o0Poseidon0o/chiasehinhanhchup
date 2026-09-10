@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { userApi } from '../../api/userApi';
+import { addressApi } from '../../api/addressApi';
 
 export const AuthModal = () => {
   const {
@@ -80,6 +81,19 @@ export const AuthModal = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [pendingNotice, setPendingNotice] = useState(null);
+  const [provinces, setProvinces] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    addressApi.getProvinces()
+      .then(res => {
+        if (mounted && res.data?.success && Array.isArray(res.data.data)) {
+          setProvinces(res.data.data);
+        }
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
 
   // Tự động bắt URL query param nếu người dùng click link từ email (vd: ?action=reset-password&token=xxx&email=yyy)
   useEffect(() => {
@@ -896,16 +910,15 @@ export const AuthModal = () => {
                           })}
                           className="w-full bg-[#141720] border border-[#2b3245] focus:border-amber-500 rounded-xl px-2.5 py-2 text-xs text-white outline-none cursor-pointer"
                         >
-                          <option value="Hà Nội">Hà Nội</option>
-                          <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
-                          <option value="Đà Nẵng">Đà Nẵng</option>
-                          <option value="Nha Trang">Nha Trang</option>
-                          <option value="Đà Lạt">Đà Lạt</option>
-                          <option value="Hải Phòng">Hải Phòng</option>
-                          <option value="Cần Thơ">Cần Thơ</option>
-                          <option value="Huế">Huế</option>
-                          <option value="Quảng Ninh">Quảng Ninh</option>
-                          <option value="Bình Dương">Bình Dương</option>
+                          {provinces.length > 0 ? (
+                            provinces.map((p) => (
+                              <option key={p.provinceId} value={p.name}>
+                                {p.name}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="Hà Nội">Hà Nội</option>
+                          )}
                           <option value="Toàn quốc (Nhận chụp xa)">Toàn quốc (Nhận chụp xa)</option>
                         </select>
                       </div>
