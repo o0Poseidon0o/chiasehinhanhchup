@@ -243,6 +243,26 @@ const testCases = [
     priority: 'High',
     status: 'Pass'
   },
+  {
+    module: '3. Đặt Lịch Chụp Ảnh (Booking)',
+    id: 'TC_BOOK_008',
+    title: 'Ngăn chặn trùng lịch khi 2 khách đặt cùng lúc (Concurrency Safety)',
+    precondition: 'NAG đã có 1 đơn chốt (confirmed) trong khung giờ X ngày Y',
+    steps: '1. Khách thứ hai chọn cùng NAG, cùng ngày Y và khung giờ X\n2. Bấm Gửi yêu cầu đặt lịch (trên BookingPage hoặc BookingModal)\n3. Quan sát phản hồi từ hệ thống',
+    expected: 'Hệ thống tự động phát hiện xung đột thời gian thực, từ chối tạo đơn trùng (HTTP 409 Conflict), thông báo rõ ràng cho khách chọn khung giờ khác.',
+    priority: 'Critical',
+    status: 'Pass'
+  },
+  {
+    module: '3. Đặt Lịch Chụp Ảnh (Booking)',
+    id: 'TC_BOOK_009',
+    title: 'Giải phóng thời gian trống khi NAG bấm "Đã Chụp Xong" hoặc "Đã Hủy"',
+    precondition: 'NAG có 1 đơn lịch đang ở trạng thái confirmed (đang khóa slot)',
+    steps: '1. NAG vào Studio Workspace -> Tab Lịch Booking -> Bấm [Đã Chụp Xong] (completed)\n2. Một khách hàng mới vào đặt lịch đúng khung giờ đó của ngày đó\n3. Quan sát hệ thống kiểm tra tình trạng bận/rảnh',
+    expected: 'Khung giờ đó được tự động giải phóng (bỏ thời gian trống ra), không còn bị báo bận, khách mới có thể đặt lịch bình thường.',
+    priority: 'High',
+    status: 'Pass'
+  },
 
   // ==========================================
   // PHÂN HỆ 4: KHÁM PHÁ NHIẾP ẢNH GIA (CRM)

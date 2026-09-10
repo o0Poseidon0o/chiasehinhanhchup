@@ -238,6 +238,45 @@ const getPhotographerBookings = async (userId, query = {}) => {
   return myBookings;
 };
 
+// Helper phân tích thời gian dạng "HH:mm" thành số phút trong ngày
+const parseTimeToMinutes = (timeStr) => {
+  if (!timeStr) return 0;
+  const match = String(timeStr).match(/(\d{1,2}):(\d{2})/);
+  if (!match) return 0;
+  return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+};
+
+// Helper trích xuất khoảng thời gian Start - End từ dữ liệu booking
+const extractTimeRange = (item) => {
+  if (!item) return { start: '08:00', end: '18:00' };
+  let start = '08:00', end = '18:00';
+  const text = typeof item === 'string' ? item : `${item.timeSlot || ''} ${item.note || ''} ${item.conceptNote || ''}`;
+  const rangeMatch = text.match(/(\d{1,2}:\d{2})\s*(?:➔|-|to)\s*(\d{1,2}:\d{2})/i);
+  if (rangeMatch) {
+    start = rangeMatch[1];
+    end = rangeMatch[2];
+  } else if (text.includes('Sáng') || text.includes('08:00')) {
+    start = '08:00'; end = '11:30';
+  } else if (text.includes('Chiều') || text.includes('Trưa') || text.includes('13:30') || text.includes('14:00')) {
+    start = '13:30'; end = '16:30';
+  } else if (text.includes('Hoàng Hôn') || text.includes('16:30')) {
+    start = '16:30'; end = '18:30';
+  } else if (text.includes('Tối') || text.includes('Flash') || text.includes('18:30')) {
+    start = '18:30'; end = '21:00';
+  }
+  return { start, end };
+};
+
+// Helper kiểm tra 2 khoảng thời gian có giao nhau (trùng nhau) hay không
+const doTimeRangesOverlap = (start1, end1, start2, end2) => {
+  const s1 = parseTimeToMinutes(start1);
+  const e1 = parseTimeToMinutes(end1);
+  const s2 = parseTimeToMinutes(start2);
+  const e2 = parseTimeToMinutes(end2);
+  if (s1 === 0 || e1 === 0 || s2 === 0 || e2 === 0) return true; // Nếu không xác định rõ giờ thì an toàn coi là trùng
+  return Math.max(s1, s2) < Math.min(e1, e2);
+};
+
 /**
  * Cập nhật trạng thái lịch Booking
  */
@@ -253,6 +292,34 @@ const updateBookingStatus = async (bookingId, userId, status) => {
     const err = new Error('Bạn không có quyền chỉnh sửa lịch booking của photographer khác.');
     err.statusCode = 403;
     throw err;
+  }
+
+  // Nếu chuyển sang trạng thái "confirmed" (Xác nhận lịch) -> Kiểm tra xem đã có đơn nào khác confirmed trùng khung giờ chưa
+  if (status === 'confirmed') {
+    const allBookings = await Booking.find();
+    const safe = Array.isArray(allBookings) ? allBookings : [];
+    const curRange = extractTimeRange(booking);
+
+    const existingConfirmed = safe.find(b => {
+      if (String(b._id) === String(booking._id)) return false;
+      // Chỉ các đơn "confirmed" mới khóa lịch; đơn 'completed' (đã chụp xong) hoặc 'cancelled' (đã hủy) được giải phóng thời gian trống
+      if (b.status !== 'confirmed') return false;
+
+      const isPhMatch = (booking.photographerId && String(b.photographerId) === String(booking.photographerId)) ||
+                        (booking.photographerName && b.photographerName && b.photographerName.toLowerCase() === booking.photographerName.toLowerCase());
+      if (!isPhMatch) return false;
+
+      if (b.bookingDate !== booking.bookingDate) return false;
+
+      const bRange = extractTimeRange(b);
+      return doTimeRangesOverlap(curRange.start, curRange.end, bRange.start, bRange.end);
+    });
+
+    if (existingConfirmed) {
+      const err = new Error(`Không thể xác nhận! Khung giờ này ngày ${booking.bookingDate} đã được chốt chính thức cho khách "${existingConfirmed.clientName}" (${existingConfirmed.clientPhone}). Vui lòng dời lịch hoặc hủy đơn trùng trước.`);
+      err.statusCode = 409;
+      throw err;
+    }
   }
 
   booking.status = status;
@@ -372,6 +439,34 @@ const createBooking = async (data) => {
   if (photographerId && !finalPhotographerName) {
     const user = await User.findById(photographerId);
     if (user) finalPhotographerName = user.name;
+  }
+
+  // Kiểm tra xung đột trước khi tạo đơn: Nếu khung giờ này ngày đó đã có đơn 'confirmed' (chốt chính thức) thì báo bận ngay
+  // Lưu ý: Các đơn 'completed' (đã chụp xong) hoặc 'cancelled' (đã hủy) được coi là khung giờ trống, sẵn sàng đón khách
+  if (bookingDate && (photographerId || finalPhotographerName)) {
+    const allBookings = await Booking.find();
+    const safe = Array.isArray(allBookings) ? allBookings : [];
+    const requestedRange = extractTimeRange(timeSlot || note);
+
+    const confirmedConflict = safe.find(b => {
+      // Chỉ các đơn 'confirmed' mới khóa lịch; đơn 'completed' (đã chụp xong) đã giải phóng thời gian
+      if (!b || b.status !== 'confirmed') return false;
+
+      const isPhMatch = (photographerId && String(b.photographerId) === String(photographerId)) ||
+                        (finalPhotographerName && b.photographerName && b.photographerName.toLowerCase() === finalPhotographerName.toLowerCase());
+      if (!isPhMatch) return false;
+
+      if (b.bookingDate !== bookingDate.trim()) return false;
+
+      const bRange = extractTimeRange(b);
+      return doTimeRangesOverlap(requestedRange.start, requestedRange.end, bRange.start, bRange.end);
+    });
+
+    if (confirmedConflict) {
+      const err = new Error(`Nhiếp ảnh gia ${finalPhotographerName || 'đã chọn'} đã có lịch chụp chính thức được chốt vào khung giờ này ngày ${bookingDate}. Vui lòng chọn khung giờ hoặc nhiếp ảnh gia khác!`);
+      err.statusCode = 409;
+      throw err;
+    }
   }
 
   const booking = new Booking({

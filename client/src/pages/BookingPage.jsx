@@ -300,7 +300,10 @@ export const BookingPage = () => {
                           (b.photographerName && selectedPhotographer?.name && b.photographerName === selectedPhotographer.name);
                           
         const isDateMatch = b.bookingDate === bookingDate;
-        const isActive = b.status !== 'cancelled' && b.status !== '❌ Đã Hủy';
+        // Lịch bị hủy (cancelled) hoặc đã hoàn thành chụp xong (completed) đều được giải phóng thời gian trống
+        const isCancelled = b.status === 'cancelled' || b.status === '❌ Đã Hủy';
+        const isCompleted = b.status === 'completed' || (b.status || '').includes('chụp xong') || (b.status || '').includes('Chụp Xong');
+        const isActive = !isCancelled && !isCompleted;
         if (!isPhMatch || !isDateMatch || !isActive) return false;
 
         const bRange = extractTimeRangeFromBooking(b);
@@ -308,8 +311,8 @@ export const BookingPage = () => {
       });
 
       if (conflict) {
+        // Chỉ đơn đang ở trạng thái confirmed (đã chốt) mới khóa cứng lịch; các đơn pending chỉ mang tính cảnh báo
         const isConfirmed = conflict.status === 'confirmed' || 
-                            conflict.status === 'completed' || 
                             (conflict.status || '').includes('Xác nhận') || 
                             (conflict.status || '').includes('Xác Nhận');
         setBookingConflict({ ...conflict, isConfirmed });
@@ -413,7 +416,11 @@ export const BookingPage = () => {
         const freshConflict = freshBookings.find(b => {
           const isPhMatch = String(b.photographerId) === String(selectedPhotographer?._id) || b.photographerName === selectedPhotographer?.name;
           const isDateMatch = b.bookingDate === bookingDate;
-          const isConfirmed = b.status === 'confirmed' || b.status === 'completed' || (b.status || '').includes('Xác nhận');
+          // Chỉ các đơn 'confirmed' mới khóa lịch; đơn 'completed' (đã chụp xong) hoặc 'cancelled' (đã hủy) đã giải phóng thời gian
+          const isConfirmed = (b.status === 'confirmed' || (b.status || '').includes('Xác nhận')) && 
+                              b.status !== 'completed' && 
+                              b.status !== 'cancelled' && 
+                              b.status !== '❌ Đã Hủy';
           if (!isPhMatch || !isDateMatch || !isConfirmed) return false;
 
           const bRange = extractTimeRangeFromBooking(b);

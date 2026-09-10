@@ -1185,7 +1185,11 @@ export const StudioWorkspace = () => {
                       const curRange = extractRange(b);
                       const conflict = (bookings || []).find(cb => {
                         if (String(cb._id) === String(b._id)) return false;
-                        const isConfirmed = cb.status === 'confirmed' || cb.status === 'completed' || (cb.status || '').includes('Xác nhận');
+                        // Chỉ đơn 'confirmed' đang có hiệu lực mới cảnh báo trùng lịch; đơn 'completed' (đã chụp xong) hoặc 'cancelled' (đã hủy) đã giải phóng thời gian
+                        const isConfirmed = (cb.status === 'confirmed' || (cb.status || '').includes('Xác nhận')) && 
+                                            cb.status !== 'completed' && 
+                                            cb.status !== 'cancelled' && 
+                                            cb.status !== '❌ Đã Hủy';
                         if (!isConfirmed) return false;
                         if (cb.bookingDate !== b.bookingDate) return false;
                         const cbRange = extractRange(cb);

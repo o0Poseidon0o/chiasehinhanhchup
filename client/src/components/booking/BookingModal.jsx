@@ -42,6 +42,7 @@ export const BookingModal = ({ isOpen, onClose, preselectedPhotographer = null, 
     clientEmail: '',
     category: initialCategory || 'Chân Dung Nghệ Thuật',
     bookingDate: '',
+    timeSlot: 'Buổi Trưa - Chiều (13:30 - 16:30)',
     provinceId: '',
     provinceName: '',
     wardId: '',
@@ -241,6 +242,33 @@ export const BookingModal = ({ isOpen, onClose, preselectedPhotographer = null, 
     setLoading(true);
 
     try {
+      // Kiểm tra xung đột trước khi gửi: Nếu NAG đã có lịch 'confirmed' ngày đó thì cảnh báo ngay
+      try {
+        const res = await photographerApi.getBookings({ all: 'true' });
+        const list = res.data || [];
+        const conflict = list.find(b => {
+          if (!b || b.status !== 'confirmed') return false;
+          const isPhMatch = (formData.photographerId && String(b.photographerId) === String(formData.photographerId)) ||
+                            (formData.photographerName && b.photographerName === formData.photographerName);
+          if (!isPhMatch) return false;
+          if (b.bookingDate !== formData.bookingDate) return false;
+
+          // Nếu cả 2 đều có timeSlot thì kiểm tra từ khóa khung giờ
+          if (formData.timeSlot && b.timeSlot) {
+            const t1 = formData.timeSlot.slice(0, 10);
+            const t2 = b.timeSlot.slice(0, 10);
+            return t1 === t2;
+          }
+          return true;
+        });
+
+        if (conflict) {
+          setError(`Nhiếp ảnh gia ${formData.photographerName || 'đã chọn'} đã có lịch chụp chính thức được chốt vào ngày ${formData.bookingDate}. Vui lòng chọn ngày/giờ khác hoặc trao đổi trực tiếp!`);
+          setLoading(false);
+          return;
+        }
+      } catch (_) {}
+
       await photographerApi.createBooking(formData);
       setSuccess(true);
     } catch (err) {
@@ -287,6 +315,7 @@ export const BookingModal = ({ isOpen, onClose, preselectedPhotographer = null, 
               <div>• Khách hàng: <strong className="text-white">{formData.clientName}</strong></div>
               <div>• Số điện thoại / Zalo: <strong className="text-amber-400">{formData.clientPhone}</strong></div>
               {formData.bookingDate && <div>• Ngày dự kiến: <strong className="text-white">{formData.bookingDate}</strong></div>}
+              {formData.timeSlot && <div>• Khung giờ: <strong className="text-amber-400">{formData.timeSlot}</strong></div>}
               {formData.location && (
                 <div>
                   • Địa điểm chụp: <strong className="text-amber-300">{formData.location}</strong>
@@ -377,37 +406,57 @@ export const BookingModal = ({ isOpen, onClose, preselectedPhotographer = null, 
               </div>
             </div>
 
-            {/* GÓI CHỤP & NGÀY CHỤP */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* GÓI CHỤP, NGÀY CHỤP & KHUNG GIỜ */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <div className="space-y-1">
-                <label className="block text-xs font-semibold text-gray-300">Gói chụp mong muốn</label>
+                <label className="block text-xs font-semibold text-gray-300">Gói chụp</label>
                 <div className="relative">
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full bg-[#0c0d12] border border-[#2b3245] focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer appearance-none"
+                    className="w-full bg-[#0c0d12] border border-[#2b3245] focus:border-amber-500 rounded-xl px-2.5 py-2 text-xs text-white outline-none cursor-pointer appearance-none truncate"
                   >
-                    <option value="Chân Dung Nghệ Thuật" className="bg-[#141720]">Chân Dung Nghệ Thuật</option>
-                    <option value="Ảnh Cưới & Pre-wedding" className="bg-[#141720]">Ảnh Cưới & Pre-wedding</option>
-                    <option value="Kỷ Yếu & Học Sinh/Sinh Viên" className="bg-[#141720]">Kỷ Yếu & Học Sinh/Sinh Viên</option>
-                    <option value="Gia Đình & Bé Yêu" className="bg-[#141720]">Gia Đình & Bé Yêu</option>
-                    <option value="Sự Kiện & Doanh Nghiệp" className="bg-[#141720]">Sự Kiện & Doanh Nghiệp</option>
-                    <option value="Lookbook & Thời Trang" className="bg-[#141720]">Lookbook & Thời Trang</option>
+                    <option value="Chân Dung Nghệ Thuật" className="bg-[#141720]">Chân Dung</option>
+                    <option value="Ảnh Cưới & Pre-wedding" className="bg-[#141720]">Ảnh Cưới</option>
+                    <option value="Kỷ Yếu & Học Sinh/Sinh Viên" className="bg-[#141720]">Kỷ Yếu</option>
+                    <option value="Gia Đình & Bé Yêu" className="bg-[#141720]">Gia Đình</option>
+                    <option value="Sự Kiện & Doanh Nghiệp" className="bg-[#141720]">Sự Kiện</option>
+                    <option value="Lookbook & Thời Trang" className="bg-[#141720]">Lookbook</option>
                   </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-xs">
+                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-xs">
                     ▼
                   </div>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="block text-xs font-semibold text-gray-300">Ngày dự kiến chụp</label>
+                <label className="block text-xs font-semibold text-gray-300">Ngày dự kiến</label>
                 <input
                   type="date"
                   value={formData.bookingDate}
                   onChange={(e) => setFormData({ ...formData, bookingDate: e.target.value })}
-                  className="w-full bg-[#0c0d12] border border-[#2b3245] focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-white outline-none"
+                  className="w-full bg-[#0c0d12] border border-[#2b3245] focus:border-amber-500 rounded-xl px-2.5 py-2 text-xs text-white outline-none"
                 />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-gray-300">Khung giờ</label>
+                <div className="relative">
+                  <select
+                    value={formData.timeSlot}
+                    onChange={(e) => setFormData({ ...formData, timeSlot: e.target.value })}
+                    className="w-full bg-[#0c0d12] border border-[#2b3245] focus:border-amber-500 rounded-xl px-2.5 py-2 text-xs text-white outline-none cursor-pointer appearance-none truncate"
+                  >
+                    <option value="Buổi Sáng (08:00 - 11:30)" className="bg-[#141720]">Sáng (08:00 - 11:30)</option>
+                    <option value="Buổi Trưa - Chiều (13:30 - 16:30)" className="bg-[#141720]">Chiều (13:30 - 16:30)</option>
+                    <option value="Giờ Vàng Hoàng Hôn (16:30 - 18:30)" className="bg-[#141720]">Hoàng Hôn (16:30 - 18:30)</option>
+                    <option value="Buổi Tối & Flash (18:30 - 21:00)" className="bg-[#141720]">Tối & Đèn (18:30 - 21:00)</option>
+                    <option value="Thỏa thuận trực tiếp" className="bg-[#141720]">Thỏa thuận riêng</option>
+                  </select>
+                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-xs">
+                    ▼
+                  </div>
+                </div>
               </div>
             </div>
 

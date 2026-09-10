@@ -67,6 +67,12 @@
 "TC_BOOK_007","3. Đặt Lịch Chụp Ảnh (Booking)","Tra cứu lịch chụp trong ""Lịch Chụp Của Tôi""","Đã đặt ít nhất 1 lịch chụp","1. Bấm nút ""Lịch Chụp Của Tôi"" trên Navbar hoặc Banner
 2. Nhập Số điện thoại hoặc Email đã dùng để đặt lịch
 3. Xem danh sách các buổi chụp đã đặt","Hiển thị đầy đủ mã lịch, tên NAG, ngày giờ, địa điểm, trạng thái (Chờ xác nhận, Đã chốt, Hoàn thành).","High","Pass","Tester / QA Lead","Đã kiểm tra trên bản 2.0"
+"TC_BOOK_008","3. Đặt Lịch Chụp Ảnh (Booking)","Ngăn chặn trùng lịch khi 2 khách đặt cùng lúc (Concurrency Safety)","NAG đã có 1 đơn chốt (confirmed) trong khung giờ X ngày Y","1. Khách thứ hai chọn cùng NAG, cùng ngày Y và khung giờ X
+2. Bấm Gửi yêu cầu đặt lịch (trên BookingPage hoặc BookingModal)
+3. Quan sát phản hồi từ hệ thống","Hệ thống tự động phát hiện xung đột thời gian thực, từ chối tạo đơn trùng (HTTP 409 Conflict), thông báo rõ ràng cho khách chọn khung giờ khác.","Critical","Pass","Tester / QA Lead","Đã kiểm tra trên bản 2.0"
+"TC_BOOK_009","3. Đặt Lịch Chụp Ảnh (Booking)","Giải phóng thời gian trống khi NAG bấm ""Đã Chụp Xong"" hoặc ""Đã Hủy""","NAG có 1 đơn lịch đang ở trạng thái confirmed (đang khóa slot)","1. NAG vào Studio Workspace -> Tab Lịch Booking -> Bấm [Đã Chụp Xong] (completed)
+2. Một khách hàng mới vào đặt lịch đúng khung giờ đó của ngày đó
+3. Quan sát hệ thống kiểm tra tình trạng bận/rảnh","Khung giờ đó được tự động giải phóng (bỏ thời gian trống ra), không còn bị báo bận, khách mới có thể đặt lịch bình thường.","High","Pass","Tester / QA Lead","Đã kiểm tra trên bản 2.0"
 "TC_PHOTO_001","4. Hồ Sơ Nhiếp Ảnh Gia","Xem danh sách Nhiếp ảnh gia tại trang /photographers","Truy cập /photographers","1. Xem lưới danh sách các Nhiếp ảnh gia đối tác
 2. Kiểm tra thông tin hiển thị trên từng thẻ","Mỗi thẻ hiển thị: Avatar/Logo, Tên NAG, Khu vực hoạt động, Thể loại sở trường, Số album đã thực hiện, Đánh giá sao, Link xem hồ sơ.","High","Pass","Tester / QA Lead","Đã kiểm tra trên bản 2.0"
 "TC_PHOTO_002","4. Hồ Sơ Nhiếp Ảnh Gia","Tìm kiếm thợ ảnh theo Tên, Email, Thiết bị, Tỉnh thành","Ở trang /photographers","1. Gõ từ khóa tìm kiếm (VD: ""Sony"", ""Hà Nội"", ""Cưới"") vào ô tìm kiếm
