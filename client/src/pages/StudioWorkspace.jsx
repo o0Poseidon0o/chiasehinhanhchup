@@ -181,8 +181,9 @@ export const StudioWorkspace = () => {
     let mounted = true;
     addressApi.getProvinces()
       .then(res => {
-        if (mounted && res.data?.success && Array.isArray(res.data.data)) {
-          setProvinces(res.data.data);
+        const provList = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        if (mounted && provList.length > 0) {
+          setProvinces(provList);
         }
       })
       .catch(() => {});

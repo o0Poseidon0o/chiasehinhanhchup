@@ -97,14 +97,16 @@ export const AuthModal = () => {
     let mounted = true;
     addressApi.getProvinces()
       .then(res => {
-        if (mounted && res.data?.success && Array.isArray(res.data.data)) {
-          setProvinces(res.data.data);
-          const defaultProv = res.data.data.find(p => p.name.includes('Hà Nội')) || res.data.data[0];
+        const provList = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        if (mounted && provList.length > 0) {
+          setProvinces(provList);
+          const defaultProv = provList.find(p => p.name.includes('Hà Nội')) || provList[0];
           if (defaultProv) {
             addressApi.getWards(defaultProv.provinceId)
               .then(wRes => {
-                if (mounted && wRes.data?.success && Array.isArray(wRes.data.data)) {
-                  setWards(wRes.data.data);
+                const wardList = Array.isArray(wRes?.data) ? wRes.data : (Array.isArray(wRes) ? wRes : []);
+                if (mounted) {
+                  setWards(wardList);
                 }
               })
               .catch(() => {});

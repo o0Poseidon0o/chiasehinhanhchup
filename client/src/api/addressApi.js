@@ -15,10 +15,12 @@ export const addressApi = {
   async getProvinces() {
     try {
       const response = await api.get('/provinces');
-      return response.data;
+      const payload = response.data;
+      const list = Array.isArray(payload?.data) ? payload.data : (Array.isArray(payload) ? payload : []);
+      return { success: true, count: list.length, data: list };
     } catch (error) {
       console.error('Lỗi lấy danh sách tỉnh thành:', error);
-      return { success: false, data: [] };
+      return { success: false, count: 0, data: [] };
     }
   },
 
@@ -26,13 +28,15 @@ export const addressApi = {
    * Lấy danh sách Phường / Xã theo provinceId từ database nội bộ
    */
   async getWards(provinceId) {
-    if (!provinceId) return { success: true, data: [] };
+    if (!provinceId) return { success: true, count: 0, data: [] };
     try {
       const response = await api.get(`/wards/${provinceId}`);
-      return response.data;
+      const payload = response.data;
+      const list = Array.isArray(payload?.data) ? payload.data : (Array.isArray(payload) ? payload : []);
+      return { success: true, count: list.length, data: list };
     } catch (error) {
       console.error(`Lỗi lấy danh sách phường xã cho tỉnh ${provinceId}:`, error);
-      return { success: false, data: [] };
+      return { success: false, count: 0, data: [] };
     }
   },
 

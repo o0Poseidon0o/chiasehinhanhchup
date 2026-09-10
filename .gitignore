@@ -18,6 +18,7 @@ build/
 
 # Local Database files
 server/data/*.json
+!server/data/ghn_address_data.json
 data/*.json
 
 # Logs
