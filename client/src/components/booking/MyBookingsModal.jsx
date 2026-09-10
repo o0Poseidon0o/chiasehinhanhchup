@@ -233,7 +233,7 @@ export const MyBookingsModal = ({ isOpen, onClose }) => {
 
                     <div className="flex items-center space-x-2">
                       <MapPin className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span className="truncate">Địa điểm: <strong className="text-white">{b.detailedLocation || b.cityLocation || 'Hà Nội'}</strong></span>
+                      <span className="truncate">Địa điểm: <strong className="text-white">{b.location || b.detailedLocation || b.cityLocation || 'Hà Nội'}</strong></span>
                     </div>
                   </div>
 

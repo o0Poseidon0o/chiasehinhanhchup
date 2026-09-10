@@ -45,8 +45,9 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const addonRoutes = require('./routes/addonRoutes');
 const settingRoutes = require('./routes/settingRoutes');
 const locationGuideRoutes = require('./routes/locationGuideRoutes');
+const addressRoutes = require('./routes/addressRoutes');
 
-// Gắn route API Album, User, Photographer CRM, Dynamic Categories, Addons, Locations & Settings
+// Gắn route API Album, User, Photographer CRM, Dynamic Categories, Addons, Locations, Address & Settings
 app.use('/api/albums', albumRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/photographer', photographerRoutes);
@@ -54,6 +55,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/addons', addonRoutes);
 app.use('/api/locations', locationGuideRoutes);
 app.use('/api/settings', settingRoutes);
+app.use('/api/address', addressRoutes);
 
 // Bắt lỗi 404 cho các route không tồn tại
 app.use(notFoundHandler);
