@@ -86,17 +86,37 @@ export const AdminLocationGuidesManagement = () => {
     return () => { mounted = false; };
   }, []);
 
-  const handleCityChange = (cityName) => {
+  const [modalWards, setModalWards] = useState([]);
+  const [loadingModalWards, setLoadingModalWards] = useState(false);
+
+  const handleCityChange = async (cityName) => {
     const regionData = mapProvinceToRegion(cityName);
     if (regionData) {
       setFormData(prev => ({
         ...prev,
         city: cityName,
+        ward: '',
         region: regionData.region,
         regionName: regionData.regionName
       }));
     } else {
-      setFormData(prev => ({ ...prev, city: cityName }));
+      setFormData(prev => ({ ...prev, city: cityName, ward: '' }));
+    }
+
+    const found = provinces.find(p => p.name === cityName);
+    if (found) {
+      try {
+        setLoadingModalWards(true);
+        const res = await addressApi.getWards(found.provinceId);
+        const list = Array.isArray(res?.data?.data) ? res.data.data : (Array.isArray(res?.data) ? res.data : []);
+        setModalWards(list);
+      } catch (_) {
+        setModalWards([]);
+      } finally {
+        setLoadingModalWards(false);
+      }
+    } else {
+      setModalWards([]);
     }
   };
 
@@ -109,6 +129,8 @@ export const AdminLocationGuidesManagement = () => {
   const [formData, setFormData] = useState({
     name: '',
     city: '',
+    ward: '',
+    address: '',
     region: 'north',
     regionName: 'Miền Bắc',
     image: '',
@@ -157,9 +179,12 @@ export const AdminLocationGuidesManagement = () => {
 
   const handleOpenCreate = () => {
     setEditingLoc(null);
+    setModalWards([]);
     setFormData({
       name: '',
       city: '',
+      ward: '',
+      address: '',
       region: 'north',
       regionName: 'Miền Bắc',
       image: '',
@@ -180,6 +205,8 @@ export const AdminLocationGuidesManagement = () => {
     setFormData({
       name: loc.name || '',
       city: loc.city || '',
+      ward: loc.ward || '',
+      address: loc.address || '',
       region: loc.region || 'north',
       regionName: loc.regionName || 'Miền Bắc',
       image: loc.image || '',
@@ -192,6 +219,16 @@ export const AdminLocationGuidesManagement = () => {
       isFeatured: Boolean(loc.isFeatured),
       order: Number(loc.order) || 1
     });
+
+    if (loc.city && provinces.length > 0) {
+      const found = provinces.find(p => p.name === loc.city);
+      if (found) {
+        addressApi.getWards(found.provinceId).then(res => {
+          const list = Array.isArray(res?.data?.data) ? res.data.data : (Array.isArray(res?.data) ? res.data : []);
+          setModalWards(list);
+        }).catch(() => {});
+      }
+    }
     setIsModalOpen(true);
   };
 
@@ -266,7 +303,11 @@ export const AdminLocationGuidesManagement = () => {
 
   const filtered = locations.filter((loc) => {
     const q = searchQuery.toLowerCase().trim();
-    const matchesQuery = !q || (loc.name || '').toLowerCase().includes(q) || (loc.city || '').toLowerCase().includes(q);
+    const matchesQuery = !q 
+      || (loc.name || '').toLowerCase().includes(q) 
+      || (loc.city || '').toLowerCase().includes(q)
+      || (loc.ward || '').toLowerCase().includes(q)
+      || (loc.address || '').toLowerCase().includes(q);
     const matchesRegion = selectedRegion === 'all' || loc.region === selectedRegion;
     const matchesCity = selectedCity === 'all' || (loc.city || '').toLowerCase().includes(selectedCity.toLowerCase());
     return matchesQuery && matchesRegion && matchesCity;
@@ -387,9 +428,9 @@ export const AdminLocationGuidesManagement = () => {
                     alt={loc.name}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap max-w-[80%]">
                     <span className="px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[10px] text-white font-semibold">
-                      {loc.city}
+                      {[loc.ward, loc.city].filter(Boolean).join(' - ') || loc.city}
                     </span>
                     <span className="px-2 py-0.5 rounded-md bg-amber-500/30 border border-amber-500/40 text-[10px] text-amber-300 font-bold">
                       {loc.regionName || loc.region}
@@ -418,6 +459,12 @@ export const AdminLocationGuidesManagement = () => {
                 {/* Details */}
                 <div className="p-4 space-y-2">
                   <h4 className="text-base font-bold text-white line-clamp-1">{loc.name}</h4>
+                  {loc.address && (
+                    <div className="flex items-center space-x-1.5 text-xs text-amber-300/90 font-medium">
+                      <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span className="line-clamp-1">{[loc.address, loc.ward, loc.city].filter(Boolean).join(', ')}</span>
+                    </div>
+                  )}
                   <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">{loc.description}</p>
 
                   <div className="pt-2 space-y-1 text-[11px] text-gray-300 border-t border-white/5">
@@ -548,6 +595,35 @@ export const AdminLocationGuidesManagement = () => {
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              {/* Phường / Xã và Địa chỉ cụ thể của Địa điểm chụp */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-300">Phường / Xã (Tùy chọn)</label>
+                  <select
+                    value={formData.ward || ''}
+                    onChange={(e) => setFormData({ ...formData, ward: e.target.value })}
+                    disabled={!formData.city || modalWards.length === 0}
+                    className="w-full bg-[#1a1714] border border-[#2c2620] focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-white outline-none cursor-pointer disabled:opacity-40"
+                  >
+                    <option value="">{loadingModalWards ? 'Đang tải phường/xã...' : '-- Chọn Phường / Xã --'}</option>
+                    {modalWards.map((w) => (
+                      <option key={w.wardId} value={w.name}>{w.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-300">Địa chỉ cụ thể / Tên đường</label>
+                  <input
+                    type="text"
+                    value={formData.address || ''}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="Ví dụ: Phố Đinh Tiên Hoàng, Hoàn Kiếm..."
+                    className="w-full bg-[#1a1714] border border-[#2c2620] focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-white outline-none"
+                  />
                 </div>
               </div>
 

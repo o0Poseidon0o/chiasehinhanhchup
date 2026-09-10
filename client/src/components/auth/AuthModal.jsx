@@ -67,13 +67,20 @@ export const AuthModal = () => {
     phone: '',
     password: '',
     role: 'photographer',
+    address: '',
+    province: 'Hà Nội',
+    ward: '',
     studioInfo: {
       avatar: '',
       portfolioUrl: '',
       experience: '2-3 năm',
       equipment: '',
-      styles: 'Chân dung, Cặp đôi',
+      styles: 'Chân dung nghệ thuật',
       location: 'Hà Nội',
+      province: 'Hà Nội',
+      ward: '',
+      address: '',
+      startingPrice: '',
       bio: ''
     }
   });
@@ -82,6 +89,8 @@ export const AuthModal = () => {
   const [error, setError] = useState('');
   const [pendingNotice, setPendingNotice] = useState(null);
   const [provinces, setProvinces] = useState([]);
+  const [wards, setWards] = useState([]);
+  const [loadingWards, setLoadingWards] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -89,11 +98,51 @@ export const AuthModal = () => {
       .then(res => {
         if (mounted && res.data?.success && Array.isArray(res.data.data)) {
           setProvinces(res.data.data);
+          const defaultProv = res.data.data.find(p => p.name.includes('Hà Nội')) || res.data.data[0];
+          if (defaultProv) {
+            addressApi.getWards(defaultProv.provinceId)
+              .then(wRes => {
+                if (mounted && wRes.data?.success && Array.isArray(wRes.data.data)) {
+                  setWards(wRes.data.data);
+                }
+              })
+              .catch(() => {});
+          }
         }
       })
       .catch(() => {});
     return () => { mounted = false; };
   }, []);
+
+  const handleProvinceSelect = async (provName) => {
+    const found = provinces.find(p => p.name === provName);
+    const provId = found ? found.provinceId : null;
+    setRegisterData(prev => ({
+      ...prev,
+      province: provName,
+      ward: '',
+      studioInfo: {
+        ...prev.studioInfo,
+        location: provName,
+        province: provName,
+        ward: ''
+      }
+    }));
+    if (provId) {
+      try {
+        setLoadingWards(true);
+        const res = await addressApi.getWards(provId);
+        const list = Array.isArray(res?.data?.data) ? res.data.data : (Array.isArray(res?.data) ? res.data : []);
+        setWards(list);
+      } catch (_) {
+        setWards([]);
+      } finally {
+        setLoadingWards(false);
+      }
+    } else {
+      setWards([]);
+    }
+  };
 
   // Tự động bắt URL query param nếu người dùng click link từ email (vd: ?action=reset-password&token=xxx&email=yyy)
   useEffect(() => {
@@ -257,13 +306,28 @@ export const AuthModal = () => {
     setLoading(true);
 
     try {
+      const fullAddr = [
+        registerData.address.trim(),
+        registerData.ward.trim(),
+        registerData.province.trim()
+      ].filter(Boolean).join(', ');
+
       const payload = {
         name: registerData.name,
         email: registerData.email,
         phone: registerData.phone,
         password: registerData.password,
+        address: fullAddr || registerData.address,
+        province: registerData.province,
+        ward: registerData.ward,
         role: role,
-        studioInfo: role === 'photographer' ? registerData.studioInfo : {}
+        studioInfo: role === 'photographer' ? {
+          ...registerData.studioInfo,
+          location: registerData.province || registerData.studioInfo.location,
+          province: registerData.province,
+          ward: registerData.ward,
+          address: registerData.address
+        } : {}
       };
 
       const res = await register(payload);
@@ -789,12 +853,61 @@ export const AuthModal = () => {
                   </div>
                 </div>
 
-                {/* FIELDS DÀNH RIÊNG CHO NHIẾP ẢNH GIA / STUDIO */}
+                {/* KHU VỰC CƯ TRÚ DÀNH CHO KHÁCH HÀNG */}
+                {role === 'client' && (
+                  <div className="bg-[#0c0d12] border border-[#2b3245] rounded-2xl p-3.5 space-y-2.5">
+                    <label className="block text-xs font-semibold text-gray-300 flex items-center space-x-1.5">
+                      <MapPin className="w-4 h-4 text-amber-400" />
+                      <span>Khu Vực & Địa Chỉ Cư Trú (Khách Hàng)</span>
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <span className="text-[11px] text-gray-400">Tỉnh / Thành phố *</span>
+                        <select
+                          value={registerData.province}
+                          onChange={(e) => handleProvinceSelect(e.target.value)}
+                          className="w-full bg-[#141720] border border-[#2b3245] focus:border-amber-500 rounded-xl px-2.5 py-2 text-xs text-white outline-none cursor-pointer"
+                        >
+                          <option value="">-- Chọn Tỉnh / Thành --</option>
+                          {provinces.map((p) => (
+                            <option key={p.provinceId} value={p.name}>{p.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[11px] text-gray-400">Phường / Xã</span>
+                        <select
+                          value={registerData.ward}
+                          onChange={(e) => setRegisterData({ ...registerData, ward: e.target.value })}
+                          disabled={!registerData.province || wards.length === 0}
+                          className="w-full bg-[#141720] border border-[#2b3245] focus:border-amber-500 rounded-xl px-2.5 py-2 text-xs text-white outline-none cursor-pointer disabled:opacity-40"
+                        >
+                          <option value="">{loadingWards ? 'Đang tải...' : '-- Chọn Phường / Xã --'}</option>
+                          {wards.map((w) => (
+                            <option key={w.wardId} value={w.name}>{w.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[11px] text-gray-400">Địa chỉ cụ thể (Số nhà, tên đường, tòa nhà...)</span>
+                      <input
+                        type="text"
+                        value={registerData.address}
+                        onChange={(e) => setRegisterData({ ...registerData, address: e.target.value })}
+                        placeholder="VD: Số 25 Tôn Đức Thắng, Căn hộ A12..."
+                        className="w-full bg-[#141720] border border-[#2b3245] focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* HỒ SƠ NĂNG LỰC & STUDIO DÀNH RIÊNG CHO NHIẾP ẢNH GIA */}
                 {role === 'photographer' && (
                   <div className="bg-[#0c0d12] border border-amber-500/30 rounded-2xl p-3.5 space-y-3">
                     <div className="flex items-center space-x-1.5 text-xs font-bold text-amber-400 uppercase">
                       <Award className="w-4 h-4" />
-                      <span>Hồ sơ năng lực (Để Admin kiểm duyệt)</span>
+                      <span>Hồ sơ năng lực & Thông tin Studio</span>
                     </div>
 
                     {/* Ảnh đại diện Avatar Studio / Photographer */}
@@ -860,27 +973,106 @@ export const AuthModal = () => {
                       </div>
                     </div>
 
-                    {/* Link Portfolio */}
-                    <div className="space-y-1">
-                      <label className="block text-[11px] font-semibold text-gray-300">
-                        Link Portfolio / Facebook / Instagram tác phẩm <span className="text-gray-400 font-normal text-[10px]">(Tùy chọn)</span>
-                      </label>
-                      <div className="relative">
-                        <Globe className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    {/* Địa chỉ cơ sở & Khu vực hoạt động của Studio */}
+                    <div className="space-y-2 bg-[#141720] p-3 rounded-xl border border-[#2b3245]">
+                      <div className="flex items-center space-x-1.5 text-[11px] font-semibold text-amber-300">
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span>Khu Vực & Địa Chỉ Cơ Sở / Studio</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="block text-[10px] text-gray-400">Tỉnh / Thành phố *</label>
+                          <select
+                            value={registerData.province}
+                            onChange={(e) => handleProvinceSelect(e.target.value)}
+                            className="w-full bg-[#0c0d12] border border-[#2b3245] focus:border-amber-500 rounded-xl px-2.5 py-2 text-xs text-white outline-none cursor-pointer"
+                          >
+                            {provinces.length > 0 ? (
+                              provinces.map((p) => (
+                                <option key={p.provinceId} value={p.name}>{p.name}</option>
+                              ))
+                            ) : (
+                              <option value="Hà Nội">Hà Nội</option>
+                            )}
+                            <option value="Toàn quốc (Nhận chụp xa)">Toàn quốc (Nhận chụp xa)</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="block text-[10px] text-gray-400">Phường / Xã</label>
+                          <select
+                            value={registerData.ward}
+                            onChange={(e) => setRegisterData({ ...registerData, ward: e.target.value })}
+                            disabled={!registerData.province || wards.length === 0}
+                            className="w-full bg-[#0c0d12] border border-[#2b3245] focus:border-amber-500 rounded-xl px-2.5 py-2 text-xs text-white outline-none cursor-pointer disabled:opacity-40"
+                          >
+                            <option value="">{loadingWards ? 'Đang tải...' : '-- Chọn Phường / Xã --'}</option>
+                            {wards.map((w) => (
+                              <option key={w.wardId} value={w.name}>{w.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-[10px] text-gray-400">Địa chỉ cụ thể Studio (Số nhà, ngõ ngách, tên đường)</label>
                         <input
-                          type="url"
-                          value={registerData.studioInfo.portfolioUrl}
-                          onChange={(e) => setRegisterData({
-                            ...registerData,
-                            studioInfo: { ...registerData.studioInfo, portfolioUrl: e.target.value }
-                          })}
-                          placeholder="https://instagram.com/yourstudio hoặc link drive/behance"
-                          className="w-full bg-[#141720] border border-[#2b3245] focus:border-amber-500 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-gray-500 outline-none"
+                          type="text"
+                          value={registerData.address}
+                          onChange={(e) => setRegisterData({ ...registerData, address: e.target.value })}
+                          placeholder="VD: Số 88 Phố Huế, Tầng 3 Studio..."
+                          className="w-full bg-[#0c0d12] border border-[#2b3245] focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 outline-none"
                         />
                       </div>
                     </div>
 
-                    {/* Kinh nghiệm, Khu vực & Thể loại (DROPDOWNS) */}
+                    {/* Giới thiệu bản thân & Hồ sơ năng lực (Bio) */}
+                    <div className="space-y-1">
+                      <label className="block text-[11px] font-semibold text-gray-300">
+                        Giới thiệu Hồ Sơ Năng Lực & Phong Cách Chụp (Bio)
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={registerData.studioInfo.bio}
+                        onChange={(e) => setRegisterData({
+                          ...registerData,
+                          studioInfo: { ...registerData.studioInfo, bio: e.target.value }
+                        })}
+                        placeholder="Giới thiệu đôi nét về bản thân, phong cách bấm máy, kinh nghiệm tác nghiệp..."
+                        className="w-full bg-[#141720] border border-[#2b3245] focus:border-amber-500 rounded-xl p-2.5 text-xs text-white placeholder-gray-500 outline-none"
+                      />
+                    </div>
+
+                    {/* Thiết bị tác nghiệp & Giá khởi điểm */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="block text-[11px] font-semibold text-gray-300">Thiết bị máy ảnh / Lens chính</label>
+                        <input
+                          type="text"
+                          value={registerData.studioInfo.equipment}
+                          onChange={(e) => setRegisterData({
+                            ...registerData,
+                            studioInfo: { ...registerData.studioInfo, equipment: e.target.value }
+                          })}
+                          placeholder="Sony A7IV, Canon R6, 24-70 GM..."
+                          className="w-full bg-[#141720] border border-[#2b3245] focus:border-amber-500 rounded-xl px-2.5 py-2 text-xs text-white placeholder-gray-500 outline-none"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="block text-[11px] font-semibold text-gray-300">Bảng giá khởi điểm (tham khảo)</label>
+                        <input
+                          type="text"
+                          value={registerData.studioInfo.startingPrice}
+                          onChange={(e) => setRegisterData({
+                            ...registerData,
+                            studioInfo: { ...registerData.studioInfo, startingPrice: e.target.value }
+                          })}
+                          placeholder="VD: Từ 1.200.000đ"
+                          className="w-full bg-[#141720] border border-[#2b3245] focus:border-amber-500 rounded-xl px-2.5 py-2 text-xs text-white placeholder-gray-500 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Kinh nghiệm & Link Portfolio */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div className="space-y-1">
                         <label className="block text-[11px] font-semibold text-gray-300">Số năm kinh nghiệm *</label>
@@ -901,26 +1093,22 @@ export const AuthModal = () => {
                       </div>
 
                       <div className="space-y-1">
-                        <label className="block text-[11px] font-semibold text-gray-300">Khu vực hoạt động *</label>
-                        <select
-                          value={registerData.studioInfo.location || 'Hà Nội'}
-                          onChange={(e) => setRegisterData({
-                            ...registerData,
-                            studioInfo: { ...registerData.studioInfo, location: e.target.value }
-                          })}
-                          className="w-full bg-[#141720] border border-[#2b3245] focus:border-amber-500 rounded-xl px-2.5 py-2 text-xs text-white outline-none cursor-pointer"
-                        >
-                          {provinces.length > 0 ? (
-                            provinces.map((p) => (
-                              <option key={p.provinceId} value={p.name}>
-                                {p.name}
-                              </option>
-                            ))
-                          ) : (
-                            <option value="Hà Nội">Hà Nội</option>
-                          )}
-                          <option value="Toàn quốc (Nhận chụp xa)">Toàn quốc (Nhận chụp xa)</option>
-                        </select>
+                        <label className="block text-[11px] font-semibold text-gray-300">
+                          Link Portfolio tác phẩm <span className="text-gray-400 font-normal text-[10px]">(Tùy chọn)</span>
+                        </label>
+                        <div className="relative">
+                          <Globe className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input
+                            type="url"
+                            value={registerData.studioInfo.portfolioUrl}
+                            onChange={(e) => setRegisterData({
+                              ...registerData,
+                              studioInfo: { ...registerData.studioInfo, portfolioUrl: e.target.value }
+                            })}
+                            placeholder="https://instagram.com/..."
+                            className="w-full bg-[#141720] border border-[#2b3245] focus:border-amber-500 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-gray-500 outline-none"
+                          />
+                        </div>
                       </div>
                     </div>
 

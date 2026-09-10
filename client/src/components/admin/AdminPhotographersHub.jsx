@@ -596,14 +596,34 @@ export const AdminPhotographersHub = () => {
                     {p.studioInfo?.equipment && (
                       <div className="flex items-center justify-between text-gray-300">
                         <span className="text-gray-400">Thiết bị:</span>
-                        <span>{p.studioInfo.equipment}</span>
+                        <span className="text-right truncate max-w-[220px]">{p.studioInfo.equipment}</span>
                       </div>
                     )}
 
-                    {p.studioInfo?.location && (
+                    {(p.studioInfo?.address || p.address) ? (
+                      <div className="flex items-center justify-between text-gray-300">
+                        <span className="text-gray-400">Địa chỉ:</span>
+                        <span className="text-right truncate max-w-[220px]" title={p.studioInfo?.address || p.address}>
+                          {p.studioInfo?.address || p.address}
+                        </span>
+                      </div>
+                    ) : (p.studioInfo?.location || p.province) ? (
                       <div className="flex items-center justify-between text-gray-300">
                         <span className="text-gray-400">Khu vực:</span>
-                        <span>{p.studioInfo.location}</span>
+                        <span>{[p.studioInfo?.ward || p.ward, p.studioInfo?.location || p.province].filter(Boolean).join(', ')}</span>
+                      </div>
+                    ) : null}
+
+                    {p.studioInfo?.startingPrice && (
+                      <div className="flex items-center justify-between text-gray-300">
+                        <span className="text-gray-400">Giá khởi điểm:</span>
+                        <span className="text-amber-400 font-semibold">{p.studioInfo.startingPrice}</span>
+                      </div>
+                    )}
+
+                    {p.studioInfo?.bio && (
+                      <div className="pt-1 text-gray-400 border-t border-[#242938]/60 italic text-[11px] line-clamp-2">
+                        "{p.studioInfo.bio}"
                       </div>
                     )}
                   </div>
@@ -747,10 +767,12 @@ export const AdminPhotographersHub = () => {
                           </div>
                           <div>
                             <div className="font-bold text-white text-xs sm:text-sm">{p.name}</div>
-                            {p.studioInfo?.location && (
+                            {(p.studioInfo?.location || p.province) && (
                               <div className="text-[11px] text-gray-400 flex items-center space-x-1">
-                                <MapPin className="w-3 h-3 text-gray-500" />
-                                <span>{p.studioInfo.location}</span>
+                                <MapPin className="w-3 h-3 text-gray-500 shrink-0" />
+                                <span className="truncate max-w-[180px]" title={p.studioInfo?.address || p.address || ''}>
+                                  {[p.studioInfo?.ward || p.ward, p.studioInfo?.location || p.province].filter(Boolean).join(', ')}
+                                </span>
                               </div>
                             )}
                           </div>

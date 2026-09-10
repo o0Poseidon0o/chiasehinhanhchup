@@ -187,6 +187,8 @@ class LocalLocationGuide {
     this.id = data.id || this._id;
     this.name = data.name || '';
     this.city = data.city || '';
+    this.ward = data.ward || '';
+    this.address = data.address || '';
     this.region = data.region || 'north';
     this.regionName = data.regionName || (data.region === 'central' ? 'Miền Trung' : data.region === 'south' ? 'Miền Nam' : data.region === 'highlands' ? 'Tây Nguyên' : 'Miền Bắc');
     this.image = data.image || '';

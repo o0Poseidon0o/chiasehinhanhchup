@@ -163,6 +163,9 @@ export const StudioWorkspace = () => {
       equipment: currentUser?.studioInfo?.equipment || '',
       styles: currentUser?.studioInfo?.styles || '',
       location: currentUser?.studioInfo?.location || '',
+      province: currentUser?.studioInfo?.province || currentUser?.studioInfo?.location || '',
+      ward: currentUser?.studioInfo?.ward || '',
+      address: currentUser?.studioInfo?.address || '',
       bio: currentUser?.studioInfo?.bio || ''
     }
   });
@@ -171,6 +174,8 @@ export const StudioWorkspace = () => {
   const [isDraggingBanner, setIsDraggingBanner] = useState(false);
   const [isDraggingAvatar, setIsDraggingAvatar] = useState(false);
   const [provinces, setProvinces] = useState([]);
+  const [studioWards, setStudioWards] = useState([]);
+  const [loadingStudioWards, setLoadingStudioWards] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -183,6 +188,28 @@ export const StudioWorkspace = () => {
       .catch(() => {});
     return () => { mounted = false; };
   }, []);
+
+  // Tải danh sách Phường/Xã cho Studio khi Tỉnh thay đổi
+  useEffect(() => {
+    const provName = profileForm.studioInfo.province || profileForm.studioInfo.location;
+    if (provName && provinces.length > 0) {
+      const found = provinces.find(p => p.name === provName);
+      if (found) {
+        let mounted = true;
+        setLoadingStudioWards(true);
+        addressApi.getWards(found.provinceId)
+          .then(res => {
+            const list = Array.isArray(res?.data?.data) ? res.data.data : (Array.isArray(res?.data) ? res.data : []);
+            if (mounted) setStudioWards(list);
+          })
+          .catch(() => { if (mounted) setStudioWards([]); })
+          .finally(() => { if (mounted) setLoadingStudioWards(false); });
+        return () => { mounted = false; };
+      }
+    } else {
+      setStudioWards([]);
+    }
+  }, [profileForm.studioInfo.province, profileForm.studioInfo.location, provinces]);
 
   useEffect(() => {
     if (currentUser) {
@@ -203,6 +230,9 @@ export const StudioWorkspace = () => {
           equipment: currentUser.studioInfo?.equipment || '',
           styles: currentUser.studioInfo?.styles || '',
           location: currentUser.studioInfo?.location || '',
+          province: currentUser.studioInfo?.province || currentUser.studioInfo?.location || '',
+          ward: currentUser.studioInfo?.ward || '',
+          address: currentUser.studioInfo?.address || '',
           bio: currentUser.studioInfo?.bio || ''
         }
       });
@@ -1558,13 +1588,21 @@ export const StudioWorkspace = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Khu vực hoạt động</label>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Tỉnh / Thành phố hoạt động chính</label>
                 <select
-                  value={profileForm.studioInfo.location || 'Hà Nội'}
-                  onChange={(e) => setProfileForm({
-                    ...profileForm,
-                    studioInfo: { ...profileForm.studioInfo, location: e.target.value }
-                  })}
+                  value={profileForm.studioInfo.province || profileForm.studioInfo.location || 'Hà Nội'}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setProfileForm({
+                      ...profileForm,
+                      studioInfo: {
+                        ...profileForm.studioInfo,
+                        location: val,
+                        province: val,
+                        ward: ''
+                      }
+                    });
+                  }}
                   className="w-full bg-[#0c0d12] border border-[#242938] focus:border-amber-500 rounded-xl px-3 py-2.5 text-xs text-white outline-none cursor-pointer"
                 >
                   {provinces.length > 0 ? (
@@ -1578,6 +1616,41 @@ export const StudioWorkspace = () => {
                   )}
                   <option value="Toàn quốc (Nhận chụp xa)">Toàn quốc (Nhận chụp xa)</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Phường / Xã và Địa chỉ cụ thể của Studio */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Phường / Xã Studio</label>
+                <select
+                  value={profileForm.studioInfo.ward || ''}
+                  onChange={(e) => setProfileForm({
+                    ...profileForm,
+                    studioInfo: { ...profileForm.studioInfo, ward: e.target.value }
+                  })}
+                  disabled={!profileForm.studioInfo.location || studioWards.length === 0}
+                  className="w-full bg-[#0c0d12] border border-[#242938] focus:border-amber-500 rounded-xl px-3 py-2.5 text-xs text-white outline-none cursor-pointer disabled:opacity-40"
+                >
+                  <option value="">{loadingStudioWards ? 'Đang tải phường/xã...' : '-- Chọn Phường / Xã Studio --'}</option>
+                  {studioWards.map((w) => (
+                    <option key={w.wardId} value={w.name}>{w.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Địa chỉ chi tiết Studio (Số nhà, đường)</label>
+                <input
+                  type="text"
+                  value={profileForm.studioInfo.address || ''}
+                  onChange={(e) => setProfileForm({
+                    ...profileForm,
+                    studioInfo: { ...profileForm.studioInfo, address: e.target.value }
+                  })}
+                  placeholder="VD: Số 18 Hàng Trống, Hoàn Kiếm..."
+                  className="w-full bg-[#0c0d12] border border-[#242938] focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none"
+                />
               </div>
             </div>
 

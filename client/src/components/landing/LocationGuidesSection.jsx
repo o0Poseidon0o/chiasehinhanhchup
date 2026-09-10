@@ -164,7 +164,7 @@ export const LocationGuidesSection = () => {
                 <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
                   <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white text-[11px] font-semibold">
                     <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
-                    <span>{loc.city}</span>
+                    <span>{[loc.ward, loc.city].filter(Boolean).join(' - ') || loc.city}</span>
                   </span>
 
                   {loc.isFeatured && (
@@ -294,8 +294,8 @@ export const LocationGuidesSection = () => {
                   {selectedLocation.regionName}
                 </span>
                 <span className="text-xs text-gray-400 flex items-center space-x-1">
-                  <MapPin className="w-3.5 h-3.5 text-amber-400" />
-                  <span>{selectedLocation.city}</span>
+                  <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>{[selectedLocation.address, selectedLocation.ward, selectedLocation.city].filter(Boolean).join(', ') || selectedLocation.city}</span>
                 </span>
               </div>
               <h3 className="text-2xl sm:text-3xl font-extrabold text-white">

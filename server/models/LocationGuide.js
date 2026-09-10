@@ -5,6 +5,8 @@ const LocationGuideSchema = new mongoose.Schema({
   id: { type: String },
   name: { type: String, required: true, trim: true },
   city: { type: String, required: true, trim: true },
+  ward: { type: String, default: '', trim: true },
+  address: { type: String, default: '', trim: true },
   region: { 
     type: String, 
     required: true, 

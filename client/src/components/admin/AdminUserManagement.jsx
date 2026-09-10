@@ -257,7 +257,11 @@ export const AdminUserManagement = () => {
       const matchName = u.name?.toLowerCase().includes(q);
       const matchEmail = u.email?.toLowerCase().includes(q);
       const matchPhone = u.phone?.includes(q);
-      const matchLocation = u.studioInfo?.location?.toLowerCase().includes(q);
+      const matchLocation = u.studioInfo?.location?.toLowerCase().includes(q) ||
+        u.province?.toLowerCase().includes(q) ||
+        u.ward?.toLowerCase().includes(q) ||
+        u.address?.toLowerCase().includes(q) ||
+        u.studioInfo?.address?.toLowerCase().includes(q);
       if (!matchName && !matchEmail && !matchPhone && !matchLocation) return false;
     }
     return true;
@@ -421,10 +425,37 @@ export const AdminUserManagement = () => {
                       </div>
                     )}
 
-                    {applicant.studioInfo?.location && (
+                    {(applicant.studioInfo?.address || applicant.address) ? (
+                      <div className="flex items-center justify-between text-gray-300">
+                        <span className="text-gray-400">Địa chỉ:</span>
+                        <span className="text-right truncate max-w-[220px]" title={applicant.studioInfo?.address || applicant.address}>
+                          {applicant.studioInfo?.address || applicant.address}
+                        </span>
+                      </div>
+                    ) : (applicant.studioInfo?.location || applicant.province) ? (
                       <div className="flex items-center justify-between text-gray-300">
                         <span className="text-gray-400">Khu vực:</span>
-                        <span>{applicant.studioInfo.location}</span>
+                        <span>{[applicant.studioInfo?.ward || applicant.ward, applicant.studioInfo?.location || applicant.province].filter(Boolean).join(', ')}</span>
+                      </div>
+                    ) : null}
+
+                    {applicant.studioInfo?.equipment && (
+                      <div className="flex items-center justify-between text-gray-300">
+                        <span className="text-gray-400">Thiết bị:</span>
+                        <span className="text-right truncate max-w-[220px]">{applicant.studioInfo.equipment}</span>
+                      </div>
+                    )}
+
+                    {applicant.studioInfo?.startingPrice && (
+                      <div className="flex items-center justify-between text-gray-300">
+                        <span className="text-gray-400">Giá khởi điểm:</span>
+                        <span className="text-amber-400 font-semibold">{applicant.studioInfo.startingPrice}</span>
+                      </div>
+                    )}
+
+                    {applicant.studioInfo?.bio && (
+                      <div className="pt-1 text-gray-400 border-t border-[#242938]/60 italic text-[11px] line-clamp-2">
+                        "{applicant.studioInfo.bio}"
                       </div>
                     )}
                   </div>
@@ -592,6 +623,14 @@ export const AdminUserManagement = () => {
                     <td className="py-3.5 px-4 space-y-0.5">
                       <div>{u.email}</div>
                       {u.phone && <div className="text-amber-400 font-mono text-[11px]">{u.phone}</div>}
+                      {(u.address || u.province || u.studioInfo?.address || u.studioInfo?.location) && (
+                        <div 
+                          className="text-gray-400 text-[10px] truncate max-w-[200px]" 
+                          title={u.address || u.studioInfo?.address || [u.ward || u.studioInfo?.ward, u.province || u.studioInfo?.location].filter(Boolean).join(', ')}
+                        >
+                          📍 {u.address || u.studioInfo?.address || [u.ward || u.studioInfo?.ward, u.province || u.studioInfo?.location].filter(Boolean).join(', ')}
+                        </div>
+                      )}
                     </td>
 
                     {/* Role Dropdown */}

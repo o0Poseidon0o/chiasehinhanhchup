@@ -6,6 +6,9 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, trim: true, lowercase: true },
   phone: { type: String, default: '', trim: true },
   password: { type: String, required: true },
+  address: { type: String, default: '', trim: true },
+  province: { type: String, default: '', trim: true },
+  ward: { type: String, default: '', trim: true },
   role: { 
     type: String, 
     enum: ['admin', 'photographer', 'client'], 
@@ -31,6 +34,9 @@ const userSchema = new mongoose.Schema({
     equipment: { type: String, default: '', trim: true },
     styles: { type: String, default: '', trim: true },
     location: { type: String, default: '', trim: true },
+    province: { type: String, default: '', trim: true },
+    ward: { type: String, default: '', trim: true },
+    address: { type: String, default: '', trim: true },
     bio: { type: String, default: '', trim: true }
   },
   createdAt: { type: Date, default: Date.now },

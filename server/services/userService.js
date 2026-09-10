@@ -28,7 +28,7 @@ const formatUserResponse = (user) => {
  * Đăng ký tài khoản người dùng mới
  */
 const registerUser = async (data) => {
-  const { name, email, phone, password, role = 'client', studioInfo = {} } = data;
+  const { name, email, phone, password, address = '', province = '', ward = '', role = 'client', studioInfo = {} } = data;
 
   if (!name || !name.trim()) {
     const err = new Error('Vui lòng nhập họ và tên hoặc tên Studio.');
@@ -95,6 +95,9 @@ const registerUser = async (data) => {
     email: cleanEmail,
     phone: phone ? phone.trim() : '',
     password: hashPassword(password),
+    address: address ? address.trim() : (studioInfo.address ? studioInfo.address.trim() : ''),
+    province: province ? province.trim() : (studioInfo.province ? studioInfo.province.trim() : ''),
+    ward: ward ? ward.trim() : (studioInfo.ward ? studioInfo.ward.trim() : ''),
     role: role === 'photographer' ? 'photographer' : 'client',
     status: userStatus,
     studioInfo: {
@@ -106,7 +109,10 @@ const registerUser = async (data) => {
       experience: studioInfo.experience ? studioInfo.experience.trim() : '',
       equipment: studioInfo.equipment ? studioInfo.equipment.trim() : '',
       styles: studioInfo.styles ? studioInfo.styles.trim() : '',
-      location: studioInfo.location ? studioInfo.location.trim() : '',
+      location: studioInfo.location ? studioInfo.location.trim() : (province ? province.trim() : ''),
+      province: studioInfo.province ? studioInfo.province.trim() : (province ? province.trim() : ''),
+      ward: studioInfo.ward ? studioInfo.ward.trim() : (ward ? ward.trim() : ''),
+      address: studioInfo.address ? studioInfo.address.trim() : (address ? address.trim() : ''),
       bio: studioInfo.bio ? studioInfo.bio.trim() : ''
     },
     createdAt: new Date(),

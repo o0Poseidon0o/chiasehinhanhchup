@@ -68,12 +68,18 @@ class LocalUser {
     this.password = data.password || '';
     this.role = data.role || 'client'; // 'admin' | 'photographer' | 'client'
     this.status = data.status || (this.role === 'photographer' ? 'pending' : 'active'); // 'pending' | 'active' | 'rejected' | 'inactive'
+    this.address = data.address || '';
+    this.province = data.province || '';
+    this.ward = data.ward || '';
     this.studioInfo = data.studioInfo || {
       portfolioUrl: '',
       experience: '',
       equipment: '',
       styles: '',
       location: '',
+      province: '',
+      ward: '',
+      address: '',
       bio: ''
     };
     this.createdAt = data.createdAt ? new Date(data.createdAt) : new Date();
@@ -95,6 +101,9 @@ class LocalUser {
       password: this.password,
       role: this.role,
       status: this.status,
+      address: this.address,
+      province: this.province,
+      ward: this.ward,
       studioInfo: this.studioInfo,
       createdAt: this.createdAt,
       lastLogin: this.lastLogin,
