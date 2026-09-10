@@ -93,6 +93,37 @@ export const LocationGuidesSection = () => {
 
   return (
     <section id="location-guides-section" className="py-12 sm:py-16 space-y-8 scroll-mt-24">
+      {/* Schema.org Structured Data for AI & Search Engines */}
+      {locations.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "ItemList",
+              "name": "Cẩm Nang Địa Điểm Chụp Ảnh Toàn Quốc - Photodate",
+              "itemListElement": locations.map((loc, idx) => ({
+                "@type": "ListItem",
+                "position": idx + 1,
+                "item": {
+                  "@type": "TouristAttraction",
+                  "name": loc.name,
+                  "description": loc.description,
+                  "image": loc.image,
+                  "address": {
+                    "@type": "PostalAddress",
+                    "streetAddress": loc.address || "",
+                    "addressLocality": loc.ward || "",
+                    "addressRegion": loc.city || "",
+                    "addressCountry": "VN"
+                  }
+                }
+              }))
+            })
+          }}
+        />
+      )}
+
       {/* Section Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="space-y-2.5 max-w-2xl">

@@ -1,0 +1,102 @@
+﻿Mã Test Case,Phân Hệ / Module,Tiêu Đề Kiểm Thử,Các Bước Thực Hiện,Kết Quả Mong Đợi,Mức Độ Ưu Tiên,Trạng Thái,Người Kiểm Thử,Ghi Chú
+"TC_AUTH_01","1. Đăng Ký & Đăng Nhập","Đăng ký tài khoản Khách hàng (Client) có Tỉnh/Thành, Phường/Xã","1. Bấm Đăng nhập / Đăng ký
+2. Chọn tab ""Đăng ký mới""
+3. Chọn vai trò ""Khách hàng""
+4. Nhập Tên, Email, SĐT, Mật khẩu
+5. Chọn Tỉnh/Thành (VD: Hà Nội)
+6. Chọn Phường/Xã (VD: Phường Hoàn Kiếm)
+7. Nhập Địa chỉ số nhà
+8. Bấm Đăng Ký Tài Khoản","Hệ thống tạo tài khoản Khách hàng thành công, tự động đăng nhập và lưu đầy đủ Tỉnh, Phường, Địa chỉ.","High","Pass","Tester / QA","Đã test trên live Vercel"
+"TC_AUTH_02","1. Đăng Ký & Đăng Nhập","Đăng ký Nhiếp ảnh gia (Photographer) kèm Hồ sơ năng lực & Studio","1. Chọn tab ""Đăng ký mới""
+2. Chọn vai trò ""Nhiếp ảnh gia""
+3. Nhập Tên, Email, SĐT, Pass
+4. Tải/dán Logo Studio
+5. Chọn Tỉnh/Thành và Phường/Xã Studio
+6. Nhập Địa chỉ cụ thể số nhà
+7. Nhập Giới thiệu Bio
+8. Nhập Thiết bị máy ảnh/lens
+9. Nhập Giá khởi điểm
+10. Bấm Đăng ký","Hệ thống ghi nhận tài khoản NAG kèm đầy đủ Hồ sơ năng lực (Bio, Thiết bị, Giá) và Địa chỉ Studio.","High","Pass","Tester / QA","Đầy đủ trường năng lực"
+"TC_AUTH_03","1. Đăng Ký & Đăng Nhập","Validate dữ liệu đăng ký (Mật khẩu ngắn, Trùng Email/SĐT)","1. Nhập mật khẩu < 6 ký tự
+2. Hoặc nhập email đã tồn tại trong DB
+3. Bấm Đăng ký","Hiển thị thông báo lỗi rõ ràng, không cho phép tạo tài khoản sai quy cách.","Medium","Pass","Tester / QA",""
+"TC_AUTH_04","1. Đăng Ký & Đăng Nhập","Đăng nhập hệ thống (Email / SĐT + Mật khẩu)","1. Bấm Đăng nhập
+2. Nhập Email hoặc SĐT đã đăng ký
+3. Nhập Mật khẩu
+4. Bấm Đăng Nhập","Đăng nhập thành công, Header cập nhật tên người dùng, mở quyền truy cập đúng vai trò.","High","Pass","Tester / QA",""
+"TC_AUTH_05","1. Đăng Ký & Đăng Nhập","Quên mật khẩu & Khôi phục tài khoản","1. Chọn ""Quên mật khẩu?"" tại modal
+2. Nhập Email tài khoản
+3. Bấm Nhận mã OTP
+4. Nhập mã OTP và Mật khẩu mới
+5. Bấm Đổi mật khẩu","Hệ thống gửi mã xác thực, cho phép đặt lại mật khẩu mới an toàn.","Medium","Pass","Tester / QA",""
+"TC_BOOK_01","2. Đặt Lịch Chụp Ảnh (Booking)","Mở form đặt lịch chụp từ nút ""Đặt Lịch"" trên Menu/Banner","1. Bấm nút ""Đặt Lịch Chụp"" trên Navbar hoặc Banner
+2. Quan sát Modal đặt lịch mở ra","Modal hiển thị giao diện sang trọng, tải sẵn danh mục chụp và danh sách Nhiếp ảnh gia.","High","Pass","Tester / QA",""
+"TC_BOOK_02","2. Đặt Lịch Chụp Ảnh (Booking)","Chọn Tỉnh / Thành và Phường / Xã chuẩn trong form Đặt lịch","1. Tại ô Tỉnh/Thành phố: Chọn tỉnh (VD: TP. Hồ Chí Minh)
+2. Quan sát ô Phường/Xã được mở khóa
+3. Chọn Phường/Xã tương ứng
+4. Nhập Địa chỉ số nhà / Địa điểm tổ chức","Danh sách Phường/Xã tải động chính xác 100% từ database nội bộ GHN (0đ, không lỗi mạng).","High","Pass","Tester / QA","34 tỉnh, 3.321 phường"
+"TC_BOOK_03","2. Đặt Lịch Chụp Ảnh (Booking)","Chọn Thể loại chụp & Nhiếp ảnh gia chỉ định","1. Chọn gói chụp (Chân dung, Cưới, Kỷ yếu...)
+2. Chọn Nhiếp ảnh gia trong danh sách
+3. Kiểm tra tự động điền Tỉnh thành theo NAG","Tự động nhận diện khu vực hoạt động của thợ ảnh để gợi ý địa bàn phù hợp.","High","Pass","Tester / QA",""
+"TC_BOOK_04","2. Đặt Lịch Chụp Ảnh (Booking)","Chọn Dịch vụ cộng thêm (Add-ons) và tính Tổng chi phí","1. Tích chọn Make-up chuyên nghiệp (+500k)
+2. Tích chọn Thuê trang phục (+300k)
+3. Quan sát tổng tiền tạm tính","Tổng chi phí cập nhật theo thời gian thực đúng với bảng giá quy định.","Medium","Pass","Tester / QA",""
+"TC_BOOK_05","2. Đặt Lịch Chụp Ảnh (Booking)","Gửi yêu cầu đặt lịch & Tra cứu lịch chụp cá nhân","1. Điền Tên, SĐT, Email người đặt
+2. Bấm ""Xác Nhận Đặt Lịch""
+3. Vào mục ""Lịch Chụp Của Tôi"" kiểm tra","Tạo mã lịch chụp thành công, hiển thị trong danh sách theo dõi tiến độ của khách hàng.","High","Pass","Tester / QA",""
+"TC_LOC_01","3. Cẩm Nang Địa Điểm (Location Guides)","Lọc địa điểm chụp ảnh theo Vùng Miền","1. Cuộn đến mục ""Cẩm Nang Địa Điểm Chụp""
+2. Lần lượt bấm các tab: Toàn Quốc, Miền Bắc, Miền Trung, Tây Nguyên, Miền Nam","Danh sách thẻ địa điểm chuyển đổi mượt mà theo đúng vùng miền được chọn.","High","Pass","Tester / QA",""
+"TC_LOC_02","3. Cẩm Nang Địa Điểm (Location Guides)","Kiểm tra hiển thị đầy đủ thông tin trên Thẻ Địa Điểm (Card)","1. Quan sát từng thẻ địa điểm
+2. Kiểm tra: Tên, Huy hiệu Phường - Tỉnh, Địa chỉ chi tiết 📍, Giờ vàng, Giá vé, Mẹo góc máy, Concept tags","Thẻ địa điểm hiển thị trọn vẹn, không bị khuyết ô nào, chữ rõ ràng dễ đọc.","High","Pass","Tester / QA","Đã hoàn thiện đầy đủ"
+"TC_LOC_03","3. Cẩm Nang Địa Điểm (Location Guides)","Mở Popup xem Mẹo Chụp & Bấm nút ""Chỉ Đường Maps""","1. Bấm vào thẻ địa điểm hoặc nút ""Mẹo Chụp""
+2. Xem khung Tọa độ chi tiết
+3. Bấm nút ""Chỉ Đường Maps""","Popup mở giữa màn hình, nút Chỉ đường mở Google Maps chính xác địa chỉ thực tế.","High","Pass","Tester / QA","Liên kết Google Maps chuẩn"
+"TC_LOC_04","3. Cẩm Nang Địa Điểm (Location Guides)","Xem Video Review Góc Máy Thực Tế (YouTube / TikTok)","1. Trong modal địa điểm, chuyển tab ""Video Review""
+2. Bấm xem video hoặc bấm ""Mở Video Ngay""","Video phát mượt mà hoặc chuyển hướng đến clip hậu trường sống ảo thực tế.","Medium","Pass","Tester / QA",""
+"TC_LOC_05","3. Cẩm Nang Địa Điểm (Location Guides)","Thao tác liên kết từ Địa Điểm: ""Đặt Lịch Chụp Tại Đây"" & ""Tìm NAG""","1. Trong popup địa điểm, bấm ""Đặt Lịch Chụp Tại Đây""
+2. Hoặc bấm ""Tìm Nhiếp Ảnh Gia Tại [Tỉnh]""","Chuyển thẳng sang form Đặt lịch có sẵn tên địa điểm hoặc trang tìm kiếm NAG theo đúng Tỉnh.","High","Pass","Tester / QA",""
+"TC_PHOTO_01","4. Hồ Sơ Nhiếp Ảnh Gia (Photographers)","Tìm kiếm & Bộ lọc Nhiếp ảnh gia theo Tỉnh / Thể loại","1. Truy cập trang /photographers
+2. Gõ từ khóa tìm kiếm (tên, khu vực, thiết bị)
+3. Chọn lọc theo thể loại (Áo dài, Cưới, Chân dung...)","Kết quả lọc nhanh chóng, chính xác theo từ khóa và tiêu chí.","High","Pass","Tester / QA",""
+"TC_PHOTO_02","4. Hồ Sơ Nhiếp Ảnh Gia (Photographers)","Xem trang chi tiết Hồ sơ Nhiếp ảnh gia (/photographer/:id)","1. Bấm vào thẻ một Nhiếp ảnh gia
+2. Kiểm tra: Bio năng lực, Thiết bị chính, Kinh nghiệm, Địa chỉ Studio, Link Portfolio, Nút Zalo, Bảng giá","Trang cá nhân của thợ ảnh hiển thị đẳng cấp, chuyên nghiệp, thông tin minh bạch.","High","Pass","Tester / QA",""
+"TC_STUDIO_01","5. Studio Workspace (Dành cho NAG)","Cài đặt Hồ sơ Studio & Địa chỉ hoạt động","1. Đăng nhập tài khoản NAG, vào /app
+2. Chuyển mục ""Cài đặt Studio & Hồ sơ""
+3. Cập nhật Tỉnh/Thành, Phường/Xã, Địa chỉ số nhà
+4. Bấm ""Lưu Thông Tin""","Hệ thống lưu thành công, danh sách Phường/Xã tự động đồng bộ theo Tỉnh.","High","Pass","Tester / QA",""
+"TC_STUDIO_02","5. Studio Workspace (Dành cho NAG)","Tạo Album ảnh mới & Tải ảnh hàng loạt (Bulk Upload)","1. Bấm ""Tạo Album Mới""
+2. Nhập Tên album, Khách hàng, Mã PIN bảo mật
+3. Kéo thả hàng chục ảnh chất lượng cao vào album
+4. Đặt hạn mức số ảnh chọn (VD: 30 ảnh)
+5. Xuất bản Album","Album được tạo thành công, ảnh tải lên giữ nguyên độ nét gốc không bị vỡ/nén.","High","Pass","Tester / QA",""
+"TC_STUDIO_03","5. Studio Workspace (Dành cho NAG)","Chia sẻ Link Album & Mã PIN cho Khách hàng","1. Bấm ""Sao chép Link xem ảnh"" hoặc gửi kèm mã PIN
+2. Mở trình duyệt ẩn danh kiểm tra","Link truy cập trực tiếp trang chọn ảnh của khách hàng bảo mật bằng mã PIN.","High","Pass","Tester / QA",""
+"TC_CLIENT_01","6. Khách Hàng Chọn Ảnh (Client Album)","Nhập mã PIN bảo mật để mở Album ảnh","1. Mở link /album/:id
+2. Nhập đúng mã PIN do Studio cung cấp
+3. Bấm ""Mở Album""","Xác thực thành công, hiển thị toàn bộ ảnh trong album.","High","Pass","Tester / QA",""
+"TC_CLIENT_02","6. Khách Hàng Chọn Ảnh (Client Album)","Trải nghiệm xem ảnh toàn màn hình (Lightbox) & Phóng to","1. Bấm vào bất kỳ tấm ảnh để xem kích thước lớn
+2. Bấm nút Next/Prev qua lại
+3. Thử zoom ảnh","Xem ảnh siêu mượt, sắc nét trên cả điện thoại và máy tính.","High","Pass","Tester / QA",""
+"TC_CLIENT_03","6. Khách Hàng Chọn Ảnh (Client Album)","Thao tác Thả tim / Chọn ảnh & Gửi danh sách về Studio","1. Bấm vào biểu tượng trái tim trên các ảnh ưng ý
+2. Theo dõi thanh đếm: ""Đã chọn X / Y ảnh""
+3. Nhập ghi chú chỉnh sửa (VD: ""bóp eo, xóa người phía sau"")
+4. Bấm ""Gửi Danh Sách Ảnh Đã Chọn""","Studio nhận được ngay danh sách ảnh khách đã chọn kèm ghi chú chi tiết.","High","Pass","Tester / QA",""
+"TC_ADMIN_01","7. Bảng Quản Trị Hệ Thống (Master Admin)","Quản lý Cẩm nang Địa điểm (Thêm, Sửa Tỉnh/Phường/Địa chỉ, Xóa)","1. Đăng nhập Admin, vào mục ""Cẩm nang Địa điểm""
+2. Bấm Thêm mới hoặc Sửa 1 địa điểm
+3. Thử chọn Tỉnh/Thành -> Phường/Xã -> Nhập Địa chỉ số nhà
+4. Bấm Lưu","Dữ liệu cập nhật ngay lập tức lên trang chủ.","High","Pass","Tester / QA",""
+"TC_ADMIN_02","7. Bảng Quản Trị Hệ Thống (Master Admin)","Quản lý Phê duyệt Nhiếp ảnh gia & Bật/Tắt chế độ tự do","1. Vào mục ""Quản trị Nhiếp ảnh gia""
+2. Gạt nút Bật/Tắt ""Trải nghiệm Tự do"" vs ""Khóa kiểm duyệt""
+3. Duyệt hồ sơ hoặc Khóa tài khoản đối tác","Cập nhật quyền hạn và chính sách đăng ký tức thì.","High","Pass","Tester / QA",""
+"TC_ADMIN_03","7. Bảng Quản Trị Hệ Thống (Master Admin)","Quản lý Người dùng & Xuất danh bạ Excel/CSV","1. Vào mục ""Quản lý Người dùng""
+2. Tìm kiếm người dùng theo tên, email, khu vực địa chỉ
+3. Bấm ""Xuất CSV / Danh bạ""","Tải về file danh sách người dùng đầy đủ cột Họ tên, SĐT, Email, Địa chỉ, Vai trò.","Medium","Pass","Tester / QA",""
+"TC_SEO_01","8. Tối Ưu Hiển Thị & AI SEO","Kiểm tra tệp robots.txt và quyền truy cập của Bot AI","1. Truy cập URL: /robots.txt
+2. Kiểm tra xem có mở quyền cho GPTBot, ClaudeBot, PerplexityBot, Google-Extended","Trả về mã 200 OK với đầy đủ danh sách cấu hình AI Bot.","High","Pass","Tester / QA","robots.txt chuẩn"
+"TC_SEO_02","8. Tối Ưu Hiển Thị & AI SEO","Kiểm tra tệp chuẩn AI Context: /llms.txt","1. Truy cập URL: /llms.txt
+2. Kiểm tra nội dung tóm tắt dịch vụ, cẩm nang và FAQ theo chuẩn LLM","Trả về nội dung Markdown chuẩn chỉnh để các AI đọc hiểu trong vài ms.","High","Pass","Tester / QA","llms.txt chuẩn"
+"TC_SEO_03","8. Tối Ưu Hiển Thị & AI SEO","Kiểm tra Thẻ Dữ Liệu Cấu Trúc Schema.org JSON-LD","1. Mở xem mã nguồn trang chủ (View Page Source)
+2. Tìm kiếm thẻ <script type=""application/ld+json"">
+3. Kiểm tra WebSite, Organization, TouristAttraction","Chứa đầy đủ cấu trúc dữ liệu JSON-LD cho Google Knowledge Graph và AI Search.","High","Pass","Tester / QA",""
+"TC_SEO_04","8. Tối Ưu Hiển Thị & AI SEO","Cơ chế chống sập trang toàn cục (ErrorBoundary)","1. Thao tác mọi trang trên ứng dụng
+2. Kiểm tra nếu có lỗi bất ngờ","Không bao giờ xuất hiện màn hình trắng bóc; luôn hiển thị giao diện báo lỗi thân thiện kèm nút Tải lại.","High","Pass","Tester / QA",""

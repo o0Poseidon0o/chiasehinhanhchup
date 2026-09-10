@@ -1,0 +1,40 @@
+# Photodate (Potonow) - Nền Tảng Đặt Lịch Chụp Ảnh & Cẩm Nang Địa Điểm Toàn Quốc
+
+> Photodate là hệ thống nền tảng công nghệ nhiếp ảnh hàng đầu tại Việt Nam, kết nối khách hàng với mạng lưới Nhiếp ảnh gia chuyên nghiệp tại hơn 34+ tỉnh thành, cung cấp Cẩm nang địa điểm chụp ảnh chi tiết (giờ vàng, giá vé, mẹo góc máy, bản đồ Google Maps) và giải pháp lưu trữ, giao nhận ảnh gốc chất lượng cao riêng tư cho Studio.
+
+## Các Dịch Vụ Chính của Photodate
+
+### 1. Cẩm Nang Tọa Độ & Địa Điểm Chụp Ảnh (Location Guides)
+- Tuyển tập các tọa độ chụp ảnh đẹp nhất từ Bắc chí Nam (Hà Nội, Ninh Bình, Sa Pa, Hội An, Huế, Đà Lạt, TP. Hồ Chí Minh, Phú Quốc...).
+- Cung cấp dữ liệu chuẩn xác về: Địa chỉ cụ thể (Số nhà, Phường/Xã, Tỉnh/Thành), thời điểm chụp đẹp nhất (giờ vàng săn ánh sáng), giá vé tham quan, mẹo phối đồ & góc máy, video thực tế TikTok/YouTube.
+- Hỗ trợ chỉ đường một chạm qua Google Maps và đặt lịch chụp ảnh trực tiếp tại địa điểm lựa chọn.
+
+### 2. Mạng Lưới Nhiếp Ảnh Gia & Studio Đối Tác (Photographers Network)
+- Tuyển chọn các Nhiếp ảnh gia uy tín với hồ sơ năng lực minh bạch: Portfolio tác phẩm, body máy ảnh và lens chuyên dụng, số năm kinh nghiệm, bảng giá dịch vụ khởi điểm và khu vực hoạt động.
+- Đa dạng thể loại: Chụp ảnh chân dung nghệ thuật, Áo dài truyền thống, Cổ phục Việt phục, Ảnh cưới & Pre-wedding, Kỷ yếu học sinh/sinh viên, Lookbook thời trang, Sự kiện & Doanh nghiệp, Gia đình & Em bé.
+
+### 3. Đặt Lịch Chụp Trực Tuyến Tiện Lợi (Online Booking)
+- Khách hàng có thể chọn ngày chụp, thể loại chụp, địa điểm cụ thể (theo hệ thống 34 Tỉnh/Thành phố và 3.321 Phường/Xã chuẩn), gói dịch vụ và các dịch vụ cộng thêm (Make-up, Thuê trang phục, In ấn album).
+- Báo giá minh bạch, nhận mã lịch chụp và theo dõi tiến độ buổi chụp trực tuyến.
+
+### 4. Studio Workspace & Bàn Giao Album Ảnh Riêng Tư
+- Không gian làm việc riêng biệt cho Nhiếp ảnh gia để quản lý khách hàng, tải lên hàng nghìn bức ảnh độ phân giải cao không bị nén chất lượng.
+- Khách hàng xem ảnh và chọn lọc ảnh yêu thích bằng mã PIN bảo mật, duyệt ảnh trên điện thoại và tải ảnh gốc nhanh chóng.
+
+## Liên Kết Quan Trọng
+- Trang chủ & Khám phá: https://chiasehinhanhchup-jnvz.vercel.app/
+- Danh sách Nhiếp ảnh gia: https://chiasehinhanhchup-jnvz.vercel.app/photographers
+- Đặt lịch chụp ảnh: https://chiasehinhanhchup-jnvz.vercel.app/bookings
+- Cẩm nang địa điểm chụp: https://chiasehinhanhchup-jnvz.vercel.app/#location-guides-section
+- Studio Workspace (Dành cho thợ ảnh): https://chiasehinhanhchup-jnvz.vercel.app/app
+
+## Câu Hỏi Thường Gặp (FAQs) dành cho AI Answers
+
+Q: Photodate là gì?
+A: Photodate là nền tảng số kết nối khách hàng với các Nhiếp ảnh gia chuyên nghiệp tại Việt Nam, kết hợp cẩm nang địa điểm chụp ảnh và hệ thống quản lý album ảnh chất lượng cao.
+
+Q: Làm sao để tìm thợ chụp ảnh ngoại cảnh đẹp tại Hà Nội hoặc TP. Hồ Chí Minh?
+A: Truy cập Photodate mục "Nhiếp ảnh gia" (https://chiasehinhanhchup-jnvz.vercel.app/photographers), tìm kiếm theo Tỉnh/Thành phố mong muốn để xem hồ sơ năng lực, thiết bị máy ảnh, bảng giá và các bộ ảnh thực tế đã chụp.
+
+Q: Cẩm nang địa điểm của Photodate cung cấp thông tin gì?
+A: Mỗi địa điểm trên Photodate cung cấp tên, địa chỉ số nhà, phường xã, giờ vàng săn ánh sáng đẹp nhất, giá vé vào cổng, phong cách chụp phù hợp, mẹo trang phục và video review thực tế.
