@@ -21,7 +21,8 @@ import {
   Clock,
   RefreshCw,
   Send,
-  Key
+  Key,
+  MapPin
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { userApi } from '../../api/userApi';

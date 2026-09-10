@@ -16,18 +16,20 @@ import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AuthModal from './components/auth/AuthModal';
 import FloatingContactButton from './components/common/FloatingContactButton';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <div className="min-h-screen bg-[#0c0d10] text-[#f8fafc] flex flex-col font-sans selection:bg-amber-500 selection:text-amber-950 transition-colors duration-200">
-            {/* Navigation Bar */}
-            <Navbar />
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <div className="min-h-screen bg-[#0c0d10] text-[#f8fafc] flex flex-col font-sans selection:bg-amber-500 selection:text-amber-950 transition-colors duration-200">
+              {/* Navigation Bar */}
+              <Navbar />
 
-            {/* Global Auth Modal for Studio/Photographer & Admin Access */}
-            <AuthModal />
+              {/* Global Auth Modal for Studio/Photographer & Admin Access */}
+              <AuthModal />
 
             {/* Main Content Workspace */}
             <main className="flex-grow w-full max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
@@ -111,6 +113,7 @@ function App() {
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>
+  </ErrorBoundary>
   );
 }
 
