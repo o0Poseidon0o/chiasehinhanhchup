@@ -4,12 +4,13 @@ import {
   Calendar, Camera, CheckCircle2, User, Phone, Mail, MapPin, 
   Sparkles, ShieldCheck, ArrowRight, ArrowLeft, Clock, QrCode, Copy, Check, Lock,
   Users, Shirt, Scissors, Zap, BookOpen, Layers, AlertTriangle,
-  Crown, Gift, Heart, Palette, Calculator
+  Crown, Gift, Heart, Palette, Calculator, Building2, Home
 } from 'lucide-react';
 import { userApi } from '../api/userApi';
 import { categoryApi } from '../api/categoryApi';
 import { photographerApi } from '../api/photographerApi';
 import { addonApi, FALLBACK_ADDONS } from '../api/addonApi';
+import { addressApi } from '../api/addressApi';
 import { BookingPriceEstimator, extractNumericPrice } from '../components/booking/BookingPriceEstimator';
 import { useAuth } from '../context/AuthContext';
 import { formatAvatarUrl, handleImageError } from '../utils/imageHelper';
@@ -125,11 +126,97 @@ export const BookingPage = () => {
   }, [startTime, endTime]);
 
   const [peopleCount, setPeopleCount] = useState('1 - 2 người');
+  const [provinces, setProvinces] = useState([]);
+  const [wards, setWards] = useState([]);
+  const [selectedProvinceId, setSelectedProvinceId] = useState('');
+  const [selectedProvinceName, setSelectedProvinceName] = useState('Hà Nội');
+  const [selectedWardId, setSelectedWardId] = useState('');
+  const [selectedWardName, setSelectedWardName] = useState('');
   const [cityLocation, setCityLocation] = useState('Hà Nội');
   const [detailedLocation, setDetailedLocation] = useState('');
+  const [loadingProvinces, setLoadingProvinces] = useState(false);
+  const [loadingWards, setLoadingWards] = useState(false);
   const [selectedAddons, setSelectedAddons] = useState([]);
   const [availableAddons, setAvailableAddons] = useState(FALLBACK_ADDONS);
   const [conceptNote, setConceptNote] = useState('');
+
+  // Tải danh sách 34 Tỉnh/Thành từ Database nội bộ Photodate
+  useEffect(() => {
+    setLoadingProvinces(true);
+    addressApi.getProvinces()
+      .then(res => {
+        const list = res.data || [];
+        setProvinces(list);
+        if (list.length > 0) {
+          const defaultProv = list.find(p => p.name === 'Hà Nội') || list[0];
+          setSelectedProvinceId(defaultProv.provinceId);
+          setSelectedProvinceName(defaultProv.name);
+          setCityLocation(defaultProv.name);
+
+          addressApi.getWards(defaultProv.provinceId)
+            .then(wRes => setWards(wRes.data || []))
+            .catch(() => {});
+        }
+      })
+      .catch(err => console.error('Lỗi tải tỉnh thành:', err))
+      .finally(() => setLoadingProvinces(false));
+  }, []);
+
+  // Tự động nhận diện Tỉnh theo Studio đã chọn
+  useEffect(() => {
+    if (selectedPhotographer?.studioInfo?.location && provinces.length > 0) {
+      const locStr = selectedPhotographer.studioInfo.location.toLowerCase();
+      const matched = provinces.find(p => 
+        locStr.includes(p.name.toLowerCase()) || 
+        (Array.isArray(p.extensionNames) && p.extensionNames.some(ext => locStr.includes(ext.toLowerCase())))
+      );
+      if (matched) {
+        setSelectedProvinceId(matched.provinceId);
+        setSelectedProvinceName(matched.name);
+        setCityLocation(matched.name);
+        setSelectedWardId('');
+        setSelectedWardName('');
+        addressApi.getWards(matched.provinceId)
+          .then(wRes => setWards(wRes.data || []))
+          .catch(() => {});
+      }
+    }
+  }, [selectedPhotographer, provinces]);
+
+  const handleProvinceChange = async (e) => {
+    const pId = e.target.value;
+    const found = provinces.find(p => String(p.provinceId) === String(pId));
+    const pName = found ? found.name : '';
+
+    setSelectedProvinceId(pId);
+    setSelectedProvinceName(pName);
+    setCityLocation(pName);
+    setSelectedWardId('');
+    setSelectedWardName('');
+
+    if (!pId) {
+      setWards([]);
+      return;
+    }
+
+    setLoadingWards(true);
+    try {
+      const res = await addressApi.getWards(pId);
+      setWards(res.data || []);
+    } catch (err) {
+      console.error('Lỗi tải phường xã:', err);
+      setWards([]);
+    } finally {
+      setLoadingWards(false);
+    }
+  };
+
+  const handleWardChange = (e) => {
+    const wId = e.target.value;
+    const found = wards.find(w => String(w.wardId) === String(wId));
+    setSelectedWardId(wId);
+    setSelectedWardName(found ? found.name : '');
+  };
 
   // Conflict Detection States
   const [existingBookings, setExistingBookings] = useState([]);
@@ -342,6 +429,12 @@ export const BookingPage = () => {
         }
       } catch (_) {}
 
+      const fullLocationString = [
+        detailedLocation.trim(),
+        selectedWardName.trim(),
+        selectedProvinceName.trim()
+      ].filter(Boolean).join(', ');
+
       const payload = {
         photographerId: selectedPhotographer?._id || '',
         photographerName: selectedPhotographer?.name || 'Hệ thống Studio tự đề xuất',
@@ -351,7 +444,12 @@ export const BookingPage = () => {
         category: selectedCategory || 'Chụp Cá Nhân / Chân Dung',
         bookingDate: bookingDate || new Date().toISOString().split('T')[0],
         timeSlot: effectiveTimeSlot,
-        location: `${cityLocation}${detailedLocation ? ` - ${detailedLocation}` : ''}`,
+        location: fullLocationString || cityLocation,
+        provinceId: selectedProvinceId,
+        provinceName: selectedProvinceName,
+        wardId: selectedWardId,
+        wardName: selectedWardName,
+        detailedAddress: detailedLocation,
         budget: `${calculatedTotal.toLocaleString('vi-VN')}đ (Tạm tính)`,
         addons: activeSelectedAddonObjects.map(a => ({
           id: a._id || a.id,
@@ -379,8 +477,9 @@ export const BookingPage = () => {
         bookingDate: bookingDate || new Date().toISOString().split('T')[0],
         timeSlot: effectiveTimeSlot,
         peopleCount,
-        cityLocation,
-        detailedLocation: detailedLocation || 'Studio hoặc ngoại cảnh tùy chọn',
+        cityLocation: selectedProvinceName || cityLocation,
+        detailedLocation: [detailedLocation.trim(), selectedWardName.trim()].filter(Boolean).join(', ') || 'Ngoại cảnh hoặc studio',
+        location: fullLocationString || cityLocation,
         addonLabels,
         addons: activeSelectedAddonObjects,
         estimatedTotal: calculatedTotal,
@@ -775,31 +874,100 @@ export const BookingPage = () => {
                 </div>
               </div>
 
-              {/* Location Select */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-300 mb-1">Tỉnh / Thành Phố *</label>
-                  <select
-                    value={cityLocation}
-                    onChange={(e) => setCityLocation(e.target.value)}
-                    className="w-full bg-[#0c0d12] border border-[#242938] focus:border-amber-500 rounded-xl px-4 py-3 text-xs sm:text-sm text-white outline-none cursor-pointer"
-                  >
-                    {['Hà Nội', 'TP. Hồ Chí Minh', 'Đà Nẵng', 'Đà Lạt', 'Hải Phòng', 'Cần Thơ'].map((c, i) => (
-                      <option key={i} value={c} className="bg-[#141720] text-white">{c}</option>
-                    ))}
-                  </select>
+              {/* Location Select (Chuẩn hóa từ Database nội bộ Photodate) */}
+              <div className="space-y-3.5 p-4 sm:p-5 rounded-2xl bg-[#0c0d12] border border-[#242938]">
+                <div className="flex items-center space-x-2 text-xs font-bold text-amber-400 uppercase tracking-wider">
+                  <MapPin className="w-4 h-4 text-amber-400" />
+                  <span>2. Khu Vực & Địa Điểm Chụp Ảnh *</span>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-gray-300 mb-1">Quận / Huyện hoặc Địa Điểm Cụ Thể</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Tỉnh / Thành Phố */}
+                  <div className="space-y-1">
+                    <label className="block text-xs font-semibold text-gray-300 flex items-center space-x-1">
+                      <Building2 className="w-3.5 h-3.5 text-amber-400/80" />
+                      <span>Tỉnh / Thành Phố <span className="text-rose-400">*</span></span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedProvinceId}
+                        onChange={handleProvinceChange}
+                        disabled={loadingProvinces}
+                        className="w-full bg-[#141720] border border-[#242938] focus:border-amber-500 rounded-xl px-4 py-3 text-xs sm:text-sm text-white outline-none cursor-pointer appearance-none disabled:opacity-50"
+                      >
+                        <option value="">{loadingProvinces ? 'Đang tải tỉnh thành...' : '-- Chọn Tỉnh / Thành phố --'}</option>
+                        {provinces.map((prov) => (
+                          <option key={prov.provinceId} value={prov.provinceId} className="bg-[#141720] text-white">
+                            {prov.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-xs">
+                        ▼
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Phường / Xã */}
+                  <div className="space-y-1">
+                    <label className="block text-xs font-semibold text-gray-300 flex items-center space-x-1">
+                      <MapPin className="w-3.5 h-3.5 text-amber-400/80" />
+                      <span>Phường / Xã</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedWardId}
+                        onChange={handleWardChange}
+                        disabled={!selectedProvinceId || loadingWards}
+                        className="w-full bg-[#141720] border border-[#242938] focus:border-amber-500 rounded-xl px-4 py-3 text-xs sm:text-sm text-white outline-none cursor-pointer appearance-none disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <option value="">
+                          {!selectedProvinceId 
+                            ? '-- Chọn Tỉnh trước --' 
+                            : loadingWards 
+                              ? 'Đang tải phường/xã...' 
+                              : '-- Chọn Phường / Xã --'}
+                        </option>
+                        {wards.map((ward) => (
+                          <option key={ward.wardId} value={ward.wardId} className="bg-[#141720] text-white">
+                            {ward.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-xs">
+                        ▼
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Địa điểm cụ thể / Studio / Quán cafe / Ngoại cảnh */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-gray-300 flex items-center space-x-1">
+                    <Home className="w-3.5 h-3.5 text-amber-400/80" />
+                    <span>Điểm chụp cụ thể / Studio / Quán Cafe / Tên đường (Tùy chọn)</span>
+                  </label>
                   <input
                     type="text"
                     value={detailedLocation}
                     onChange={(e) => setDetailedLocation(e.target.value)}
-                    placeholder="VD: Quận Cầu Giấy, Studio Phố Cổ, Bãi Đá Sông Hồng..."
-                    className="w-full bg-[#0c0d12] border border-[#242938] focus:border-amber-500 rounded-xl px-4 py-3 text-xs sm:text-sm text-white outline-none"
+                    placeholder="VD: Phim trường Smiley Ville, Hồ Tây, Bãi Đá Sông Hồng, Studio tại nhà..."
+                    className="w-full bg-[#141720] border border-[#242938] focus:border-amber-500 rounded-xl px-4 py-3 text-xs sm:text-sm text-white placeholder-gray-500 outline-none"
                   />
                 </div>
+
+                {/* Xem trước địa điểm đầy đủ */}
+                {(selectedProvinceName || detailedLocation) && (
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-200/90 flex items-start space-x-2 animate-fade-in">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-amber-300">Địa điểm ghi nhận: </span>
+                      <span>
+                        {[detailedLocation.trim(), selectedWardName.trim(), selectedProvinceName.trim()].filter(Boolean).join(', ')}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Double Booking Conflict Warning Card */}
@@ -1210,7 +1378,7 @@ export const BookingPage = () => {
                 </p>
                 <p className="flex justify-between">
                   <span className="text-gray-400">Thời gian & Địa điểm:</span>
-                  <strong className="text-amber-300">{bookingDate || 'Chưa chọn'} • {timeSlot || `${startTime} ➔ ${endTime}`} - {cityLocation}</strong>
+                  <strong className="text-amber-300">{bookingDate || 'Chưa chọn'} • {timeSlot || `${startTime} ➔ ${endTime}`} - {[detailedLocation.trim(), selectedWardName.trim(), selectedProvinceName.trim()].filter(Boolean).join(', ') || cityLocation}</strong>
                 </p>
               </div>
 

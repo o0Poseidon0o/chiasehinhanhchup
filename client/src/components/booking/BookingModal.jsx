@@ -23,7 +23,8 @@ import { userApi } from '../../api/userApi';
 import { addressApi } from '../../api/addressApi';
 import { useAuth } from '../../context/AuthContext';
 
-export const BookingModal = ({ isOpen, onClose, preselectedPhotographer = null, initialCategory = null }) => {
+export const BookingModal = ({ isOpen, onClose, preselectedPhotographer = null, initialPhotographer = null, initialCategory = null }) => {
+  const activePhotographer = preselectedPhotographer || initialPhotographer;
   const { currentUser } = useAuth();
   const [photographers, setPhotographers] = useState([]);
   
@@ -97,8 +98,8 @@ export const BookingModal = ({ isOpen, onClose, preselectedPhotographer = null, 
         setProvinces(provList);
 
         // Tự động nhận diện Tỉnh theo NAG nếu có
-        if (preselectedPhotographer?.studioInfo?.location && provList.length > 0) {
-          const locStr = preselectedPhotographer.studioInfo.location.toLowerCase();
+        if (activePhotographer?.studioInfo?.location && provList.length > 0) {
+          const locStr = activePhotographer.studioInfo.location.toLowerCase();
           const matched = provList.find(p => 
             locStr.includes(p.name.toLowerCase()) || 
             (Array.isArray(p.extensionNames) && p.extensionNames.some(ext => locStr.includes(ext.toLowerCase())))
@@ -127,11 +128,11 @@ export const BookingModal = ({ isOpen, onClose, preselectedPhotographer = null, 
       const list = res.data || [];
       setPhotographers(list);
 
-      if (preselectedPhotographer) {
+      if (activePhotographer) {
         setFormData(prev => ({
           ...prev,
-          photographerId: preselectedPhotographer._id || '',
-          photographerName: preselectedPhotographer.name || ''
+          photographerId: activePhotographer._id || '',
+          photographerName: activePhotographer.name || ''
         }));
       } else if (list.length > 0 && !formData.photographerId) {
         setFormData(prev => ({
@@ -141,7 +142,7 @@ export const BookingModal = ({ isOpen, onClose, preselectedPhotographer = null, 
         }));
       }
     }).catch(() => {});
-  }, [isOpen, preselectedPhotographer, initialCategory, currentUser]);
+  }, [isOpen, activePhotographer, initialCategory, currentUser]);
 
   if (!isOpen) return null;
 

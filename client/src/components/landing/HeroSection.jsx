@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, 
@@ -14,14 +14,22 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { addressApi } from '../../api/addressApi';
 
 export const HeroSection = () => {
   const { isLoggedIn, openAuthModal } = useAuth();
   const navigate = useNavigate();
 
   const [category, setCategory] = useState('all');
-  const [location, setLocation] = useState('hanoi');
+  const [location, setLocation] = useState('all');
   const [budget, setBudget] = useState('all');
+  const [provinces, setProvinces] = useState([]);
+
+  useEffect(() => {
+    addressApi.getProvinces().then(res => {
+      if (res.data) setProvinces(res.data);
+    }).catch(() => {});
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -119,11 +127,12 @@ export const HeroSection = () => {
                 onChange={(e) => setLocation(e.target.value)}
                 className="w-full bg-transparent text-sm text-white font-medium outline-none cursor-pointer"
               >
-                <option value="hanoi" className="bg-[#141720]">Hà Nội</option>
-                <option value="hcm" className="bg-[#141720]">TP. Hồ Chí Minh</option>
-                <option value="danang" className="bg-[#141720]">Đà Nẵng / Hội An</option>
-                <option value="dalat" className="bg-[#141720]">Đà Lạt</option>
-                <option value="all" className="bg-[#141720]">Toàn Quốc</option>
+                <option value="all" className="bg-[#141720]">Toàn Quốc (34 Tỉnh Thành)</option>
+                {provinces.map((p) => (
+                  <option key={p.provinceId} value={p.name} className="bg-[#141720]">
+                    {p.name}
+                  </option>
+                ))}
               </select>
             </div>
 

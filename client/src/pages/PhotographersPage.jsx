@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { userApi } from '../api/userApi';
 import { albumApi } from '../api/albumApi';
+import { addressApi } from '../api/addressApi';
 import { BookingModal } from '../components/booking/BookingModal';
 import { useAuth } from '../context/AuthContext';
 import { formatAvatarUrl, handleImageError } from '../utils/imageHelper';
@@ -118,12 +119,19 @@ export const PhotographersPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('Tất cả khu vực');
   const [selectedStyle, setSelectedStyle] = useState('Tất cả thể loại');
+  const [provinces, setProvinces] = useState([]);
 
   // Booking Modal State
   const [bookingModal, setBookingModal] = useState({
     isOpen: false,
     photographer: null
   });
+
+  useEffect(() => {
+    addressApi.getProvinces().then(res => {
+      if (res.data) setProvinces(res.data);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -282,8 +290,11 @@ export const PhotographersPage = () => {
               onChange={(e) => setSelectedLocation(e.target.value)}
               className="w-full bg-[#0c0d12] border border-[#242938] focus:border-amber-500 rounded-2xl pl-10 pr-4 py-3 text-xs sm:text-sm text-white outline-none appearance-none cursor-pointer"
             >
-              {LOCATIONS.map((loc, idx) => (
-                <option key={idx} value={loc} className="bg-[#141720] text-white">{loc}</option>
+              <option value="Tất cả khu vực" className="bg-[#141720] text-white">Tất cả khu vực (Toàn quốc)</option>
+              {provinces.map((prov) => (
+                <option key={prov.provinceId} value={prov.name} className="bg-[#141720] text-white">
+                  {prov.name}
+                </option>
               ))}
             </select>
           </div>
