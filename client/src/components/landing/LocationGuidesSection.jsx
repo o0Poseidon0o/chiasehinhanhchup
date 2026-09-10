@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { 
   MapPin, 
@@ -41,6 +42,28 @@ export const LocationGuidesSection = () => {
   const [loading, setLoading] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [modalTab, setModalTab] = useState('photo'); // 'photo' | 'video'
+
+  // Khóa cuộn trang khi mở modal và hỗ trợ phím Escape để đóng modal
+  useEffect(() => {
+    if (!selectedLocation) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setSelectedLocation(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedLocation]);
+
+  const handleOpenModal = (loc) => {
+    setSelectedLocation(loc);
+    setModalTab('photo');
+  };
 
   useEffect(() => {
     fetchLocations();
@@ -124,7 +147,11 @@ export const LocationGuidesSection = () => {
               className="group bg-[#12151e] border border-[#222736] hover:border-amber-500/50 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 flex flex-col hover:-translate-y-1"
             >
               {/* Cover Image */}
-              <div className="relative h-56 overflow-hidden bg-gray-900 shrink-0">
+              <div 
+                onClick={() => handleOpenModal(loc)}
+                className="relative h-56 overflow-hidden bg-gray-900 shrink-0 cursor-pointer"
+                title="Bấm để xem mẹo chụp & góc máy"
+              >
                 <img
                   src={loc.image}
                   alt={loc.name}
@@ -169,7 +196,11 @@ export const LocationGuidesSection = () => {
               {/* Card Body */}
               <div className="p-5 flex flex-col flex-grow justify-between space-y-4">
                 <div className="space-y-2.5">
-                  <h3 className="font-extrabold text-base sm:text-lg text-white group-hover:text-amber-300 transition-colors line-clamp-1">
+                  <h3 
+                    onClick={() => handleOpenModal(loc)}
+                    className="font-extrabold text-base sm:text-lg text-white group-hover:text-amber-300 transition-colors line-clamp-1 cursor-pointer"
+                    title="Bấm để xem mẹo chụp & góc máy"
+                  >
                     {loc.name}
                   </h3>
                   <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">
@@ -215,7 +246,7 @@ export const LocationGuidesSection = () => {
                 {/* Actions */}
                 <div className="pt-3 border-t border-[#222736] flex items-center gap-2">
                   <button
-                    onClick={() => setSelectedLocation(loc)}
+                    onClick={() => handleOpenModal(loc)}
                     className="flex-1 py-2 px-3 rounded-xl bg-[#1c2230] hover:bg-[#252c3f] border border-[#2e374d] text-gray-200 text-xs font-semibold transition-colors flex items-center justify-center space-x-1.5"
                   >
                     <Info className="w-3.5 h-3.5 text-amber-400" />
@@ -236,13 +267,22 @@ export const LocationGuidesSection = () => {
         </div>
       )}
 
-      {/* Modal Chi Tiết Địa Điểm & Mẹo Chụp */}
-      {selectedLocation && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-[#141721] border border-[#232938] rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative p-6 sm:p-8 space-y-6">
+      {/* Modal Chi Tiết Địa Điểm & Mẹo Chụp (Render qua Portal để luôn cố định chính giữa màn hình viewport) */}
+      {selectedLocation && typeof document !== 'undefined' && createPortal(
+        <div 
+          className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedLocation(null);
+          }}
+        >
+          <div 
+            className="bg-[#141721] border border-[#232938] rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative p-5 sm:p-8 space-y-6 my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setSelectedLocation(null)}
-              className="absolute top-5 right-5 text-gray-400 hover:text-white p-1 rounded-xl hover:bg-white/10 transition-colors"
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 text-gray-400 hover:text-white p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors z-20"
+              title="Đóng (Esc)"
             >
               <X className="w-5 h-5" />
             </button>
@@ -427,7 +467,8 @@ export const LocationGuidesSection = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </section>
   );

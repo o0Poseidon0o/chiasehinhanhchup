@@ -10,7 +10,7 @@ import TestimonialsCTA from '../components/landing/TestimonialsCTA';
 
 export const LandingPage = () => {
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="space-y-4">
       {/* 1. Hero Section & Booking Filter */}
       <HeroSection />
 

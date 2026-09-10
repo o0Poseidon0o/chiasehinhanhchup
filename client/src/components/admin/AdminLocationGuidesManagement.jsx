@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   MapPin, 
   Plus, 
@@ -56,6 +57,23 @@ export const AdminLocationGuidesManagement = () => {
     isFeatured: false,
     order: 1
   });
+
+  // Khóa cuộn trang khi mở modal và hỗ trợ phím Escape để đóng
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setIsModalOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isModalOpen]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -368,12 +386,21 @@ export const AdminLocationGuidesManagement = () => {
       )}
 
       {/* Modal Thêm / Chỉnh sửa Địa Điểm */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-[#141210] border border-[#2c2620] rounded-3xl w-full max-w-xl p-6 relative shadow-2xl max-h-[90vh] overflow-y-auto space-y-5">
+      {isModalOpen && typeof document !== 'undefined' && createPortal(
+        <div 
+          className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsModalOpen(false);
+          }}
+        >
+          <div 
+            className="bg-[#141210] border border-[#2c2620] rounded-3xl w-full max-w-xl p-6 relative shadow-2xl max-h-[90vh] overflow-y-auto space-y-5 my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setIsModalOpen(false)}
-              className="absolute top-5 right-5 text-gray-400 hover:text-white p-1 rounded-xl hover:bg-white/5 transition-colors"
+              className="absolute top-5 right-5 text-gray-400 hover:text-white p-1 rounded-xl hover:bg-white/5 transition-colors z-10"
+              title="Đóng (Esc)"
             >
               <X className="w-5 h-5" />
             </button>
@@ -576,7 +603,8 @@ export const AdminLocationGuidesManagement = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
