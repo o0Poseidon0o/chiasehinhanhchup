@@ -203,11 +203,22 @@ export const LocationGuidesSection = () => {
                   >
                     {loc.name}
                   </h3>
+
+                  {/* Địa chỉ chi tiết */}
+                  {(loc.address || loc.ward || loc.city) && (
+                    <div className="flex items-center space-x-1.5 text-[11px] text-amber-300/90 font-medium">
+                      <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span className="truncate" title={[loc.address, loc.ward, loc.city].filter(Boolean).join(', ')}>
+                        {[loc.address, loc.ward, loc.city].filter(Boolean).join(', ')}
+                      </span>
+                    </div>
+                  )}
+
                   <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">
                     {loc.description}
                   </p>
 
-                  {/* Highlights info */}
+                  {/* Highlights info: Giờ vàng & Giá vé */}
                   <div className="pt-2 space-y-1.5 border-t border-white/5 text-[11px] text-gray-300">
                     {loc.bestTime && (
                       <div className="flex items-center space-x-2">
@@ -222,6 +233,14 @@ export const LocationGuidesSection = () => {
                       </div>
                     )}
                   </div>
+
+                  {/* Mẹo góc máy trích đoạn nếu có */}
+                  {loc.tips && (
+                    <div className="flex items-start space-x-1.5 text-[11px] text-amber-200/80 bg-amber-500/5 p-2 rounded-xl border border-amber-500/10">
+                      <Sparkles className="w-3 h-3 text-amber-400 shrink-0 mt-0.5" />
+                      <span className="line-clamp-2 leading-tight italic">{loc.tips}</span>
+                    </div>
+                  )}
 
                   {/* Concept Tags */}
                   {Array.isArray(loc.suitableConcepts) && loc.suitableConcepts.length > 0 && (
@@ -400,6 +419,30 @@ export const LocationGuidesSection = () => {
               </div>
             )}
 
+            {/* Tọa độ chi tiết & Google Maps */}
+            <div className="p-4 rounded-2xl bg-[#181c28] border border-[#262f44] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+              <div className="flex items-start space-x-3">
+                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 shrink-0 mt-0.5">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Tọa Độ & Địa Chỉ Chụp Cụ Thể</span>
+                  <span className="text-xs sm:text-sm font-semibold text-white">
+                    {[selectedLocation.address, selectedLocation.ward, selectedLocation.city].filter(Boolean).join(', ') || selectedLocation.city}
+                  </span>
+                </div>
+              </div>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([selectedLocation.name, selectedLocation.address, selectedLocation.ward, selectedLocation.city].filter(Boolean).join(', '))}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center justify-center space-x-1.5 shrink-0 transition-colors"
+              >
+                <span>Chỉ Đường Maps</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+
             {/* Content Details */}
             <div className="space-y-4 text-sm">
               <div className="space-y-1">
@@ -446,13 +489,26 @@ export const LocationGuidesSection = () => {
             </div>
 
             {/* Modal Bottom Actions */}
-            <div className="pt-4 border-t border-[#232938] flex items-center justify-end space-x-3">
+            <div className="pt-4 border-t border-[#232938] flex flex-wrap items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setSelectedLocation(null)}
                 className="px-4 py-2.5 rounded-xl border border-[#232938] text-gray-300 hover:text-white hover:bg-white/5 text-xs font-semibold"
               >
                 Đóng
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const locName = selectedLocation.name;
+                  const locCity = selectedLocation.city;
+                  setSelectedLocation(null);
+                  navigate(`/bookings?location=${encodeURIComponent(locName)}&city=${encodeURIComponent(locCity)}`);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-[#1c2230] hover:bg-[#252c3f] border border-[#2e374d] text-gray-200 hover:text-white font-semibold text-xs flex items-center space-x-1.5 transition-colors"
+              >
+                <Calendar className="w-3.5 h-3.5 text-amber-400" />
+                <span>Đặt Lịch Chụp Tại Đây</span>
               </button>
               <button
                 type="button"

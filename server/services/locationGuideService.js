@@ -38,6 +38,35 @@ const getLocations = async (query = {}) => {
     } catch (_) {}
   }
 
+  // Tự động bổ sung thông tin Phường/Xã và Địa chỉ cụ thể nếu bản ghi cũ chưa có
+  const defaults = LocalLocationGuide.DEFAULT_LOCATIONS || [];
+  for (let loc of (locations || [])) {
+    if (!loc.ward || !loc.address) {
+      const match = defaults.find(d => 
+        (d.id && loc.id && d.id === loc.id) || 
+        (d.name && loc.name && d.name.toLowerCase() === loc.name.toLowerCase())
+      );
+      if (match) {
+        if (!loc.ward && match.ward) loc.ward = match.ward;
+        if (!loc.address && match.address) loc.address = match.address;
+        if (loc.city && match.city && (loc.city.includes('TP.') || loc.city.includes('('))) {
+          loc.city = match.city;
+        }
+        try {
+          if (typeof loc.save === 'function') {
+            await loc.save();
+          } else if (LocationGuide.findByIdAndUpdate && loc._id) {
+            await LocationGuide.findByIdAndUpdate(loc._id, {
+              ward: loc.ward,
+              address: loc.address,
+              city: loc.city
+            });
+          }
+        } catch (_) {}
+      }
+    }
+  }
+
   const safeList = Array.isArray(locations) ? locations : [];
   return safeList.sort((a, b) => (a.order || 0) - (b.order || 0));
 };
@@ -88,6 +117,8 @@ const createLocation = async (data) => {
   const newLoc = new LocationGuide({
     name: String(data.name).trim(),
     city: String(data.city).trim(),
+    ward: String(data.ward || '').trim(),
+    address: String(data.address || '').trim(),
     region,
     regionName,
     image: String(data.image).trim(),
