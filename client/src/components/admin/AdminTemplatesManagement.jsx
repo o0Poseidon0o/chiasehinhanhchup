@@ -16,7 +16,11 @@ import {
   Search
 } from 'lucide-react';
 import {
-  templateApi,
+  fetchTemplates,
+  importDriveTemplatesApi,
+  updateTemplateApi,
+  deleteTemplateApi,
+  resetDefaultTemplatesApi,
   FALLBACK_EDITORIAL_TEMPLATES
 } from '../../api/templateApi';
 
@@ -39,10 +43,9 @@ export default function AdminTemplatesManagement() {
   const loadAllTemplates = async () => {
     setLoading(true);
     try {
-      const res = await templateApi.getAll({ includePrivate: 'true' });
-      const list = res?.data || res?.templates || [];
-      if (list.length) {
-        setTemplates(list);
+      const res = await fetchTemplates({ publicOnly: 'false' });
+      if (res?.templates?.length) {
+        setTemplates(res.templates);
       } else {
         setTemplates(FALLBACK_EDITORIAL_TEMPLATES);
       }
@@ -62,17 +65,17 @@ export default function AdminTemplatesManagement() {
     if (!driveFolderUrl.trim()) return;
     setImportingDrive(true);
     try {
-      const res = await templateApi.importDrive({
+      const res = await importDriveTemplatesApi({
         folderUrl: driveFolderUrl.trim(),
         category: driveCategory,
         authorName: 'Master Admin (Google Drive)',
         isPublic: true
       });
-      showToast(res.message || `Đã đồng bộ ${res.importedCount || res.data?.length || 0} mẫu từ Google Drive!`);
+      showToast(res.message || `Đã đồng bộ ${res.importedCount || 0} mẫu từ Google Drive!`);
       setDriveFolderUrl('');
       await loadAllTemplates();
     } catch (err) {
-      showToast(err.message || 'Không thể quét thư mục Google Drive. Hãy kiểm tra quyền chia sẻ Công khai!', 'error');
+      showToast(err.response?.data?.message || 'Không thể quét thư mục Google Drive. Hãy kiểm tra quyền chia sẻ Công khai!', 'error');
     } finally {
       setImportingDrive(false);
     }
@@ -80,12 +83,10 @@ export default function AdminTemplatesManagement() {
 
   const handleTogglePublic = async (tpl) => {
     const id = tpl._id || tpl.id;
-    const displayName = tpl.title || tpl.name || 'Template';
     try {
-      const res = await templateApi.update(id, { isPublic: !tpl.isPublic });
-      const updated = res?.data || res || { ...tpl, isPublic: !tpl.isPublic };
+      const updated = await updateTemplateApi(id, { isPublic: !tpl.isPublic });
       setTemplates(prev => prev.map(item => ((item._id || item.id) === id ? updated : item)));
-      showToast(`Đã chuyển mẫu "${displayName}" sang ${!tpl.isPublic ? 'Công khai' : 'Ẩn'}`);
+      showToast(`Đã chuyển mẫu "${tpl.name}" sang ${!tpl.isPublic ? 'Công khai' : 'Ẩn'}`);
     } catch {
       showToast('Không thể cập nhật trạng thái mẫu', 'error');
     }
@@ -93,12 +94,11 @@ export default function AdminTemplatesManagement() {
 
   const handleDelete = async (tpl) => {
     const id = tpl._id || tpl.id;
-    const displayName = tpl.title || tpl.name || 'Template';
-    if (!window.confirm(`Bạn có chắc muốn xóa mẫu "${displayName}" khỏi hệ thống?`)) return;
+    if (!window.confirm(`Bạn có chắc muốn xóa mẫu "${tpl.name}" khỏi hệ thống?`)) return;
     try {
-      await templateApi.delete(id);
+      await deleteTemplateApi(id);
       setTemplates(prev => prev.filter(item => (item._id || item.id) !== id));
-      showToast(`Đã xóa mẫu "${displayName}"`);
+      showToast(`Đã xóa mẫu "${tpl.name}"`);
     } catch {
       showToast('Lỗi khi xóa mẫu template', 'error');
     }
@@ -108,9 +108,8 @@ export default function AdminTemplatesManagement() {
     if (!window.confirm('Khôi phục lại 6 mẫu Editorial gốc (TAM LE MEDIA Present & Magazine)? Các mẫu do nhiếp ảnh gia tự tạo vẫn được giữ nguyên.')) return;
     setResetting(true);
     try {
-      const res = await templateApi.resetDefaults();
-      const list = res?.data || res?.templates;
-      if (list) setTemplates(list);
+      const res = await resetDefaultTemplatesApi();
+      if (res?.templates) setTemplates(res.templates);
       showToast(res.message || 'Đã khôi phục bộ mẫu Editorial gốc!');
     } catch {
       showToast('Lỗi khi khôi phục mẫu mặc định', 'error');
@@ -123,11 +122,11 @@ export default function AdminTemplatesManagement() {
 
   const filteredTemplates = templates.filter(t => {
     const matchCat = categoryFilter === 'ALL' || (t.category || 'Editorial') === categoryFilter;
-    const titleStr = (t.title || t.name || '').toLowerCase();
-    const descStr = (t.subtitle || t.description || '').toLowerCase();
-    const authorStr = (t.authorName || '').toLowerCase();
-    const q = searchTerm.trim().toLowerCase();
-    const matchSearch = !q || titleStr.includes(q) || descStr.includes(q) || authorStr.includes(q);
+    const matchSearch =
+      !searchTerm.trim() ||
+      (t.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (t.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (t.authorName || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchCat && matchSearch;
   });
 
@@ -135,11 +134,10 @@ export default function AdminTemplatesManagement() {
     <div className="space-y-6">
       {toastMsg && (
         <div
-          className={`fixed bottom-6 right-6 z-50 px-5 py-3.5 rounded-2xl shadow-2xl border flex items-center gap-3 text-sm font-bold animate-bounce ${
-            toastMsg.type === 'error'
+          className={`fixed bottom-6 right-6 z-50 px-5 py-3.5 rounded-2xl shadow-2xl border flex items-center gap-3 text-sm font-bold animate-bounce ${toastMsg.type === 'error'
               ? 'bg-red-950/95 border-red-500/40 text-red-200'
               : 'bg-emerald-950/95 border-emerald-500/40 text-emerald-200'
-          }`}
+            }`}
         >
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{toastMsg.msg}</span>
@@ -249,11 +247,10 @@ export default function AdminTemplatesManagement() {
               key={cat}
               type="button"
               onClick={() => setCategoryFilter(cat)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                categoryFilter === cat
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${categoryFilter === cat
                   ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
                   : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-white'
-              }`}
+                }`}
             >
               {cat === 'ALL' ? 'Tất Cả Danh Mục' : cat}
             </button>
@@ -282,12 +279,8 @@ export default function AdminTemplatesManagement() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {filteredTemplates.map(tpl => {
             const id = tpl._id || tpl.id;
-            const displayName = tpl.title || tpl.name || 'Mẫu Storyboard';
-            const displayDesc = tpl.subtitle || tpl.description || 'Mẫu thiết kế Storyboard & Profile Nhiếp ảnh gia.';
-            const slots = (tpl.photoSlots || tpl.slots || []).filter(s => !s.isBackground);
+            const slots = tpl.slots || [];
             const texts = tpl.textLayers || [];
-            const cards = tpl.decorCards || (tpl.cardFrame?.enabled ? [tpl.cardFrame] : []);
-
             return (
               <div
                 key={id}
@@ -299,27 +292,26 @@ export default function AdminTemplatesManagement() {
                     className="w-24 h-32 rounded-2xl shrink-0 relative overflow-hidden border border-slate-700/80 shadow-inner"
                     style={{
                       backgroundColor:
-                        tpl.background?.type === 'solid' || tpl.background?.mode === 'solid'
+                        tpl.background?.mode === 'solid'
                           ? tpl.background?.color || '#f8f5f0'
                           : '#1e293b'
                     }}
                   >
-                    {(tpl.background?.grayscale || tpl.background?.mode === 'photo-bw') && (
+                    {tpl.background?.mode === 'photo-bw' && (
                       <div className="absolute inset-0 bg-gradient-to-b from-zinc-500 via-zinc-700 to-zinc-900 opacity-75" />
                     )}
-                    {cards.map((c, cIdx) => (
+                    {tpl.cardFrame?.enabled && (
                       <div
-                        key={c.id || cIdx}
                         className="absolute shadow-sm"
                         style={{
-                          left: `${c.x}%`,
-                          top: `${c.y}%`,
-                          width: `${c.w}%`,
-                          height: `${c.h}%`,
-                          backgroundColor: c.bgColor || c.color || '#fbf9f5'
+                          left: `${tpl.cardFrame.x}%`,
+                          top: `${tpl.cardFrame.y}%`,
+                          width: `${tpl.cardFrame.w}%`,
+                          height: `${tpl.cardFrame.h}%`,
+                          backgroundColor: tpl.cardFrame.color || '#fbf9f5'
                         }}
                       />
-                    ))}
+                    )}
                     {slots.map((s, idx) => (
                       <div
                         key={s.id || idx}
@@ -354,17 +346,17 @@ export default function AdminTemplatesManagement() {
                       )}
                     </div>
 
-                    <h4 className="text-sm font-bold text-white truncate" title={displayName}>
-                      {displayName}
+                    <h4 className="text-sm font-bold text-white truncate" title={tpl.name}>
+                      {tpl.name}
                     </h4>
                     <p className="text-xs text-slate-400 line-clamp-2 mt-1">
-                      {displayDesc}
+                      {tpl.description || 'Mẫu thiết kế Storyboard & Profile Nhiếp ảnh gia.'}
                     </p>
 
                     <div className="flex items-center gap-3 mt-3 text-[11px] text-slate-400">
                       <span className="flex items-center gap-1">
                         <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
-                        {(tpl.photoSlots || tpl.slots || []).length} ô ảnh
+                        {slots.length} ô ảnh
                       </span>
                       <span className="flex items-center gap-1">
                         <Type className="w-3.5 h-3.5 text-sky-400" />
@@ -399,11 +391,10 @@ export default function AdminTemplatesManagement() {
                     <button
                       type="button"
                       onClick={() => handleTogglePublic(tpl)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                        tpl.isPublic !== false
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${tpl.isPublic !== false
                           ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25'
                           : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white'
-                      }`}
+                        }`}
                     >
                       {tpl.isPublic !== false ? (
                         <>
