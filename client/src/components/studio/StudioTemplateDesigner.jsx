@@ -578,6 +578,88 @@ export const StudioTemplateDesigner = ({
     showToast('success', '✨ Đã thêm Ô ảnh mới! Bạn có thể nhấn giữ chuột kéo ô ảnh tới bất kỳ vị trí nào hoặc kéo góc phải-dưới để chỉnh kích thước.');
   };
 
+  // Bật / Thêm Ô Ảnh Nền Tràn Viền cho bất kỳ mẫu Template nào
+  const handleEnableOrSelectBackgroundSlot = (customImageItem = null) => {
+    const existingBg = photoSlots.find((s) => s.isBackground);
+    if (existingBg) {
+      setSelectedSlotId(existingBg.id);
+      if (customImageItem) {
+        setSlotImages((prev) => ({ ...prev, [existingBg.id]: customImageItem }));
+      }
+      showToast('success', '🖼️ Đang chọn Ảnh Nền! Bấm vào bất kỳ ảnh nào bên dưới hoặc tải ảnh từ máy để đổi ảnh nền.');
+      return existingBg.id;
+    }
+
+    const bgId = `slot_bg_${Date.now()}`;
+    const newBgSlot = {
+      id: bgId,
+      label: 'Ảnh nền tràn viền',
+      isBackground: true,
+      x: 0,
+      y: 0,
+      w: 100,
+      h: 100,
+      filterPreset: 'original',
+      grayscale: false,
+      brightness: 100,
+      contrast: 100,
+      saturate: 100,
+      sepia: 0,
+      blur: 0,
+      panX: 50,
+      panY: 50,
+      zoom: 1
+    };
+
+    setPhotoSlots((prev) => [newBgSlot, ...prev]);
+    setSelectedSlotId(bgId);
+    setBackground((prev) => ({
+      ...prev,
+      type: 'photo',
+      overlayOpacity: prev?.overlayOpacity > 0 ? prev.overlayOpacity : 0.18
+    }));
+
+    const pool = activeSourcePhotos;
+    const defaultImg =
+      customImageItem ||
+      pool[0] || {
+        url: SAMPLE_WEDDING_PHOTOS[0],
+        fileName: 'Background.jpg'
+      };
+    setSlotImages((prev) => ({
+      ...prev,
+      [bgId]: defaultImg
+    }));
+
+    showToast('success', '🖼️ Đã thêm Ảnh Nền Tràn Viền cho mẫu này! Bạn có thể chọn ảnh khác ở danh sách bên dưới hoặc chỉnh độ mờ / đen trắng.');
+    return bgId;
+  };
+
+  // Gỡ bỏ Ảnh nền tràn viền để quay về nền màu đặc (Kem / Trắng / Đen)
+  const handleRemoveBackgroundSlot = () => {
+    const hasBg = photoSlots.some((s) => s.isBackground);
+    if (!hasBg) return;
+    const remaining = photoSlots.filter((s) => !s.isBackground);
+    setPhotoSlots(remaining);
+    setSelectedSlotId(remaining[0]?.id || '');
+    setBackground((prev) => ({ ...prev, type: 'solid', overlayOpacity: 0, blur: 0 }));
+    showToast('success', 'Đã gỡ Ảnh nền và chuyển về nền màu đặc.');
+  };
+
+  // Tải trực tiếp 1 ảnh từ máy tính làm Ảnh nền tràn viền
+  const handleUploadDirectBackgroundPhoto = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const newItem = {
+      fileId: '',
+      fileName: file.name,
+      url: URL.createObjectURL(file)
+    };
+    setLocalUploadedPhotos((prev) => [newItem, ...prev]);
+    handleEnableOrSelectBackgroundSlot(newItem);
+    e.target.value = '';
+  };
+
   // Nhân bản ô ảnh đang chọn
   const handleDuplicateSelectedSlot = () => {
     if (!selectedSlotObj) return;
@@ -2156,7 +2238,28 @@ export const StudioTemplateDesigner = ({
                   <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
                     Ô Ảnh Đang Chọn ({photoSlots.length} ô):
                   </span>
-                  <div className="flex items-center space-x-1.5">
+                  <div className="flex items-center flex-wrap gap-1.5">
+                    {!photoSlots.some((s) => s.isBackground) ? (
+                      <button
+                        type="button"
+                        onClick={() => handleEnableOrSelectBackgroundSlot()}
+                        className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[11px] font-bold flex items-center space-x-1 cursor-pointer"
+                        title="Thêm lớp ảnh nền tràn viền phía sau các ô ảnh cho mẫu này"
+                      >
+                        <ImageIcon className="w-3 h-3" />
+                        <span>🖼️ + Thêm Ảnh Nền</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleRemoveBackgroundSlot}
+                        className="px-2 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-[11px] font-bold flex items-center space-x-1 cursor-pointer"
+                        title="Gỡ bỏ ảnh nền tràn viền, quay về nền màu đặc"
+                      >
+                        <X className="w-3 h-3" />
+                        <span>Gỡ Ảnh Nền</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={handleAddPhotoSlot}
@@ -2209,6 +2312,76 @@ export const StudioTemplateDesigner = ({
 
                 {selectedSlotObj && (
                   <div className="pt-2.5 border-t border-[#1e2330] space-y-3.5 text-xs">
+                    {/* NẾU ĐANG CHỌN ẢNH NỀN TRÀN VIỀN: HIỂN THỊ BỘ ĐIỀU KHIỂN ẢNH NỀN TRỰC QUAN */}
+                    {selectedSlotObj.isBackground && (
+                      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2.5">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <span className="font-bold text-amber-300 flex items-center space-x-1.5 text-[11px]">
+                            <ImageIcon className="w-3.5 h-3.5" />
+                            <span>🖼️ Đang Chỉnh Ảnh Nền Tràn Viền (Bấm chọn ảnh bên dưới hoặc tải từ máy)</span>
+                          </span>
+                          <div className="flex items-center space-x-1.5">
+                            <label className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-amber-950 font-black text-[10px] cursor-pointer flex items-center space-x-1">
+                              <Upload className="w-3 h-3" />
+                              <span>Tải Ảnh Nền Từ Máy</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleUploadDirectBackgroundPhoto}
+                                className="hidden"
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={handleRemoveBackgroundSlot}
+                              className="px-2 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold text-[10px] cursor-pointer"
+                            >
+                              Gỡ Ảnh Nền
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 pt-1">
+                          <div>
+                            <label className="flex justify-between text-[11px] text-gray-300 mb-0.5">
+                              <span>Độ phủ tối ảnh nền</span>
+                              <span className="text-amber-300">
+                                {Math.round((background?.overlayOpacity || 0) * 100)}%
+                              </span>
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="0.75"
+                              step="0.05"
+                              value={background?.overlayOpacity || 0}
+                              onChange={(e) =>
+                                setBackground((p) => ({ ...p, overlayOpacity: Number(e.target.value) }))
+                              }
+                              className="w-full accent-amber-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="flex justify-between text-[11px] text-gray-300 mb-0.5">
+                              <span>Làm mờ ảnh nền (Blur)</span>
+                              <span className="text-amber-300">{background?.blur || 0}px</span>
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="12"
+                              step="1"
+                              value={background?.blur || 0}
+                              onChange={(e) =>
+                                setBackground((p) => ({ ...p, blur: Number(e.target.value) }))
+                              }
+                              className="w-full accent-amber-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* 1. DI CHUYỂN VỊ TRÍ, ĐỔI KÍCH THƯỚC, XOAY & SẮP XẾP LỚP Ô ẢNH */}
                     {!selectedSlotObj.isBackground && (
                       <div className="p-3 rounded-xl bg-[#141720] border border-[#242938] space-y-2.5">
@@ -3037,47 +3210,116 @@ export const StudioTemplateDesigner = ({
                 </div>
               </div>
 
-              {/* Nếu có ảnh nền (như Mẫu 1 & Mẫu 4): Chỉnh độ tối & làm mờ ảnh nền */}
-              {photoSlots.some((s) => s.isBackground) && (
-                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[#1e2330]">
-                  <div>
-                    <label className="flex justify-between text-gray-400 mb-1">
-                      <span>Độ phủ tối ảnh nền</span>
-                      <span className="text-amber-300">
-                        {Math.round((background?.overlayOpacity || 0) * 100)}%
-                      </span>
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="0.75"
-                      step="0.05"
-                      value={background?.overlayOpacity || 0}
-                      onChange={(e) =>
-                        setBackground((p) => ({ ...p, overlayOpacity: Number(e.target.value) }))
-                      }
-                      className="w-full accent-amber-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="flex justify-between text-gray-400 mb-1">
-                      <span>Làm mờ ảnh nền (Blur)</span>
-                      <span className="text-amber-300">{background?.blur || 0}px</span>
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="12"
-                      step="1"
-                      value={background?.blur || 0}
-                      onChange={(e) =>
-                        setBackground((p) => ({ ...p, blur: Number(e.target.value) }))
-                      }
-                      className="w-full accent-amber-500"
-                    />
+              {/* Bật / Thêm / Tùy chỉnh Ảnh nền tràn viền cho MỌI mẫu Template */}
+              <div className="pt-3 border-t border-[#1e2330] space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="font-bold text-amber-300 flex items-center space-x-1.5">
+                    <ImageIcon className="w-4 h-4" />
+                    <span>🖼️ Ảnh Nền Tràn Viền Phía Sau Bố Cục:</span>
+                  </span>
+                  <div className="flex items-center space-x-1.5">
+                    {!photoSlots.some((s) => s.isBackground) ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleEnableOrSelectBackgroundSlot()}
+                          className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-black text-[11px] cursor-pointer"
+                        >
+                          + Thêm Ảnh Nền Từ Album
+                        </button>
+                        <label className="px-2.5 py-1.5 rounded-xl bg-[#141720] hover:bg-[#1e2436] border border-amber-500/40 text-amber-300 font-bold text-[11px] cursor-pointer flex items-center space-x-1">
+                          <Upload className="w-3 h-3" />
+                          <span>Tải Ảnh Nền Từ Máy</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleUploadDirectBackgroundPhoto}
+                            className="hidden"
+                          />
+                        </label>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const bgSlot = photoSlots.find((s) => s.isBackground);
+                            if (bgSlot) {
+                              setSelectedSlotId(bgSlot.id);
+                              setControlTab('photos');
+                            }
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold text-[11px] cursor-pointer"
+                        >
+                          Đổi Ảnh / Chỉnh Màu Nền
+                        </button>
+                        <label className="px-2.5 py-1 rounded-lg bg-[#141720] border border-[#282f42] text-gray-200 font-bold text-[11px] cursor-pointer flex items-center space-x-1">
+                          <Upload className="w-3 h-3" />
+                          <span>Tải Ảnh Khác</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleUploadDirectBackgroundPhoto}
+                            className="hidden"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleRemoveBackgroundSlot}
+                          className="px-2.5 py-1 rounded-lg bg-red-500/20 text-red-300 font-bold text-[11px] cursor-pointer"
+                        >
+                          Gỡ Ảnh Nền
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
-              )}
+
+                {photoSlots.some((s) => s.isBackground) ? (
+                  <div className="grid grid-cols-2 gap-3 bg-[#141720] p-3 rounded-xl border border-[#242938]">
+                    <div>
+                      <label className="flex justify-between text-gray-400 mb-1">
+                        <span>Độ phủ tối ảnh nền</span>
+                        <span className="text-amber-300">
+                          {Math.round((background?.overlayOpacity || 0) * 100)}%
+                        </span>
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="0.75"
+                        step="0.05"
+                        value={background?.overlayOpacity || 0}
+                        onChange={(e) =>
+                          setBackground((p) => ({ ...p, overlayOpacity: Number(e.target.value) }))
+                        }
+                        className="w-full accent-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="flex justify-between text-gray-400 mb-1">
+                        <span>Làm mờ ảnh nền (Blur)</span>
+                        <span className="text-amber-300">{background?.blur || 0}px</span>
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="12"
+                        step="1"
+                        value={background?.blur || 0}
+                        onChange={(e) =>
+                          setBackground((p) => ({ ...p, blur: Number(e.target.value) }))
+                        }
+                        className="w-full accent-amber-500"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-gray-400 italic">
+                    Mẫu này đang dùng nền màu đặc. Bấm <strong>"+ Thêm Ảnh Nền Từ Album"</strong> hoặc <strong>"Tải Ảnh Nền Từ Máy"</strong> để chèn ảnh nền tràn viền phía sau!
+                  </p>
+                )}
+              </div>
 
               {/* Quản lý Thẻ nền trang trí (Decor Cards như khung kem giữa trang ở Mẫu 1 & Mẫu 3) */}
               <div className="pt-3 border-t border-[#1e2330] space-y-2.5">
