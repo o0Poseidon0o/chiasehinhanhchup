@@ -40,7 +40,8 @@ import {
   EyeOff,
   X,
   Compass,
-  MapPin
+  MapPin,
+  Layout
 } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
 import { userApi } from '../api/userApi';
@@ -53,6 +54,7 @@ import { AdminLocationGuidesManagement } from '../components/admin/AdminLocation
 import { AdminBookingsManagement } from '../components/admin/AdminBookingsManagement';
 import { AdminReviewsManagement } from '../components/admin/AdminReviewsManagement';
 import { AdminAddonsManagement } from '../components/admin/AdminAddonsManagement';
+import AdminTemplatesManagement from '../components/admin/AdminTemplatesManagement';
 import { AdminContactSettings } from '../components/admin/AdminContactSettings';
 import { AdminEmailSettings } from '../components/admin/AdminEmailSettings';
 import { useAuth } from '../context/AuthContext';
@@ -687,6 +689,18 @@ export const AdminDashboard = () => {
         </button>
 
         <button
+          onClick={() => setActiveTab('templates')}
+          className={`flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
+            activeTab === 'templates'
+              ? 'bg-gradient-to-r from-amber-500 to-amber-400 text-amber-950 shadow-md shadow-amber-500/20 scale-[1.01]'
+              : 'text-[#a2998a] hover:text-white hover:bg-[#1a1714]'
+          }`}
+        >
+          <Layout className="w-4 h-4 shrink-0 text-amber-400" />
+          <span className="truncate">🎨 Kho Template</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('email')}
           className={`flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
             activeTab === 'email'
@@ -713,6 +727,8 @@ export const AdminDashboard = () => {
         <AdminAddonsManagement />
       ) : activeTab === 'reviews' ? (
         <AdminReviewsManagement />
+      ) : activeTab === 'templates' ? (
+        <AdminTemplatesManagement />
       ) : activeTab === 'contacts' ? (
         <AdminContactSettings />
       ) : activeTab === 'email' ? (

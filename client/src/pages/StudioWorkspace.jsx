@@ -37,7 +37,8 @@ import {
   Edit3,
   Hash,
   Image as ImageIcon,
-  AlertTriangle
+  AlertTriangle,
+  Wand2
 } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
 import { photographerApi } from '../api/photographerApi';
@@ -47,6 +48,7 @@ import { getPublicBaseUrl, formatDate, generateClientShareText } from '../utils/
 import { useAuth } from '../context/AuthContext';
 import { EditAlbumModal } from '../components/admin/EditAlbumModal';
 import CustomerWorkspace from './CustomerWorkspace';
+import StudioTemplateDesigner from '../components/studio/StudioTemplateDesigner';
 import { formatAvatarUrl, handleImageError } from '../utils/imageHelper';
 
 export const StudioWorkspace = () => {
@@ -512,14 +514,22 @@ const StudioWorkspaceContent = () => {
             </p>
           </div>
 
-          <div className="flex items-center space-x-2.5 flex-wrap">
+          <div className="flex items-center space-x-2.5 flex-wrap gap-y-2">
+            <button
+              onClick={() => setActiveTab('templates')}
+              className="px-4 py-3 bg-[#0c0d12] hover:bg-amber-500/15 border border-amber-500/40 text-amber-300 font-bold rounded-2xl text-xs sm:text-sm flex items-center space-x-2 transition-all cursor-pointer"
+            >
+              <Wand2 className="w-4 h-4 text-amber-400" />
+              <span>Thiết Kế Storyboard</span>
+            </button>
+
             <button
               onClick={() => {
                 setCreatedSuccess(null);
                 setCreateError('');
                 setIsCreateModalOpen(true);
               }}
-              className="px-5 py-3 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-amber-950 font-black rounded-2xl text-xs sm:text-sm flex items-center space-x-2 shadow-lg shadow-amber-500/20 transition-all hover:scale-105"
+              className="px-5 py-3 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-amber-950 font-black rounded-2xl text-xs sm:text-sm flex items-center space-x-2 shadow-lg shadow-amber-500/20 transition-all hover:scale-105 cursor-pointer"
             >
               <PlusCircle className="w-4 h-4 stroke-[2.5]" />
               <span>Tạo Album Mới</span>
@@ -645,6 +655,18 @@ const StudioWorkspaceContent = () => {
         >
           <Calendar className="w-4 h-4" />
           <span>📅 Lịch Booking & Tư Vấn ({bookings.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('templates')}
+          className={`flex items-center space-x-2 px-4 sm:px-6 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === 'templates'
+              ? 'bg-gradient-to-r from-amber-500 to-amber-400 text-amber-950 shadow-md shadow-amber-500/20'
+              : 'text-amber-300/90 hover:text-amber-200 bg-amber-500/5 border border-amber-500/20'
+          }`}
+        >
+          <Wand2 className="w-4 h-4" />
+          <span>🎨 Thiết Kế Storyboard & Template</span>
         </button>
 
         <button
@@ -1823,6 +1845,13 @@ const StudioWorkspaceContent = () => {
               {profileLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Lưu Thay Đổi Hồ Sơ</span>}
             </button>
           </form>
+        </div>
+      )}
+
+      {/* TAB 5: THIẾT KẾ STORYBOARD & TEMPLATE GOOGLE DRIVE */}
+      {activeTab === 'templates' && (
+        <div className="animate-fade-in">
+          <StudioTemplateDesigner currentUser={currentUser} albums={albums} />
         </div>
       )}
 
