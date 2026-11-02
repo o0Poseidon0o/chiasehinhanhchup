@@ -496,5 +496,30 @@ export const templateApi = {
   }
 };
 
+export const fetchTemplates = async (params = {}) => {
+  const res = await templateApi.getAll(params);
+  return { ...res, templates: res.data || res.templates || FALLBACK_EDITORIAL_TEMPLATES };
+};
+
+export const createTemplateApi = (payload) => templateApi.create(payload);
+
+export const importDriveTemplatesApi = (payload) =>
+  templateApi.importDrive({
+    ...payload,
+    driveUrl: payload?.driveUrl || payload?.folderUrl || ''
+  });
+
+export const updateTemplateApi = async (id, payload) => {
+  const res = await templateApi.update(id, payload);
+  return res?.data || res;
+};
+
+export const deleteTemplateApi = (id) => templateApi.delete(id);
+
+export const resetDefaultTemplatesApi = async () => {
+  const res = await templateApi.resetDefaults();
+  return { ...res, templates: res?.data || res?.templates || FALLBACK_EDITORIAL_TEMPLATES };
+};
+
 export default templateApi;
 

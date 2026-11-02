@@ -119,6 +119,115 @@ const SAMPLE_WEDDING_PHOTOS = [
   'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?q=80&w=1200&auto=format&fit=crop'
 ];
 
+const PHOTO_FILTER_PRESETS = [
+  {
+    id: 'original',
+    label: '🎨 Màu Gốc',
+    desc: 'Giữ nguyên màu gốc',
+    patch: { filterPreset: 'original', grayscale: false, brightness: 100, contrast: 100, saturate: 100, sepia: 0, blur: 0 }
+  },
+  {
+    id: 'bw_classic',
+    label: '🖤 B&W Tạp Chí',
+    desc: 'Đen trắng thanh lịch',
+    patch: { filterPreset: 'bw_classic', grayscale: true, brightness: 103, contrast: 112, saturate: 0, sepia: 0, blur: 0 }
+  },
+  {
+    id: 'bw_noir',
+    label: '🎬 Noir Điện Ảnh',
+    desc: 'Đen trắng tương phản sâu',
+    patch: { filterPreset: 'bw_noir', grayscale: true, brightness: 96, contrast: 138, saturate: 0, sepia: 0, blur: 0 }
+  },
+  {
+    id: 'film_warm',
+    label: '🎞️ Film Cổ Điển',
+    desc: 'Màu phim ấm hoài niệm',
+    patch: { filterPreset: 'film_warm', grayscale: false, brightness: 103, contrast: 106, saturate: 92, sepia: 28, blur: 0 }
+  },
+  {
+    id: 'matte_cream',
+    label: '☁️ Kem Mịn Hàn',
+    desc: 'Trong trẻo, dịu nhẹ',
+    patch: { filterPreset: 'matte_cream', grayscale: false, brightness: 107, contrast: 92, saturate: 86, sepia: 8, blur: 0 }
+  },
+  {
+    id: 'kodak_gold',
+    label: '☀️ Kodak Gold',
+    desc: 'Rực rỡ, ấm nắng',
+    patch: { filterPreset: 'kodak_gold', grayscale: false, brightness: 102, contrast: 110, saturate: 130, sepia: 14, blur: 0 }
+  },
+  {
+    id: 'retro_sepia',
+    label: '📜 Hoài Cổ Sepia',
+    desc: 'Nâu trầm thập niên 90',
+    patch: { filterPreset: 'retro_sepia', grayscale: false, brightness: 100, contrast: 106, saturate: 80, sepia: 68, blur: 0 }
+  },
+  {
+    id: 'dreamy_glow',
+    label: '✨ Mơ Màng',
+    desc: 'Sáng mịn lãng mạn',
+    patch: { filterPreset: 'dreamy_glow', grayscale: false, brightness: 110, contrast: 94, saturate: 95, sepia: 5, blur: 0.6 }
+  }
+];
+
+const SLOT_FRAME_STYLES = [
+  {
+    id: 'none',
+    label: 'Không viền',
+    patch: { frameStyle: 'none', borderWidth: 0, borderColor: '#FFFFFF', borderRadius: 0, shadow: 'none' }
+  },
+  {
+    id: 'thin_white',
+    label: 'Viền Trắng Mảnh',
+    patch: { frameStyle: 'thin_white', borderWidth: 3, borderColor: '#FFFFFF', borderRadius: 0, shadow: 'soft' }
+  },
+  {
+    id: 'polaroid',
+    label: 'Khung Polaroid',
+    patch: { frameStyle: 'polaroid', borderWidth: 6, borderColor: '#FAF8F4', borderRadius: 2, shadow: 'deep' }
+  },
+  {
+    id: 'floating_3d',
+    label: 'Nổi 3D Đổ Bóng',
+    patch: { frameStyle: 'floating_3d', borderWidth: 0, borderColor: '#FFFFFF', borderRadius: 6, shadow: 'deep' }
+  },
+  {
+    id: 'rounded_arch',
+    label: 'Bo Góc Mềm',
+    patch: { frameStyle: 'rounded_arch', borderWidth: 2, borderColor: '#FAF8F4', borderRadius: 20, shadow: 'soft' }
+  },
+  {
+    id: 'gold_luxury',
+    label: 'Viền Vàng Gold',
+    patch: { frameStyle: 'gold_luxury', borderWidth: 2, borderColor: '#D4AF37', borderRadius: 0, shadow: 'soft' }
+  }
+];
+
+/**
+ * Tạo chuỗi CSS / Canvas filter đồng nhất cho từng Ô ảnh
+ */
+const buildSlotCssFilter = (slot = {}, extraBlur = 0) => {
+  const parts = [];
+  if (slot.grayscale) parts.push('grayscale(100%)');
+  if (slot.brightness !== undefined && Number(slot.brightness) !== 100) {
+    parts.push(`brightness(${slot.brightness}%)`);
+  }
+  if (slot.contrast !== undefined && Number(slot.contrast) !== 100) {
+    parts.push(`contrast(${slot.contrast}%)`);
+  }
+  if (slot.saturate !== undefined && Number(slot.saturate) !== 100 && !slot.grayscale) {
+    parts.push(`saturate(${slot.saturate}%)`);
+  }
+  if (slot.sepia && Number(slot.sepia) > 0 && !slot.grayscale) {
+    parts.push(`sepia(${slot.sepia}%)`);
+  }
+  const totalBlur = (Number(slot.blur) || 0) + (Number(extraBlur) || 0);
+  if (totalBlur > 0) {
+    parts.push(`blur(${totalBlur}px)`);
+  }
+  return parts.length > 0 ? parts.join(' ') : 'none';
+};
+
 /**
  * Chuẩn hóa link ảnh Google Drive sang link an toàn cho cả hiển thị và xuất Canvas (không bị chặn CORS)
  */
@@ -425,29 +534,82 @@ export const StudioTemplateDesigner = ({
     );
   };
 
-  // Thêm 1 ô ảnh mới tự do
+  // Thêm 1 ô ảnh mới tự do (hỗ trợ kéo-thả vị trí, kích thước, xoay và hiệu ứng màu)
   const handleAddPhotoSlot = () => {
+    const fgCount = photoSlots.filter((s) => !s.isBackground).length;
+    const offset = (fgCount % 5) * 4;
     const newId = `slot_custom_${Date.now()}`;
     const newSlot = {
       id: newId,
       label: `Ô ảnh #${photoSlots.length + 1}`,
       isBackground: false,
-      x: 20,
-      y: 20,
-      w: 45,
-      h: 45,
+      x: Math.min(55, 16 + offset),
+      y: Math.min(55, 16 + offset),
+      w: 42,
+      h: 42,
+      rotation: 0,
+      opacity: 100,
       borderRadius: 0,
+      borderWidth: 0,
+      borderColor: '#FFFFFF',
+      frameStyle: 'none',
+      shadow: 'soft',
+      filterPreset: 'original',
       grayscale: false,
+      brightness: 100,
+      contrast: 100,
+      saturate: 100,
+      sepia: 0,
+      blur: 0,
       panX: 50,
       panY: 50,
       zoom: 1
     };
     setPhotoSlots((prev) => [...prev, newSlot]);
     setSelectedSlotId(newId);
+    setControlTab('photos');
+    const pool = activeSourcePhotos;
     setSlotImages((prev) => ({
       ...prev,
-      [newId]: { url: SAMPLE_WEDDING_PHOTOS[photoSlots.length % SAMPLE_WEDDING_PHOTOS.length] }
+      [newId]: pool[photoSlots.length % pool.length] || {
+        url: SAMPLE_WEDDING_PHOTOS[photoSlots.length % SAMPLE_WEDDING_PHOTOS.length]
+      }
     }));
+    showToast('success', '✨ Đã thêm Ô ảnh mới! Bạn có thể nhấn giữ chuột kéo ô ảnh tới bất kỳ vị trí nào hoặc kéo góc phải-dưới để chỉnh kích thước.');
+  };
+
+  // Nhân bản ô ảnh đang chọn
+  const handleDuplicateSelectedSlot = () => {
+    if (!selectedSlotObj) return;
+    const newId = `slot_dup_${Date.now()}`;
+    const cloned = {
+      ...selectedSlotObj,
+      id: newId,
+      label: `${selectedSlotObj.label || 'Ô ảnh'} (Bản sao)`,
+      isBackground: false,
+      x: Math.min(85, Number(selectedSlotObj.x || 10) + 5),
+      y: Math.min(85, Number(selectedSlotObj.y || 10) + 5)
+    };
+    setPhotoSlots((prev) => [...prev, cloned]);
+    setSelectedSlotId(newId);
+    if (slotImages[selectedSlotObj.id]) {
+      setSlotImages((prev) => ({ ...prev, [newId]: slotImages[selectedSlotObj.id] }));
+    }
+  };
+
+  // Đổi thứ tự lớp (Đưa lên trên / Đẩy xuống dưới) cho ô ảnh đang chọn
+  const handleMoveSlotLayer = (direction) => {
+    if (!selectedSlotId) return;
+    setPhotoSlots((prev) => {
+      const idx = prev.findIndex((s) => s.id === selectedSlotId);
+      if (idx === -1) return prev;
+      const targetIdx = direction === 'up' ? idx + 1 : idx - 1;
+      if (targetIdx < 0 || targetIdx >= prev.length) return prev;
+      const next = [...prev];
+      const [item] = next.splice(idx, 1);
+      next.splice(targetIdx, 0, item);
+      return next;
+    });
   };
 
   // Xóa ô ảnh đang chọn
@@ -456,6 +618,220 @@ export const StudioTemplateDesigner = ({
     const remaining = photoSlots.filter((s) => s.id !== selectedSlotId);
     setPhotoSlots(remaining);
     setSelectedSlotId(remaining[0]?.id || '');
+  };
+
+  // Tạo nhanh bố cục sáng tạo mới (Tự thiết kế Template mới từ đầu)
+  const handleQuickCreateLayout = (layoutType) => {
+    const now = Date.now();
+    let newSlots = [];
+    let newCards = [];
+    let newBg = { type: 'solid', color: '#FAF8F4', grayscale: false, blur: 0, overlayOpacity: 0 };
+
+    if (layoutType === 'blank_freeform') {
+      newSlots = [
+        {
+          id: `slot_${now}_1`,
+          label: 'Ô ảnh chính #1',
+          isBackground: false,
+          x: 15,
+          y: 12,
+          w: 70,
+          h: 65,
+          rotation: 0,
+          opacity: 100,
+          borderRadius: 0,
+          borderWidth: 0,
+          borderColor: '#FFFFFF',
+          frameStyle: 'floating_3d',
+          shadow: 'deep',
+          filterPreset: 'original',
+          grayscale: false,
+          brightness: 100,
+          contrast: 100,
+          saturate: 100,
+          sepia: 0,
+          blur: 0,
+          panX: 50,
+          panY: 50,
+          zoom: 1
+        }
+      ];
+    } else if (layoutType === 'polaroid_scrapbook') {
+      newBg = { type: 'solid', color: '#F3EFE6', grayscale: false, blur: 0, overlayOpacity: 0 };
+      newSlots = [
+        {
+          id: `slot_${now}_bg`,
+          label: 'Ảnh nền mờ',
+          isBackground: true,
+          x: 0,
+          y: 0,
+          w: 100,
+          h: 100,
+          grayscale: true,
+          panX: 50,
+          panY: 50,
+          zoom: 1.05
+        },
+        {
+          id: `slot_${now}_1`,
+          label: 'Polaroid Trái',
+          isBackground: false,
+          x: 10,
+          y: 16,
+          w: 48,
+          h: 44,
+          rotation: -6,
+          opacity: 100,
+          borderRadius: 2,
+          borderWidth: 6,
+          borderColor: '#FAF8F4',
+          frameStyle: 'polaroid',
+          shadow: 'deep',
+          filterPreset: 'film_warm',
+          grayscale: false,
+          brightness: 103,
+          contrast: 106,
+          saturate: 92,
+          sepia: 28,
+          blur: 0,
+          panX: 50,
+          panY: 50,
+          zoom: 1
+        },
+        {
+          id: `slot_${now}_2`,
+          label: 'Polaroid Phải',
+          isBackground: false,
+          x: 42,
+          y: 36,
+          w: 48,
+          h: 44,
+          rotation: 5,
+          opacity: 100,
+          borderRadius: 2,
+          borderWidth: 6,
+          borderColor: '#FAF8F4',
+          frameStyle: 'polaroid',
+          shadow: 'deep',
+          filterPreset: 'original',
+          grayscale: false,
+          brightness: 100,
+          contrast: 100,
+          saturate: 100,
+          sepia: 0,
+          blur: 0,
+          panX: 50,
+          panY: 50,
+          zoom: 1
+        }
+      ];
+      newBg.blur = 4;
+      newBg.overlayOpacity = 0.25;
+    } else if (layoutType === 'editorial_overlap') {
+      newCards = [
+        {
+          id: `card_${now}`,
+          x: 8,
+          y: 10,
+          w: 84,
+          h: 76,
+          bgColor: '#FAF8F4',
+          borderRadius: 0,
+          shadow: true
+        }
+      ];
+      newSlots = [
+        {
+          id: `slot_${now}_1`,
+          label: 'Ảnh lớn bên trái',
+          isBackground: false,
+          x: 13,
+          y: 15,
+          w: 52,
+          h: 62,
+          rotation: 0,
+          opacity: 100,
+          borderRadius: 0,
+          borderWidth: 0,
+          borderColor: '#FFFFFF',
+          frameStyle: 'none',
+          shadow: 'soft',
+          filterPreset: 'original',
+          grayscale: false,
+          brightness: 100,
+          contrast: 100,
+          saturate: 100,
+          sepia: 0,
+          blur: 0,
+          panX: 50,
+          panY: 50,
+          zoom: 1
+        },
+        {
+          id: `slot_${now}_2`,
+          label: 'Ảnh nổi chồng góc phải',
+          isBackground: false,
+          x: 52,
+          y: 44,
+          w: 35,
+          h: 36,
+          rotation: 0,
+          opacity: 100,
+          borderRadius: 0,
+          borderWidth: 5,
+          borderColor: '#FAF8F4',
+          frameStyle: 'thin_white',
+          shadow: 'deep',
+          filterPreset: 'bw_classic',
+          grayscale: true,
+          brightness: 103,
+          contrast: 112,
+          saturate: 0,
+          sepia: 0,
+          blur: 0,
+          panX: 50,
+          panY: 50,
+          zoom: 1
+        }
+      ];
+    }
+
+    setActiveTemplateId('custom_freeform');
+    setBackground(newBg);
+    setDecorCards(newCards);
+    setPhotoSlots(newSlots);
+    const firstFg = newSlots.find((s) => !s.isBackground) || newSlots[0];
+    if (firstFg) setSelectedSlotId(firstFg.id);
+
+    const pool = activeSourcePhotos;
+    const nextImgs = {};
+    newSlots.forEach((s, idx) => {
+      nextImgs[s.id] = pool[idx % pool.length] || {
+        url: SAMPLE_WEDDING_PHOTOS[idx % SAMPLE_WEDDING_PHOTOS.length]
+      };
+    });
+    setSlotImages(nextImgs);
+    showToast('success', '🎨 Đã khởi tạo bố cục sáng tạo! Hãy kéo-thả các Ô ảnh trên khung để tùy biến và bấm "Lưu Thành Template Mới".');
+  };
+
+  // Thêm / Xóa Thẻ nền trang trí (Decor Card)
+  const handleAddDecorCard = () => {
+    const newCard = {
+      id: `card_${Date.now()}`,
+      x: 12,
+      y: 18,
+      w: 76,
+      h: 60,
+      bgColor: '#FAF8F4',
+      borderRadius: 0,
+      shadow: true
+    };
+    setDecorCards((prev) => [...prev, newCard]);
+    showToast('success', 'Đã thêm Khung giấy nền trang trí (Decor Card)!');
+  };
+
+  const handleRemoveDecorCard = (cardId) => {
+    setDecorCards((prev) => prev.filter((c) => c.id !== cardId));
   };
 
   // Thêm 1 lớp chữ mới tự do
@@ -534,14 +910,57 @@ export const StudioTemplateDesigner = ({
     showToast('success', `Đã áp dụng bộ chữ "${preset.label}"!`);
   };
 
-  // Kéo-thả trực tiếp Chữ hoặc Logo trên khung Preview
+  // Kéo-thả trực tiếp Ô ảnh (Di chuyển & Đổi kích thước), Khung nền, Chữ hoặc Logo trên khung Preview
   const handlePreviewPointerMove = (e) => {
     if (!draggingItem || !previewContainerRef.current) return;
     const rect = previewContainerRef.current.getBoundingClientRect();
-    const relX = Math.max(2, Math.min(98, ((e.clientX - rect.left) / rect.width) * 100));
-    const relY = Math.max(2, Math.min(98, ((e.clientY - rect.top) / rect.height) * 100));
+    const relX = Math.max(1, Math.min(99, ((e.clientX - rect.left) / rect.width) * 100));
+    const relY = Math.max(1, Math.min(99, ((e.clientY - rect.top) / rect.height) * 100));
 
-    if (draggingItem.type === 'text' && draggingItem.id) {
+    if (draggingItem.type === 'slot-move' && draggingItem.id) {
+      const dx = ((e.clientX - draggingItem.startClientX) / rect.width) * 100;
+      const dy = ((e.clientY - draggingItem.startClientY) / rect.height) * 100;
+      let nextX = Math.max(-15, Math.min(94, draggingItem.origX + dx));
+      let nextY = Math.max(-15, Math.min(94, draggingItem.origY + dy));
+
+      // Tự động bắt dính (Snap) vào trục giữa trang (50%) nếu kéo gần tâm
+      const centerX = nextX + (draggingItem.origW || 40) / 2;
+      const centerY = nextY + (draggingItem.origH || 40) / 2;
+      if (Math.abs(centerX - 50) < 1.2) {
+        nextX = 50 - (draggingItem.origW || 40) / 2;
+      }
+      if (Math.abs(centerY - 50) < 1.2) {
+        nextY = 50 - (draggingItem.origH || 40) / 2;
+      }
+
+      setPhotoSlots((prev) =>
+        prev.map((s) =>
+          s.id === draggingItem.id
+            ? { ...s, x: Number(nextX.toFixed(1)), y: Number(nextY.toFixed(1)) }
+            : s
+        )
+      );
+    } else if (draggingItem.type === 'slot-resize' && draggingItem.id) {
+      const dx = ((e.clientX - draggingItem.startClientX) / rect.width) * 100;
+      const dy = ((e.clientY - draggingItem.startClientY) / rect.height) * 100;
+      const dir = draggingItem.dir || 'se';
+      const nextW =
+        dir === 's'
+          ? draggingItem.origW
+          : Math.max(8, Math.min(100, draggingItem.origW + dx));
+      const nextH =
+        dir === 'e'
+          ? draggingItem.origH
+          : Math.max(8, Math.min(100, draggingItem.origH + dy));
+
+      setPhotoSlots((prev) =>
+        prev.map((s) =>
+          s.id === draggingItem.id
+            ? { ...s, w: Number(nextW.toFixed(1)), h: Number(nextH.toFixed(1)) }
+            : s
+        )
+      );
+    } else if (draggingItem.type === 'text' && draggingItem.id) {
       setTextLayers((prev) =>
         prev.map((t) =>
           t.id === draggingItem.id
@@ -596,7 +1015,6 @@ export const StudioTemplateDesigner = ({
         img.crossOrigin = 'anonymous';
         img.onload = () => resolve(img);
         img.onerror = () => {
-          // Thử fallback trực tiếp nếu proxy không chạy ở môi trường tĩnh
           const fallbackImg = new window.Image();
           fallbackImg.crossOrigin = 'anonymous';
           fallbackImg.onload = () => resolve(fallbackImg);
@@ -606,10 +1024,16 @@ export const StudioTemplateDesigner = ({
         img.src = safeUrl;
       });
 
-    // Helper vẽ ảnh object-fit: cover kèm Pan (panX, panY) & Zoom + Grayscale
+    // Helper vẽ ảnh object-fit: cover kèm Pan, Zoom, Rotation, Frame & Bộ lọc màu nghệ thuật
     const drawCoverImage = (img, xPx, yPx, wPx, hPx, opts = {}) => {
       if (!img) return;
-      const { panX = 50, panY = 50, zoom = 1, grayscale = false, blur = 0, borderRadius = 0 } = opts;
+      const {
+        panX = 50,
+        panY = 50,
+        zoom = 1,
+        borderRadius = 0,
+        cssFilter = 'none'
+      } = opts;
 
       ctx.save();
       ctx.beginPath();
@@ -620,11 +1044,8 @@ export const StudioTemplateDesigner = ({
       }
       ctx.clip();
 
-      const filters = [];
-      if (grayscale) filters.push('grayscale(100%)');
-      if (blur > 0) filters.push(`blur(${blur * 2}px)`);
-      if (filters.length > 0) {
-        ctx.filter = filters.join(' ');
+      if (cssFilter && cssFilter !== 'none') {
+        ctx.filter = cssFilter;
       }
 
       const imgRatio = img.width / img.height;
@@ -658,12 +1079,15 @@ export const StudioTemplateDesigner = ({
       if (assigned?.url) {
         const img = await loadImageSafe(assigned.url, assigned.fileId);
         if (img) {
+          const mergedSlot = {
+            ...slot,
+            grayscale: Boolean(slot.grayscale || state.background?.grayscale)
+          };
           drawCoverImage(img, 0, 0, W, H, {
             panX: slot.panX ?? 50,
             panY: slot.panY ?? 50,
             zoom: slot.zoom ?? 1,
-            grayscale: Boolean(slot.grayscale || state.background?.grayscale),
-            blur: Number(state.background?.blur) || 0
+            cssFilter: buildSlotCssFilter(mergedSlot, (Number(state.background?.blur) || 0) * 2)
           });
         }
       }
@@ -673,7 +1097,7 @@ export const StudioTemplateDesigner = ({
       }
     }
 
-    // 3. Vẽ các Thẻ nền trang trí (Decor Cards - ví dụ khung kem giữa trang ở Mẫu 1 & Mẫu 3)
+    // 3. Vẽ các Thẻ nền trang trí (Decor Cards)
     for (const card of state.decorCards || []) {
       const cx = (card.x / 100) * W;
       const cy = (card.y / 100) * H;
@@ -686,34 +1110,104 @@ export const StudioTemplateDesigner = ({
         ctx.shadowOffsetY = 12;
       }
       ctx.fillStyle = card.bgColor || '#FAF8F4';
-      ctx.fillRect(cx, cy, cw, ch);
+      const cRadius = (Number(card.borderRadius) || 0) * (W / 540);
+      if (cRadius > 0 && ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(cx, cy, cw, ch, cRadius);
+        ctx.fill();
+      } else {
+        ctx.fillRect(cx, cy, cw, ch);
+      }
       ctx.restore();
     }
 
-    // 4. Vẽ các Ô ảnh chính (Foreground Photo Slots)
+    // 4. Vẽ các Ô ảnh chính (Foreground Photo Slots) hỗ trợ Xoay, Khung Polaroid/Viền, Đổ bóng & Bộ lọc màu
+    const scaleRatio = W / 540;
     const fgSlots = state.photoSlots.filter((s) => !s.isBackground);
     for (const slot of fgSlots) {
       const sx = (slot.x / 100) * W;
       const sy = (slot.y / 100) * H;
       const sw = (slot.w / 100) * W;
       const sh = (slot.h / 100) * H;
+      const rotDeg = Number(slot.rotation) || 0;
+      const opacityVal = Math.max(0.1, Math.min(1, (Number(slot.opacity ?? 100)) / 100));
+      const radiusPx = (Number(slot.borderRadius) || 0) * scaleRatio;
+      const borderW = (Number(slot.borderWidth) || 0) * scaleRatio;
+      const isPolaroid = slot.frameStyle === 'polaroid';
+      const padSide = isPolaroid ? Math.max(14 * scaleRatio, borderW) : borderW;
+      const padBottom = isPolaroid ? Math.max(44 * scaleRatio, borderW * 3.2) : borderW;
+
+      ctx.save();
+      ctx.globalAlpha = opacityVal;
+
+      // Xoay quanh tâm của Ô ảnh nếu có góc xoay (Rotation)
+      if (rotDeg !== 0) {
+        const cx = sx + sw / 2;
+        const cy = sy + sh / 2;
+        ctx.translate(cx, cy);
+        ctx.rotate((rotDeg * Math.PI) / 180);
+        ctx.translate(-cx, -cy);
+      }
+
+      // Đổ bóng 3D hoặc bóng nhẹ cho Ô ảnh
+      if (slot.shadow === 'deep' || slot.shadow === 'soft' || isPolaroid) {
+        ctx.save();
+        ctx.shadowColor = slot.shadow === 'deep' || isPolaroid ? 'rgba(0,0,0,0.42)' : 'rgba(0,0,0,0.22)';
+        ctx.shadowBlur = (slot.shadow === 'deep' || isPolaroid ? 36 : 18) * scaleRatio;
+        ctx.shadowOffsetY = (slot.shadow === 'deep' || isPolaroid ? 14 : 6) * scaleRatio;
+        ctx.fillStyle = slot.borderColor || '#FAF8F4';
+        if (radiusPx > 0 && ctx.roundRect) {
+          ctx.beginPath();
+          ctx.roundRect(sx, sy, sw, sh, radiusPx);
+          ctx.fill();
+        } else {
+          ctx.fillRect(sx, sy, sw, sh);
+        }
+        ctx.restore();
+      }
+
+      // Vẽ nền khung viền (nếu có viền hoặc Polaroid)
+      if (padSide > 0 || padBottom > 0) {
+        ctx.fillStyle = slot.borderColor || '#FFFFFF';
+        if (radiusPx > 0 && ctx.roundRect) {
+          ctx.beginPath();
+          ctx.roundRect(sx, sy, sw, sh, radiusPx);
+          ctx.fill();
+        } else {
+          ctx.fillRect(sx, sy, sw, sh);
+        }
+      }
+
+      const innerX = sx + padSide;
+      const innerY = sy + padSide;
+      const innerW = Math.max(10, sw - padSide * 2);
+      const innerH = Math.max(10, sh - padSide - padBottom);
+      const innerRadius = Math.max(0, radiusPx - padSide * 0.5);
 
       ctx.fillStyle = '#E5E0D8';
-      ctx.fillRect(sx, sy, sw, sh);
+      if (innerRadius > 0 && ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(innerX, innerY, innerW, innerH, innerRadius);
+        ctx.fill();
+      } else {
+        ctx.fillRect(innerX, innerY, innerW, innerH);
+      }
 
       const assigned = state.slotImages[slot.id];
       if (assigned?.url) {
         const img = await loadImageSafe(assigned.url, assigned.fileId);
         if (img) {
-          drawCoverImage(img, sx, sy, sw, sh, {
+          drawCoverImage(img, innerX, innerY, innerW, innerH, {
             panX: slot.panX ?? 50,
             panY: slot.panY ?? 50,
             zoom: slot.zoom ?? 1,
-            grayscale: Boolean(slot.grayscale),
-            borderRadius: ((slot.borderRadius || 0) / 100) * Math.min(sw, sh)
+            borderRadius: innerRadius,
+            cssFilter: buildSlotCssFilter(slot, (Number(slot.blur) || 0) * 1.5)
           });
         }
       }
+
+      ctx.restore();
     }
 
     // 5. Vẽ Khung PNG Overlay từ Google Drive (nếu Template có gắn link Drive PNG)
@@ -1082,11 +1576,35 @@ export const StudioTemplateDesigner = ({
       {/* 1. THANH CHỌN MẪU TEMPLATE (PRESETS + CỘNG ĐỒNG + GOOGLE DRIVE) */}
       <div className="bg-[#141720] border border-[#242938] rounded-3xl p-4 sm:p-5 space-y-3.5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 flex-wrap gap-y-1.5">
             <Layout className="w-4 h-4 text-amber-400" />
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">
               1. Chọn Bố Cục Template ({filteredTemplates.length} mẫu)
             </h3>
+            <div className="flex items-center space-x-1.5 pl-1">
+              <button
+                type="button"
+                onClick={() => handleQuickCreateLayout('blank_freeform')}
+                className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold transition-all cursor-pointer"
+                title="Bắt đầu từ trang trắng để tự thêm ô ảnh, kéo-thả vị trí và lưu thành Template mới"
+              >
+                + Tự Tạo Mẫu Trắng
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickCreateLayout('polaroid_scrapbook')}
+                className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 text-[11px] font-bold transition-all cursor-pointer"
+              >
+                📸 Mẫu Polaroid Nghiêng
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickCreateLayout('editorial_overlap')}
+                className="px-2.5 py-1 rounded-lg bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 text-purple-300 text-[11px] font-bold transition-all cursor-pointer"
+              >
+                📖 Mẫu Tạp Chí Xếp Chồng
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center space-x-1 bg-[#0c0d12] p-1 rounded-xl border border-[#242938]">
@@ -1255,6 +1773,10 @@ export const StudioTemplateDesigner = ({
                 .map((bgSlot) => {
                   const bgImg = slotImages[bgSlot.id];
                   const isSlotSelected = selectedSlotId === bgSlot.id;
+                  const mergedBgSlot = {
+                    ...bgSlot,
+                    grayscale: Boolean(bgSlot.grayscale || background?.grayscale)
+                  };
                   return (
                     <div
                       key={bgSlot.id}
@@ -1273,9 +1795,7 @@ export const StudioTemplateDesigner = ({
                           style={{
                             objectPosition: `${bgSlot.panX ?? 50}% ${bgSlot.panY ?? 50}%`,
                             transform: `scale(${bgSlot.zoom ?? 1})`,
-                            filter: `${
-                              bgSlot.grayscale || background?.grayscale ? 'grayscale(100%) ' : ''
-                            }${background?.blur ? `blur(${background.blur}px)` : ''}`
+                            filter: buildSlotCssFilter(mergedBgSlot, background?.blur || 0)
                           }}
                           className="w-full h-full object-cover transition-transform duration-150"
                         />
@@ -1306,56 +1826,158 @@ export const StudioTemplateDesigner = ({
                 />
               ))}
 
-              {/* Lớp 3: Các Ô Ảnh Chính (Foreground Photo Slots) */}
+              {/* Lớp 3: Các Ô Ảnh Chính (Hỗ trợ Kéo-thả di chuyển, Kéo góc đổi kích thước, Xoay, Khung Polaroid & Bộ lọc màu) */}
               {photoSlots
                 .filter((s) => !s.isBackground)
                 .map((slot, idx) => {
                   const assigned = slotImages[slot.id];
                   const isSelected = selectedSlotId === slot.id;
+                  const isPolaroid = slot.frameStyle === 'polaroid';
+                  const borderW = Number(slot.borderWidth) || 0;
+                  const padSide = isPolaroid ? Math.max(8, borderW) : borderW;
+                  const padBottom = isPolaroid ? Math.max(24, borderW * 3) : borderW;
+                  const shadowClass =
+                    slot.shadow === 'deep' || isPolaroid
+                      ? 'shadow-[0_14px_34px_rgba(0,0,0,0.45)]'
+                      : slot.shadow === 'soft'
+                      ? 'shadow-md'
+                      : '';
+
                   return (
                     <div
                       key={slot.id}
-                      onClick={(e) => {
+                      onPointerDown={(e) => {
                         e.stopPropagation();
                         setSelectedSlotId(slot.id);
                         setControlTab('photos');
+                        setDraggingItem({
+                          type: 'slot-move',
+                          id: slot.id,
+                          startClientX: e.clientX,
+                          startClientY: e.clientY,
+                          origX: Number(slot.x) || 0,
+                          origY: Number(slot.y) || 0,
+                          origW: Number(slot.w) || 40,
+                          origH: Number(slot.h) || 40
+                        });
                       }}
                       style={{
                         left: `${slot.x}%`,
                         top: `${slot.y}%`,
                         width: `${slot.w}%`,
                         height: `${slot.h}%`,
-                        borderRadius: `${slot.borderRadius || 0}px`
+                        transform: slot.rotation ? `rotate(${slot.rotation}deg)` : undefined,
+                        opacity: (Number(slot.opacity ?? 100)) / 100,
+                        borderRadius: `${slot.borderRadius || 0}px`,
+                        backgroundColor:
+                          padSide > 0 || padBottom > 0 ? slot.borderColor || '#FFFFFF' : 'transparent',
+                        paddingTop: `${padSide}px`,
+                        paddingLeft: `${padSide}px`,
+                        paddingRight: `${padSide}px`,
+                        paddingBottom: `${padBottom}px`
                       }}
-                      className={`absolute overflow-hidden cursor-pointer transition-shadow group ${
+                      className={`absolute cursor-move transition-shadow group ${shadowClass} ${
                         isSelected
-                          ? 'ring-2 ring-amber-400 shadow-[0_0_0_3px_rgba(245,158,11,0.35)] z-10'
-                          : 'hover:ring-1 hover:ring-amber-400/60'
+                          ? 'ring-2 ring-amber-400 shadow-[0_0_0_3px_rgba(245,158,11,0.35)] z-20'
+                          : 'hover:ring-1 hover:ring-amber-400/70 z-10'
                       }`}
+                      title="Nhấn giữ chuột để kéo di chuyển Ô ảnh • Kéo góc phải-dưới để đổi kích thước"
                     >
-                      {assigned?.url ? (
-                        <img
-                          src={getCanvasSafeImageUrl(assigned.url, assigned.fileId)}
-                          alt={slot.label || `Slot ${idx + 1}`}
-                          style={{
-                            objectPosition: `${slot.panX ?? 50}% ${slot.panY ?? 50}%`,
-                            transform: `scale(${slot.zoom ?? 1})`,
-                            filter: slot.grayscale ? 'grayscale(100%)' : 'none'
-                          }}
-                          className="w-full h-full object-cover pointer-events-none"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-zinc-200 flex flex-col items-center justify-center text-zinc-500 text-[10px] p-1 text-center">
-                          <ImageIcon className="w-4 h-4 mb-0.5 opacity-60" />
-                          <span>Ô #{idx + 1}</span>
-                        </div>
-                      )}
+                      <div
+                        className="w-full h-full overflow-hidden relative"
+                        style={{
+                          borderRadius: `${Math.max(0, (Number(slot.borderRadius) || 0) - padSide * 0.5)}px`
+                        }}
+                      >
+                        {assigned?.url ? (
+                          <img
+                            src={getCanvasSafeImageUrl(assigned.url, assigned.fileId)}
+                            alt={slot.label || `Slot ${idx + 1}`}
+                            style={{
+                              objectPosition: `${slot.panX ?? 50}% ${slot.panY ?? 50}%`,
+                              transform: `scale(${slot.zoom ?? 1})`,
+                              filter: buildSlotCssFilter(slot)
+                            }}
+                            className="w-full h-full object-cover pointer-events-none"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-zinc-200 flex flex-col items-center justify-center text-zinc-500 text-[10px] p-1 text-center pointer-events-none">
+                            <ImageIcon className="w-4 h-4 mb-0.5 opacity-60" />
+                            <span>Ô #{idx + 1}</span>
+                          </div>
+                        )}
+                      </div>
 
-                      {/* Nhãn góc nhỏ khi đang chọn ô */}
+                      {/* Nhãn hiển thị & Nút kéo chỉnh kích thước (Resize Handles) khi đang chọn Ô ảnh */}
                       {isSelected && (
-                        <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-amber-500 text-amber-950 font-black text-[9px] shadow">
-                          {slot.label || `Ô #${idx + 1}`}
-                        </div>
+                        <>
+                          <div className="absolute -top-6 left-0 px-2 py-0.5 rounded-md bg-amber-500 text-amber-950 font-black text-[9px] shadow-md flex items-center space-x-1 whitespace-nowrap pointer-events-none">
+                            <Move className="w-2.5 h-2.5" />
+                            <span>
+                              {slot.label || `Ô #${idx + 1}`} ({Math.round(slot.w)}% × {Math.round(slot.h)}%)
+                            </span>
+                          </div>
+
+                          {/* Nút kéo góc Dưới-Phải (Resize W & H) */}
+                          <div
+                            onPointerDown={(e) => {
+                              e.stopPropagation();
+                              setDraggingItem({
+                                type: 'slot-resize',
+                                dir: 'se',
+                                id: slot.id,
+                                startClientX: e.clientX,
+                                startClientY: e.clientY,
+                                origX: Number(slot.x) || 0,
+                                origY: Number(slot.y) || 0,
+                                origW: Number(slot.w) || 40,
+                                origH: Number(slot.h) || 40
+                              });
+                            }}
+                            className="absolute -bottom-2 -right-2 w-4 h-4 rounded-full bg-amber-400 border-2 border-slate-950 shadow-lg cursor-nwse-resize z-30 hover:scale-125 transition-transform"
+                            title="Kéo góc này để phóng to / thu nhỏ Ô ảnh"
+                          />
+
+                          {/* Nút kéo cạnh Phải (Resize W) */}
+                          <div
+                            onPointerDown={(e) => {
+                              e.stopPropagation();
+                              setDraggingItem({
+                                type: 'slot-resize',
+                                dir: 'e',
+                                id: slot.id,
+                                startClientX: e.clientX,
+                                startClientY: e.clientY,
+                                origX: Number(slot.x) || 0,
+                                origY: Number(slot.y) || 0,
+                                origW: Number(slot.w) || 40,
+                                origH: Number(slot.h) || 40
+                              });
+                            }}
+                            className="absolute top-1/2 -right-1.5 -translate-y-1/2 w-2.5 h-6 rounded-full bg-amber-400/90 border border-slate-950 shadow cursor-ew-resize z-30"
+                            title="Kéo để chỉnh chiều rộng Ô ảnh"
+                          />
+
+                          {/* Nút kéo cạnh Dưới (Resize H) */}
+                          <div
+                            onPointerDown={(e) => {
+                              e.stopPropagation();
+                              setDraggingItem({
+                                type: 'slot-resize',
+                                dir: 's',
+                                id: slot.id,
+                                startClientX: e.clientX,
+                                startClientY: e.clientY,
+                                origX: Number(slot.x) || 0,
+                                origY: Number(slot.y) || 0,
+                                origW: Number(slot.w) || 40,
+                                origH: Number(slot.h) || 40
+                              });
+                            }}
+                            className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-6 h-2.5 rounded-full bg-amber-400/90 border border-slate-950 shadow cursor-ns-resize z-30"
+                            title="Kéo để chỉnh chiều cao Ô ảnh"
+                          />
+                        </>
                       )}
                     </div>
                   );
@@ -1525,29 +2147,40 @@ export const StudioTemplateDesigner = ({
             })}
           </div>
 
-          {/* TAB 1: CHỌN ẢNH TỪ ALBUM GOOGLE DRIVE / MÁY TÍNH & CĂN CHỈNH Ô ẢNH */}
+          {/* TAB 1: CHỌN ẢNH, DI CHUYỂN BỐ CỤC Ô ẢNH & BỘ LỌC HIỆU ỨNG NGHỆ THUẬT */}
           {controlTab === 'photos' && (
             <div className="space-y-4 animate-fade-in">
               {/* Chọn Ô Ảnh Đang Chỉnh */}
               <div className="p-3.5 bg-[#0c0d12] rounded-2xl border border-[#242938] space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-1.5">
                   <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-                    Ô Ảnh Đang Chọn Trên Bố Cục:
+                    Ô Ảnh Đang Chọn ({photoSlots.length} ô):
                   </span>
                   <div className="flex items-center space-x-1.5">
                     <button
                       type="button"
                       onClick={handleAddPhotoSlot}
-                      className="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold flex items-center space-x-1"
+                      className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold flex items-center space-x-1 cursor-pointer"
                     >
                       <Plus className="w-3 h-3" />
-                      <span>Thêm Ô Ảnh</span>
+                      <span>+ Thêm Ô Ảnh</span>
                     </button>
+                    {selectedSlotObj && !selectedSlotObj.isBackground && (
+                      <button
+                        type="button"
+                        onClick={handleDuplicateSelectedSlot}
+                        className="px-2 py-1 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-300 text-[11px] font-bold flex items-center space-x-1 cursor-pointer"
+                        title="Nhân bản ô ảnh này"
+                      >
+                        <Copy className="w-3 h-3" />
+                        <span>Nhân bản</span>
+                      </button>
+                    )}
                     {photoSlots.length > 1 && (
                       <button
                         type="button"
                         onClick={handleDeleteSelectedSlot}
-                        className="p-1 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 hover:bg-red-500/25"
+                        className="p-1 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 hover:bg-red-500/25 cursor-pointer"
                         title="Xóa ô ảnh này"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -1563,9 +2196,9 @@ export const StudioTemplateDesigner = ({
                       key={slot.id}
                       type="button"
                       onClick={() => setSelectedSlotId(slot.id)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                         selectedSlotId === slot.id
-                          ? 'bg-amber-500 text-amber-950 font-bold'
+                          ? 'bg-amber-500 text-amber-950 font-bold shadow'
                           : 'bg-[#141720] text-gray-300 border border-[#282f42] hover:border-amber-500/40'
                       }`}
                     >
@@ -1574,68 +2207,397 @@ export const StudioTemplateDesigner = ({
                   ))}
                 </div>
 
-                {/* Căn chỉnh Tâm ảnh (Pan), Phóng to (Zoom) & Đen-Trắng (B&W) cho ô đang chọn */}
                 {selectedSlotObj && (
-                  <div className="pt-2 border-t border-[#1e2330] space-y-2.5 text-xs">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="flex justify-between text-[11px] text-gray-400 mb-1">
-                          <span>Dịch ngang (Pan X)</span>
-                          <span className="text-amber-300">{selectedSlotObj.panX ?? 50}%</span>
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={selectedSlotObj.panX ?? 50}
-                          onChange={(e) => updateSelectedSlot({ panX: Number(e.target.value) })}
-                          className="w-full accent-amber-500"
-                        />
+                  <div className="pt-2.5 border-t border-[#1e2330] space-y-3.5 text-xs">
+                    {/* 1. DI CHUYỂN VỊ TRÍ, ĐỔI KÍCH THƯỚC, XOAY & SẮP XẾP LỚP Ô ẢNH */}
+                    {!selectedSlotObj.isBackground && (
+                      <div className="p-3 rounded-xl bg-[#141720] border border-[#242938] space-y-2.5">
+                        <div className="flex items-center justify-between flex-wrap gap-1">
+                          <span className="font-bold text-amber-300 flex items-center space-x-1 text-[11px]">
+                            <Move className="w-3.5 h-3.5" />
+                            <span>Vị Trí, Kích Thước & Xoay Khung (Hoặc Kéo Trực Tiếp Trên Ảnh)</span>
+                          </span>
+                          <div className="flex items-center space-x-1">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateSelectedSlot({
+                                  x: Number((50 - (selectedSlotObj.w || 40) / 2).toFixed(1))
+                                })
+                              }
+                              className="px-2 py-0.5 rounded bg-[#0c0d12] hover:bg-amber-500/20 border border-[#2b3245] text-[10px] text-gray-300 cursor-pointer"
+                              title="Căn giữa theo chiều ngang"
+                            >
+                              Căn giữa
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveSlotLayer('up')}
+                              className="px-2 py-0.5 rounded bg-[#0c0d12] hover:bg-amber-500/20 border border-[#2b3245] text-[10px] text-gray-300 cursor-pointer"
+                              title="Đưa ô ảnh này lên lớp trên"
+                            >
+                              ▲ Lên trên
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveSlotLayer('down')}
+                              className="px-2 py-0.5 rounded bg-[#0c0d12] hover:bg-amber-500/20 border border-[#2b3245] text-[10px] text-gray-300 cursor-pointer"
+                              title="Đẩy ô ảnh này xuống lớp dưới"
+                            >
+                              ▼ Xuống dưới
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <div>
+                            <label className="flex justify-between text-[11px] text-gray-400 mb-0.5">
+                              <span>Vị trí Ngang (X)</span>
+                              <span className="text-amber-300">{Math.round(selectedSlotObj.x ?? 15)}%</span>
+                            </label>
+                            <input
+                              type="range"
+                              min="-10"
+                              max="90"
+                              step="0.5"
+                              value={selectedSlotObj.x ?? 15}
+                              onChange={(e) => updateSelectedSlot({ x: Number(e.target.value) })}
+                              className="w-full accent-amber-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="flex justify-between text-[11px] text-gray-400 mb-0.5">
+                              <span>Vị trí Dọc (Y)</span>
+                              <span className="text-amber-300">{Math.round(selectedSlotObj.y ?? 15)}%</span>
+                            </label>
+                            <input
+                              type="range"
+                              min="-10"
+                              max="90"
+                              step="0.5"
+                              value={selectedSlotObj.y ?? 15}
+                              onChange={(e) => updateSelectedSlot({ y: Number(e.target.value) })}
+                              className="w-full accent-amber-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="flex justify-between text-[11px] text-gray-400 mb-0.5">
+                              <span>Chiều Rộng (W)</span>
+                              <span className="text-amber-300">{Math.round(selectedSlotObj.w ?? 40)}%</span>
+                            </label>
+                            <input
+                              type="range"
+                              min="10"
+                              max="100"
+                              step="0.5"
+                              value={selectedSlotObj.w ?? 40}
+                              onChange={(e) => updateSelectedSlot({ w: Number(e.target.value) })}
+                              className="w-full accent-amber-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="flex justify-between text-[11px] text-gray-400 mb-0.5">
+                              <span>Chiều Cao (H)</span>
+                              <span className="text-amber-300">{Math.round(selectedSlotObj.h ?? 40)}%</span>
+                            </label>
+                            <input
+                              type="range"
+                              min="10"
+                              max="100"
+                              step="0.5"
+                              value={selectedSlotObj.h ?? 40}
+                              onChange={(e) => updateSelectedSlot({ h: Number(e.target.value) })}
+                              className="w-full accent-amber-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2.5 pt-1">
+                          <div>
+                            <label className="flex justify-between text-[11px] text-gray-400 mb-0.5">
+                              <span>Góc xoay nghiêng (Polaroid)</span>
+                              <span className="text-amber-300">{selectedSlotObj.rotation || 0}°</span>
+                            </label>
+                            <input
+                              type="range"
+                              min="-25"
+                              max="25"
+                              step="1"
+                              value={selectedSlotObj.rotation || 0}
+                              onChange={(e) => updateSelectedSlot({ rotation: Number(e.target.value) })}
+                              className="w-full accent-amber-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="flex justify-between text-[11px] text-gray-400 mb-0.5">
+                              <span>Độ trong suốt (Opacity)</span>
+                              <span className="text-amber-300">{selectedSlotObj.opacity ?? 100}%</span>
+                            </label>
+                            <input
+                              type="range"
+                              min="20"
+                              max="100"
+                              step="5"
+                              value={selectedSlotObj.opacity ?? 100}
+                              onChange={(e) => updateSelectedSlot({ opacity: Number(e.target.value) })}
+                              className="w-full accent-amber-500"
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <label className="flex justify-between text-[11px] text-gray-400 mb-1">
-                          <span>Dịch dọc (Pan Y)</span>
-                          <span className="text-amber-300">{selectedSlotObj.panY ?? 50}%</span>
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={selectedSlotObj.panY ?? 50}
-                          onChange={(e) => updateSelectedSlot({ panY: Number(e.target.value) })}
-                          className="w-full accent-amber-500"
-                        />
+                    )}
+
+                    {/* 2. BỘ LỌC MÀU & HIỆU ỨNG ẢNH NGHỆ THUẬT (8 PRESETS + CHỈNH MÀU CHI TIẾT) */}
+                    <div className="p-3 rounded-xl bg-[#141720] border border-[#242938] space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-amber-300 flex items-center space-x-1 text-[11px]">
+                          <Palette className="w-3.5 h-3.5" />
+                          <span>Hiệu Ứng Màu Ảnh & Bộ Lọc Film Nghệ Thuật:</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => updateSelectedSlot(PHOTO_FILTER_PRESETS[0].patch)}
+                          className="text-[10px] text-gray-400 hover:text-amber-300 underline cursor-pointer"
+                        >
+                          Reset màu gốc
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                        {PHOTO_FILTER_PRESETS.map((preset) => {
+                          const isPresetActive =
+                            (selectedSlotObj.filterPreset || (selectedSlotObj.grayscale ? 'bw_classic' : 'original')) ===
+                            preset.id;
+                          return (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => updateSelectedSlot(preset.patch)}
+                              className={`p-1.5 rounded-lg border text-left transition-all cursor-pointer ${
+                                isPresetActive
+                                  ? 'bg-amber-500/20 border-amber-400 text-amber-200 font-bold'
+                                  : 'bg-[#0c0d12] border-[#242938] text-gray-300 hover:border-amber-500/40'
+                              }`}
+                            >
+                              <div className="text-[11px] font-bold truncate">{preset.label}</div>
+                              <div className="text-[9px] text-gray-400 truncate">{preset.desc}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Thanh trượt chỉnh hiệu ứng màu chuyên sâu */}
+                      <div className="grid grid-cols-2 gap-2.5 pt-1">
+                        <div>
+                          <label className="flex justify-between text-[11px] text-gray-400 mb-0.5">
+                            <span>Độ sáng (Brightness)</span>
+                            <span className="text-amber-300">{selectedSlotObj.brightness ?? 100}%</span>
+                          </label>
+                          <input
+                            type="range"
+                            min="60"
+                            max="145"
+                            value={selectedSlotObj.brightness ?? 100}
+                            onChange={(e) =>
+                              updateSelectedSlot({
+                                brightness: Number(e.target.value),
+                                filterPreset: 'custom'
+                              })
+                            }
+                            className="w-full accent-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="flex justify-between text-[11px] text-gray-400 mb-0.5">
+                            <span>Tương phản (Contrast)</span>
+                            <span className="text-amber-300">{selectedSlotObj.contrast ?? 100}%</span>
+                          </label>
+                          <input
+                            type="range"
+                            min="65"
+                            max="155"
+                            value={selectedSlotObj.contrast ?? 100}
+                            onChange={(e) =>
+                              updateSelectedSlot({
+                                contrast: Number(e.target.value),
+                                filterPreset: 'custom'
+                              })
+                            }
+                            className="w-full accent-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="flex justify-between text-[11px] text-gray-400 mb-0.5">
+                            <span>Độ tươi màu (Saturate)</span>
+                            <span className="text-amber-300">{selectedSlotObj.saturate ?? 100}%</span>
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="180"
+                            value={selectedSlotObj.saturate ?? 100}
+                            onChange={(e) =>
+                              updateSelectedSlot({
+                                saturate: Number(e.target.value),
+                                grayscale: Number(e.target.value) === 0,
+                                filterPreset: 'custom'
+                              })
+                            }
+                            className="w-full accent-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="flex justify-between text-[11px] text-gray-400 mb-0.5">
+                            <span>Màu Phim Ấm (Sepia)</span>
+                            <span className="text-amber-300">{selectedSlotObj.sepia ?? 0}%</span>
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="90"
+                            value={selectedSlotObj.sepia ?? 0}
+                            onChange={(e) =>
+                              updateSelectedSlot({
+                                sepia: Number(e.target.value),
+                                filterPreset: 'custom'
+                              })
+                            }
+                            className="w-full accent-amber-500"
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 items-center">
-                      <div>
-                        <label className="flex justify-between text-[11px] text-gray-400 mb-1">
-                          <span>Phóng to (Zoom)</span>
-                          <span className="text-amber-300">{Number(selectedSlotObj.zoom ?? 1).toFixed(2)}x</span>
-                        </label>
-                        <input
-                          type="range"
-                          min="1"
-                          max="2.5"
-                          step="0.05"
-                          value={selectedSlotObj.zoom ?? 1}
-                          onChange={(e) => updateSelectedSlot({ zoom: Number(e.target.value) })}
-                          className="w-full accent-amber-500"
-                        />
-                      </div>
-
-                      <label className="flex items-center space-x-2 cursor-pointer bg-[#141720] p-2 rounded-xl border border-[#242938]">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(selectedSlotObj.grayscale)}
-                          onChange={(e) => updateSelectedSlot({ grayscale: e.target.checked })}
-                          className="rounded accent-amber-500"
-                        />
-                        <span className="text-xs font-semibold text-gray-200">
-                          Chuyển Đen-Trắng (B&W)
+                    {/* 3. KIỂU KHUNG VIỀN, POLAROID, BO GÓC & ĐỔ BÓNG 3D */}
+                    {!selectedSlotObj.isBackground && (
+                      <div className="p-3 rounded-xl bg-[#141720] border border-[#242938] space-y-2.5">
+                        <span className="font-bold text-amber-300 block text-[11px]">
+                          🖼️ Kiểu Khung Viền, Polaroid & Bóng Đổ 3D:
                         </span>
-                      </label>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {SLOT_FRAME_STYLES.map((st) => (
+                            <button
+                              key={st.id}
+                              type="button"
+                              onClick={() => updateSelectedSlot(st.patch)}
+                              className={`py-1.5 px-2 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                                (selectedSlotObj.frameStyle || 'none') === st.id
+                                  ? 'bg-amber-500/20 border-amber-400 text-amber-200'
+                                  : 'bg-[#0c0d12] border-[#242938] text-gray-400 hover:text-white'
+                              }`}
+                            >
+                              {st.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 pt-1 items-center">
+                          <div>
+                            <label className="flex justify-between text-[10px] text-gray-400 mb-0.5">
+                              <span>Độ dày viền</span>
+                              <span className="text-amber-300">{selectedSlotObj.borderWidth || 0}px</span>
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="16"
+                              value={selectedSlotObj.borderWidth || 0}
+                              onChange={(e) =>
+                                updateSelectedSlot({ borderWidth: Number(e.target.value) })
+                              }
+                              className="w-full accent-amber-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="flex justify-between text-[10px] text-gray-400 mb-0.5">
+                              <span>Bo tròn góc</span>
+                              <span className="text-amber-300">{selectedSlotObj.borderRadius || 0}px</span>
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="40"
+                              value={selectedSlotObj.borderRadius || 0}
+                              onChange={(e) =>
+                                updateSelectedSlot({ borderRadius: Number(e.target.value) })
+                              }
+                              className="w-full accent-amber-500"
+                            />
+                          </div>
+                          <div className="flex items-center space-x-1.5 pt-2">
+                            <input
+                              type="color"
+                              value={selectedSlotObj.borderColor || '#FFFFFF'}
+                              onChange={(e) => updateSelectedSlot({ borderColor: e.target.value })}
+                              className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent"
+                              title="Chọn màu viền khung ảnh"
+                            />
+                            <select
+                              value={selectedSlotObj.shadow || 'none'}
+                              onChange={(e) => updateSelectedSlot({ shadow: e.target.value })}
+                              className="flex-1 bg-[#0c0d12] border border-[#282f42] rounded-lg px-1.5 py-1 text-[10px] text-gray-200 outline-none"
+                            >
+                              <option value="none">Không bóng</option>
+                              <option value="soft">Bóng nhẹ</option>
+                              <option value="deep">Bóng 3D sâu</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 4. CĂN CHỈNH GÓC CẮT BÊN TRONG KHUNG (PAN X / PAN Y / ZOOM) */}
+                    <div className="p-3 rounded-xl bg-[#141720] border border-[#242938] space-y-2">
+                      <span className="font-bold text-gray-300 block text-[11px]">
+                        🔍 Căn Chỉnh Góc Cắt Ảnh Bên Trong Ô (Pan & Zoom):
+                      </span>
+                      <div className="grid grid-cols-3 gap-2.5">
+                        <div>
+                          <label className="flex justify-between text-[10px] text-gray-400 mb-0.5">
+                            <span>Tâm Ngang</span>
+                            <span className="text-amber-300">{selectedSlotObj.panX ?? 50}%</span>
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={selectedSlotObj.panX ?? 50}
+                            onChange={(e) => updateSelectedSlot({ panX: Number(e.target.value) })}
+                            className="w-full accent-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="flex justify-between text-[10px] text-gray-400 mb-0.5">
+                            <span>Tâm Dọc</span>
+                            <span className="text-amber-300">{selectedSlotObj.panY ?? 50}%</span>
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={selectedSlotObj.panY ?? 50}
+                            onChange={(e) => updateSelectedSlot({ panY: Number(e.target.value) })}
+                            className="w-full accent-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="flex justify-between text-[10px] text-gray-400 mb-0.5">
+                            <span>Zoom Ảnh</span>
+                            <span className="text-amber-300">
+                              {Number(selectedSlotObj.zoom ?? 1).toFixed(2)}x
+                            </span>
+                          </label>
+                          <input
+                            type="range"
+                            min="1"
+                            max="2.5"
+                            step="0.05"
+                            value={selectedSlotObj.zoom ?? 1}
+                            onChange={(e) => updateSelectedSlot({ zoom: Number(e.target.value) })}
+                            className="w-full accent-amber-500"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -2116,6 +3078,127 @@ export const StudioTemplateDesigner = ({
                   </div>
                 </div>
               )}
+
+              {/* Quản lý Thẻ nền trang trí (Decor Cards như khung kem giữa trang ở Mẫu 1 & Mẫu 3) */}
+              <div className="pt-3 border-t border-[#1e2330] space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-amber-300">
+                    🃏 Khung Giấy Nền Trang Trí ({decorCards.length} thẻ):
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAddDecorCard}
+                    className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[11px] font-bold cursor-pointer"
+                  >
+                    + Thêm Khung Giấy Nền
+                  </button>
+                </div>
+
+                {decorCards.map((card, cIdx) => (
+                  <div
+                    key={card.id || cIdx}
+                    className="p-2.5 rounded-xl bg-[#141720] border border-[#242938] space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-gray-200 text-[11px]">
+                        Thẻ nền #{cIdx + 1} ({Math.round(card.w)}% × {Math.round(card.h)}%)
+                      </span>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="color"
+                          value={card.bgColor || '#FAF8F4'}
+                          onChange={(e) =>
+                            setDecorCards((prev) =>
+                              prev.map((c, i) =>
+                                i === cIdx ? { ...c, bgColor: e.target.value } : c
+                              )
+                            )
+                          }
+                          className="w-5 h-5 rounded cursor-pointer border-0 bg-transparent"
+                          title="Màu thẻ nền"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveDecorCard(card.id)}
+                          className="text-red-400 hover:text-red-300 text-[10px] font-bold cursor-pointer"
+                        >
+                          Xóa
+                        </button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5 text-[10px]">
+                      <div>
+                        <span className="text-gray-400 block">X ({card.x}%)</span>
+                        <input
+                          type="range"
+                          min="0"
+                          max="80"
+                          value={card.x}
+                          onChange={(e) =>
+                            setDecorCards((prev) =>
+                              prev.map((c, i) =>
+                                i === cIdx ? { ...c, x: Number(e.target.value) } : c
+                              )
+                            )
+                          }
+                          className="w-full accent-amber-500"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block">Y ({card.y}%)</span>
+                        <input
+                          type="range"
+                          min="0"
+                          max="80"
+                          value={card.y}
+                          onChange={(e) =>
+                            setDecorCards((prev) =>
+                              prev.map((c, i) =>
+                                i === cIdx ? { ...c, y: Number(e.target.value) } : c
+                              )
+                            )
+                          }
+                          className="w-full accent-amber-500"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block">Rộng ({card.w}%)</span>
+                        <input
+                          type="range"
+                          min="15"
+                          max="100"
+                          value={card.w}
+                          onChange={(e) =>
+                            setDecorCards((prev) =>
+                              prev.map((c, i) =>
+                                i === cIdx ? { ...c, w: Number(e.target.value) } : c
+                              )
+                            )
+                          }
+                          className="w-full accent-amber-500"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block">Cao ({card.h}%)</span>
+                        <input
+                          type="range"
+                          min="15"
+                          max="100"
+                          value={card.h}
+                          onChange={(e) =>
+                            setDecorCards((prev) =>
+                              prev.map((c, i) =>
+                                i === cIdx ? { ...c, h: Number(e.target.value) } : c
+                              )
+                            )
+                          }
+                          className="w-full accent-amber-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
 
               {/* Dán trực tiếp Link File Khung PNG trên Google Drive làm lớp phủ */}
               <div className="pt-3 border-t border-[#1e2330] space-y-2">
