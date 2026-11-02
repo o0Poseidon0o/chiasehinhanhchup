@@ -33,9 +33,36 @@ export const HeroSection = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
+    const categoryStyleMap = {
+      personal: 'Chân Dung',
+      couple: 'Pre-Wedding',
+      family: 'Gia Đình',
+      graduation: 'Kỷ Yếu',
+      event: 'Sự Kiện',
+      fashion: 'Lookbook'
+    };
+
+    const params = new URLSearchParams();
+    if (category !== 'all' && categoryStyleMap[category]) {
+      params.set('style', categoryStyleMap[category]);
+    }
+    if (location !== 'all') {
+      params.set('location', location);
+    }
+    if (budget !== 'all') {
+      params.set('budget', budget);
+    }
+
+    if (params.toString()) {
+      navigate(`/photographers?${params.toString()}`);
+      return;
+    }
+
     const photographersEl = document.getElementById('photographers-section');
     if (photographersEl) {
       photographersEl.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      navigate('/photographers');
     }
   };
 

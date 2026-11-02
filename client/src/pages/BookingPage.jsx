@@ -82,6 +82,8 @@ export const BookingPage = () => {
 
   const preFilledPhId = searchParams.get('phUserId');
   const preFilledPackage = searchParams.get('package');
+  const preFilledLocation = searchParams.get('location') || '';
+  const preFilledCity = searchParams.get('city') || '';
 
   // Stepper state (1: Studio & Category, 2: Context & Schedule, 3: Addons & Concept, 4: Contact & Receipt)
   const [step, setStep] = useState(1);
@@ -129,11 +131,11 @@ export const BookingPage = () => {
   const [provinces, setProvinces] = useState([]);
   const [wards, setWards] = useState([]);
   const [selectedProvinceId, setSelectedProvinceId] = useState('');
-  const [selectedProvinceName, setSelectedProvinceName] = useState('Hà Nội');
+  const [selectedProvinceName, setSelectedProvinceName] = useState(preFilledCity || 'Hà Nội');
   const [selectedWardId, setSelectedWardId] = useState('');
   const [selectedWardName, setSelectedWardName] = useState('');
-  const [cityLocation, setCityLocation] = useState('Hà Nội');
-  const [detailedLocation, setDetailedLocation] = useState('');
+  const [cityLocation, setCityLocation] = useState(preFilledCity || 'Hà Nội');
+  const [detailedLocation, setDetailedLocation] = useState(preFilledLocation);
   const [loadingProvinces, setLoadingProvinces] = useState(false);
   const [loadingWards, setLoadingWards] = useState(false);
   const [selectedAddons, setSelectedAddons] = useState([]);
@@ -148,7 +150,11 @@ export const BookingPage = () => {
         const list = res.data || [];
         setProvinces(list);
         if (list.length > 0) {
-          const defaultProv = list.find(p => p.name === 'Hà Nội') || list[0];
+          const targetCity = (preFilledCity || 'Hà Nội').toLowerCase();
+          const defaultProv = list.find(p => 
+            p.name.toLowerCase().includes(targetCity) ||
+            (Array.isArray(p.extensionNames) && p.extensionNames.some(ext => ext.toLowerCase().includes(targetCity)))
+          ) || list.find(p => p.name === 'Hà Nội') || list[0];
           setSelectedProvinceId(defaultProv.provinceId);
           setSelectedProvinceName(defaultProv.name);
           setCityLocation(defaultProv.name);
@@ -693,7 +699,7 @@ export const BookingPage = () => {
             <button
               onClick={() => {
                 const phId = bookingReceipt.photographerId || 'ph_default_1';
-                navigate(`/photographers/${phId}?tab=reviews&bookingCode=${bookingReceipt.code}`);
+                navigate(`/photographer/${phId}?tab=reviews&bookingCode=${bookingReceipt.code}`);
               }}
               className="px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-amber-950 font-black rounded-2xl text-xs sm:text-sm shadow-lg shadow-amber-500/20 flex items-center space-x-1.5 transition-all hover:scale-105"
             >

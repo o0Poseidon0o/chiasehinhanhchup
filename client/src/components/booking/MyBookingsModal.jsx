@@ -118,7 +118,7 @@ export const MyBookingsModal = ({ isOpen, onClose }) => {
   const handleGoToReview = (b) => {
     onClose();
     const phId = b.photographerId || 'ph_default_1';
-    navigate(`/photographers/${phId}?tab=reviews&bookingCode=${b.code}`);
+    navigate(`/photographer/${phId}?tab=reviews&bookingCode=${b.code}`);
   };
 
   return createPortal(

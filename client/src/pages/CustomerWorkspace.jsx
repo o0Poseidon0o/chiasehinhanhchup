@@ -107,12 +107,17 @@ export const CustomerWorkspace = () => {
       } catch (_) {}
 
       let realBookings = [];
+      let photographersList = [];
       try {
         // Chỉ lấy các đơn của khách hàng này từ backend theo số điện thoại hoặc email
-        if (userPhone || userEmail) {
-          const res = await photographerApi.getClientBookings({ phone: userPhone, email: userEmail });
-          realBookings = res.data || [];
-        }
+        const [bkRes, phRes] = await Promise.all([
+          userPhone || userEmail
+            ? photographerApi.getClientBookings({ phone: userPhone, email: userEmail })
+            : Promise.resolve({ data: [] }),
+          userApi.getActivePhotographers().catch(() => ({ data: [] }))
+        ]);
+        realBookings = bkRes.data || [];
+        photographersList = phRes.data || [];
       } catch (_) {}
 
       const statusMap = {
@@ -134,12 +139,17 @@ export const CustomerWorkspace = () => {
       // Hợp nhất server bookings (server data ghi đè trạng thái mới nhất cho cùng mã booking)
       realBookings.forEach(rb => {
         const rbCode = `BK-${(rb._id || '').slice(-6).toUpperCase()}`;
+        const matchedPh = photographersList.find(
+          p => (rb.photographerId && String(p._id) === String(rb.photographerId)) ||
+               (rb.photographerName && p.name === rb.photographerName)
+        );
 
         const mappedItem = {
           _id: rb._id,
           code: rbCode,
-          photographerId: rb.photographerId || 'ph_default',
-          photographerName: rb.photographerName || 'Studio Photodate',
+          photographerId: rb.photographerId || matchedPh?._id || 'ph_default',
+          photographerName: rb.photographerName || matchedPh?.name || 'Studio Photodate',
+          photographerPhone: rb.photographerPhone || matchedPh?.phone || '',
           categoryTitle: rb.category || 'Gói Chụp Ảnh',
           bookingDate: rb.bookingDate || 'Chưa xếp ngày',
           timeSlot: rb.timeSlot || 'Chưa chọn giờ',
@@ -768,7 +778,7 @@ export const CustomerWorkspace = () => {
                     {/* Footer Actions */}
                     <div className="pt-3 border-t border-[#1f2636] flex items-center justify-between gap-2">
                       <a
-                        href={`https://zalo.me/${(b.customerPhone || '0988888888').replace(/\D/g, '')}`}
+                        href={`https://zalo.me/${(b.photographerPhone || '0988888888').replace(/\D/g, '')}`}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-[#1b2130] hover:bg-[#252e42] border border-[#2f3952] rounded-xl text-xs font-semibold text-gray-200 hover:text-white transition-colors"

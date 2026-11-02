@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, User, Phone, FileText, Loader2, CheckCircle2, MessageSquare } from 'lucide-react';
 
@@ -16,6 +16,17 @@ export const SubmitModal = ({
     phone: initialClientInfo?.phone || '',
     note: initialClientInfo?.note || ''
   });
+
+  // Đồng bộ thông tin khách hàng khi dữ liệu album tải xong hoặc khi mở modal
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(prev => ({
+        name: prev.name || initialClientInfo?.name || '',
+        phone: prev.phone || initialClientInfo?.phone || '',
+        note: prev.note || initialClientInfo?.note || ''
+      }));
+    }
+  }, [isOpen, initialClientInfo?.name, initialClientInfo?.phone, initialClientInfo?.note]);
 
   if (!isOpen) return null;
 

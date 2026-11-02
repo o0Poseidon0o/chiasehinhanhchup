@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Star, MapPin, Award, ShieldCheck, Phone, Mail, Calendar, 
   Share2, ArrowLeft, CheckCircle2, Camera, Layers, ExternalLink, Sparkles, Clock, Package,
@@ -45,11 +45,15 @@ const DEFAULT_PACKAGES = [
 export const PhotographerDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isLoggedIn, openAuthModal } = useAuth();
   const [photographer, setPhotographer] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('portfolio'); // portfolio | packages | reviews
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabParam = searchParams.get('tab');
+    return ['portfolio', 'packages', 'reviews'].includes(tabParam) ? tabParam : 'portfolio';
+  }); // portfolio | packages | reviews
   const [copiedLink, setCopiedLink] = useState(false);
 
   const [portfolioImages, setPortfolioImages] = useState([]);
@@ -63,8 +67,22 @@ export const PhotographerDetailPage = () => {
   const [newRating, setNewRating] = useState(5);
   const [newComment, setNewComment] = useState('');
   const [newReviewerName, setNewReviewerName] = useState(currentUser?.name || '');
-  const [newBookingCode, setNewBookingCode] = useState('');
+  const [newBookingCode, setNewBookingCode] = useState(() => searchParams.get('bookingCode') || '');
   const [submittingReview, setSubmittingReview] = useState(false);
+
+  // Tự động đồng bộ tab & mã booking khi URL query params thay đổi
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    const codeParam = searchParams.get('bookingCode');
+    if (['portfolio', 'packages', 'reviews'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    } else if (codeParam) {
+      setActiveTab('reviews');
+    }
+    if (codeParam) {
+      setNewBookingCode(codeParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (photographer?._id || id) {
@@ -865,7 +883,7 @@ export const PhotographerDetailPage = () => {
                   key={tIdx}
                   type="button"
                   onClick={() => setLightboxIndex(tIdx)}
-                  className={`relative w-9 h-9 sm:w-13 sm:h-13 rounded-lg sm:rounded-xl overflow-hidden shrink-0 transition-all border-2 ${
+                  className={`relative w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl overflow-hidden shrink-0 transition-all border-2 ${
                     lightboxIndex === tIdx
                       ? 'border-amber-400 ring-2 ring-amber-400/50 scale-105 opacity-100'
                       : 'border-transparent opacity-50 hover:opacity-100 hover:scale-105'

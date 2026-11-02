@@ -30,14 +30,29 @@ export const THEMES = [
 ];
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState('dark');
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem('app_theme');
+      if (saved && THEMES.some((t) => t.id === saved)) {
+        return saved;
+      }
+    } catch (_) {}
+    return 'dark';
+  });
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', 'dark');
-    localStorage.setItem('app_theme', 'dark');
-  }, []);
+    document.documentElement.setAttribute('data-theme', theme);
+    try {
+      localStorage.setItem('app_theme', theme);
+    } catch (_) {}
+  }, [theme]);
 
-  const toggleTheme = () => {};
+  const toggleTheme = () => {
+    setTheme((prev) => {
+      const idx = THEMES.findIndex((t) => t.id === prev);
+      return THEMES[(idx + 1) % THEMES.length].id;
+    });
+  };
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme, themes: THEMES }}>

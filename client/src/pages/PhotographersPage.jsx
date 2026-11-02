@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Camera, Star, MapPin, Search, Filter, ShieldCheck, Sparkles, 
   Calendar, ArrowRight, Phone, ExternalLink, Award, CheckCircle2, ChevronRight
@@ -111,15 +111,27 @@ const STYLES = ['Tất cả thể loại', 'Chân Dung', 'Pre-Wedding', 'Hàn Qu
 
 export const PhotographersPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isLoggedIn, openAuthModal } = useAuth();
   const [photographers, setPhotographers] = useState(DEFAULT_PHOTOGRAPHERS);
   const [loading, setLoading] = useState(true);
   
   // Filters
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState('Tất cả khu vực');
-  const [selectedStyle, setSelectedStyle] = useState('Tất cả thể loại');
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('search') || '');
+  const [selectedLocation, setSelectedLocation] = useState(() => searchParams.get('location') || searchParams.get('city') || 'Tất cả khu vực');
+  const [selectedStyle, setSelectedStyle] = useState(() => searchParams.get('style') || searchParams.get('category') || 'Tất cả thể loại');
   const [provinces, setProvinces] = useState([]);
+
+  // Đồng bộ bộ lọc khi URL query params thay đổi
+  useEffect(() => {
+    const qSearch = searchParams.get('search');
+    const qLoc = searchParams.get('location') || searchParams.get('city');
+    const qStyle = searchParams.get('style') || searchParams.get('category');
+
+    if (qSearch !== null) setSearchQuery(qSearch);
+    if (qLoc) setSelectedLocation(qLoc);
+    if (qStyle) setSelectedStyle(qStyle);
+  }, [searchParams]);
 
   // Booking Modal State
   const [bookingModal, setBookingModal] = useState({
@@ -220,15 +232,19 @@ export const PhotographersPage = () => {
 
   // Filtered List
   const filteredPhotographers = photographers.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.role && p.role.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesLoc = selectedLocation === 'Tất cả khu vực' || 
-      (p.studioInfo?.location && p.studioInfo.location.toLowerCase().includes(selectedLocation.toLowerCase()));
-
     const stylesArr = Array.isArray(p.studioInfo?.styles) 
       ? p.studioInfo.styles 
       : (typeof p.studioInfo?.styles === 'string' ? p.studioInfo.styles.split(',') : []);
+
+    const q = searchQuery.trim().toLowerCase();
+    const matchesSearch = !q ||
+      p.name.toLowerCase().includes(q) ||
+      (p.role && p.role.toLowerCase().includes(q)) ||
+      (p.studioInfo?.location && p.studioInfo.location.toLowerCase().includes(q)) ||
+      stylesArr.some(s => s.trim().toLowerCase().includes(q));
+    
+    const matchesLoc = selectedLocation === 'Tất cả khu vực' || 
+      (p.studioInfo?.location && p.studioInfo.location.toLowerCase().includes(selectedLocation.toLowerCase()));
     
     const matchesStyle = selectedStyle === 'Tất cả thể loại' || 
       stylesArr.some(s => s.trim().toLowerCase().includes(selectedStyle.toLowerCase()));

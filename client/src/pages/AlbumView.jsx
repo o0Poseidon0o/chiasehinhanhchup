@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { ArrowRight, Info, AlertCircle, RefreshCw, Image as ImageIcon, Heart, Send, CheckCircle2 } from 'lucide-react';
 import { albumApi } from '../api/albumApi';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
@@ -13,6 +13,7 @@ import { formatDate } from '../utils/formatters';
 
 export const AlbumView = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
 
   // State quản lý album
   const [album, setAlbum] = useState(null);
@@ -86,9 +87,13 @@ export const AlbumView = () => {
     }
   }, [id]);
 
-  // Kiểm tra passcode đã lưu trong sessionStorage khi mount & tự động đồng bộ
+  // Kiểm tra passcode từ URL hoặc đã lưu trong sessionStorage khi mount & tự động đồng bộ
   useEffect(() => {
-    const savedPasscode = sessionStorage.getItem(`passcode_${id}`) || '';
+    const urlPasscode = searchParams.get('passcode') || '';
+    if (urlPasscode) {
+      sessionStorage.setItem(`passcode_${id}`, urlPasscode);
+    }
+    const savedPasscode = urlPasscode || sessionStorage.getItem(`passcode_${id}`) || '';
     fetchAlbum(savedPasscode);
 
     // Tự động kiểm tra và đồng bộ ảnh mới khi người dùng quay lại tab trình duyệt

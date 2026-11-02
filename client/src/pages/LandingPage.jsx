@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import HeroSection from '../components/landing/HeroSection';
 import CategoriesSection from '../components/landing/CategoriesSection';
 import LocationGuidesSection from '../components/landing/LocationGuidesSection';
@@ -9,6 +10,21 @@ import AlbumLookupSection from '../components/landing/AlbumLookupSection';
 import TestimonialsCTA from '../components/landing/TestimonialsCTA';
 
 export const LandingPage = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash) {
+      const targetId = location.hash.replace('#', '');
+      const timer = setTimeout(() => {
+        const el = document.getElementById(targetId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [location.hash]);
+
   return (
     <div className="space-y-4">
       {/* 1. Hero Section & Booking Filter */}

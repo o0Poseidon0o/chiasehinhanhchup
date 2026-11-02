@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/common/Navbar';
@@ -40,6 +40,7 @@ function App() {
                 {/* 1.1 Public Photographers List & Profiles */}
                 <Route path="/photographers" element={<PhotographersPage />} />
                 <Route path="/photographer/:id" element={<PhotographerDetailPage />} />
+                <Route path="/photographers/:id" element={<PhotographerDetailPage />} />
 
                 {/* 1.2 Dedicated Booking Page */}
                 <Route path="/bookings" element={<BookingPage />} />
@@ -101,6 +102,9 @@ function App() {
 
                 {/* 5. Album Management (Protected by Manage Token) */}
                 <Route path="/album/:id/manage" element={<AdminManage />} />
+
+                {/* 6. Fallback Redirect for Unknown Routes */}
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>
 

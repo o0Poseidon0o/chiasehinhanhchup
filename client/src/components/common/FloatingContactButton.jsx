@@ -258,7 +258,7 @@ export const FloatingContactButton = () => {
             type="button"
             onClick={toggleOpen}
             aria-label={isOpen ? "Đóng menu hỗ trợ" : "Mở menu liên hệ tư vấn"}
-            className={`relative w-13 h-13 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-white shadow-2xl transition-all duration-300 active:scale-90 ${
+            className={`relative w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-white shadow-2xl transition-all duration-300 active:scale-90 ${
               isOpen 
                 ? 'bg-[#151922] hover:bg-[#1e2330] border-2 border-emerald-500/50 rotate-90 text-emerald-400' 
                 : 'bg-gradient-to-tr from-[#006a38] via-[#008748] to-[#10b981] hover:brightness-110 border-2 border-white shadow-emerald-950/50'

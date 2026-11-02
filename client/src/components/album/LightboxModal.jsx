@@ -17,11 +17,10 @@ export const LightboxModal = ({
   onCommentChange,
   onOpenSubmitModal,
 }) => {
-  if (currentIndex < 0 || currentIndex >= images.length) return null;
-
-  const currentImage = images[currentIndex];
-  const isSelected = selectedPhotos.some((p) => p.fileId === currentImage.fileId);
-  const currentComment = comments[currentImage.fileId] || '';
+  const isOpen = currentIndex >= 0 && currentIndex < images.length;
+  const currentImage = isOpen ? images[currentIndex] : {};
+  const isSelected = Boolean(currentImage.fileId && selectedPhotos.some((p) => p.fileId === currentImage.fileId));
+  const currentComment = (currentImage.fileId && comments[currentImage.fileId]) || '';
 
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(currentComment);
@@ -34,7 +33,7 @@ export const LightboxModal = ({
 
   // Lock body scroll when modal is active
   useEffect(() => {
-    if (currentIndex >= 0) {
+    if (isOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -42,10 +41,10 @@ export const LightboxModal = ({
     return () => {
       document.body.style.overflow = '';
     };
-  }, [currentIndex]);
+  }, [isOpen]);
 
   const handleSave = () => {
-    if (isClosed) return;
+    if (isClosed || !currentImage.fileId) return;
     if (onCommentChange) {
       onCommentChange(currentImage.fileId, draft.trim(), true);
     }
@@ -53,7 +52,7 @@ export const LightboxModal = ({
   };
 
   const handleDelete = () => {
-    if (isClosed) return;
+    if (isClosed || !currentImage.fileId) return;
     setDraft('');
     if (onCommentChange) {
       onCommentChange(currentImage.fileId, '');
@@ -63,6 +62,7 @@ export const LightboxModal = ({
 
   // Bắt sự kiện phím bấm bàn phím (Left, Right, Escape)
   useEffect(() => {
+    if (!isOpen) return;
     const handleKeyDown = (e) => {
       // Không chuyển ảnh nếu đang gõ chữ trong ô ghi chú
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -78,23 +78,27 @@ export const LightboxModal = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, images.length, onClose, onNavigate]);
+  }, [isOpen, currentIndex, images.length, onClose, onNavigate]);
 
-  const lightboxFallbackUrls = [
-    currentImage.embedUrl,
-    currentImage.thumbnailUrl,
-    `https://drive.google.com/thumbnail?id=${currentImage.fileId}&sz=w1600`,
-    `https://lh3.googleusercontent.com/d/${currentImage.fileId}=s1600`,
-    `https://lh3.googleusercontent.com/u/0/d/${currentImage.fileId}=w1600`,
-    `https://drive.google.com/uc?export=view&id=${currentImage.fileId}`,
-    `/api/albums/proxy-image/${currentImage.fileId}?sz=1600`
-  ].filter(Boolean);
+  const lightboxFallbackUrls = isOpen
+    ? [
+        currentImage.embedUrl,
+        currentImage.thumbnailUrl,
+        `https://drive.google.com/thumbnail?id=${currentImage.fileId}&sz=w1600`,
+        `https://lh3.googleusercontent.com/d/${currentImage.fileId}=s1600`,
+        `https://lh3.googleusercontent.com/u/0/d/${currentImage.fileId}=w1600`,
+        `https://drive.google.com/uc?export=view&id=${currentImage.fileId}`,
+        `/api/albums/proxy-image/${currentImage.fileId}?sz=1600`
+      ].filter(Boolean)
+    : [];
 
   const [srcIndex, setSrcIndex] = useState(0);
 
   useEffect(() => {
     setSrcIndex(0);
   }, [currentIndex]);
+
+  if (!isOpen) return null;
 
   const handleImageError = () => {
     if (srcIndex < lightboxFallbackUrls.length - 1) {

@@ -50,13 +50,19 @@ import CustomerWorkspace from './CustomerWorkspace';
 import { formatAvatarUrl, handleImageError } from '../utils/imageHelper';
 
 export const StudioWorkspace = () => {
-  const { currentUser, logout, updateCurrentUser } = useAuth();
-  const [searchParams] = useSearchParams();
+  const { currentUser } = useAuth();
 
   // Nếu người dùng đăng nhập là Khách Hàng, tự động hiển thị Không Gian Khách Hàng
   if (currentUser?.role === 'client') {
     return <CustomerWorkspace />;
   }
+
+  return <StudioWorkspaceContent />;
+};
+
+const StudioWorkspaceContent = () => {
+  const { currentUser, logout, updateCurrentUser } = useAuth();
+  const [searchParams] = useSearchParams();
 
   // Tab: 'albums' | 'clients' | 'bookings' | 'profile'
   const [activeTab, setActiveTab] = useState('albums');
@@ -1864,10 +1870,10 @@ export const StudioWorkspace = () => {
                     <button
                       onClick={() => {
                         const msg = generateClientShareText({
-                          clientName: formClientName,
-                          albumTitle: formTitle,
+                          clientName: createFormData.clientName,
+                          albumTitle: createdSuccess.title || createFormData.title,
                           clientUrl: `${getPublicBaseUrl()}/album/${createdSuccess.albumId}`,
-                          passcode: formPasscode
+                          passcode: createFormData.passcode
                         });
                         handleCopy(msg, 'modal_msg');
                       }}

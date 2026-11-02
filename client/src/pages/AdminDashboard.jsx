@@ -63,10 +63,8 @@ export const AdminDashboard = () => {
   const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
-  const [authenticating, setAuthenticating] = useState(false);
 
   // Master Admin Change Password states
   const [isChangeAdminPassOpen, setIsChangeAdminPassOpen] = useState(false);
@@ -540,7 +538,7 @@ export const AdminDashboard = () => {
               </button>
 
               <Link
-                to="/"
+                to="/app"
                 className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-gold-950 font-bold text-xs sm:text-sm shadow-lg shadow-gold-500/10 transition-all hover:scale-[1.01]"
               >
                 <Plus className="w-4 h-4 stroke-[2.5]" />
@@ -579,7 +577,7 @@ export const AdminDashboard = () => {
       </div>
 
       {/* Tab Navigation: Sleek Responsive Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2 p-2 bg-[#12100e] rounded-2xl border border-[#2b2722] shadow-inner">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 gap-2 p-2 bg-[#12100e] rounded-2xl border border-[#2b2722] shadow-inner">
         <button
           onClick={() => setActiveTab('albums')}
           className={`flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
@@ -872,7 +870,7 @@ export const AdminDashboard = () => {
             </p>
           </div>
           <Link
-            to="/"
+            to="/app"
             className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-gold-500 hover:bg-gold-400 text-gold-950 text-xs font-bold transition-all"
           >
             <Plus className="w-4 h-4" />
